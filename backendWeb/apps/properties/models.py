@@ -19,7 +19,7 @@ class Property(models.Model):
     district = models.ForeignKey(District, on_delete=models.CASCADE, related_name='properties')
     property_type = models.ForeignKey(PropertyType, on_delete=models.CASCADE, related_name='properties')
     title = models.CharField(max_length=255)
-    decription = models.TextField()
+    description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
     area_m2 = models.DecimalField(max_digits=10, decimal_places=2)
     price_per_m2 = models.DecimalField(max_digits=10, decimal_places=2)
@@ -35,6 +35,7 @@ class Property(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(blank=True, null=True, default=None)
     is_active = models.BooleanField(default=True)
+    views = models.IntegerField(default=0)
 
     class Meta:
         db_table = 'Property'

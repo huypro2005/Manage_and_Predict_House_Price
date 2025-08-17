@@ -39,3 +39,6 @@ class CustomUser(AbstractUser):
     
     avatar_tag.allow_tags = True
     avatar_tag.short_description = 'Avatar'
+
+    def get_full_name(self):
+        return f"{self.first_name} {self.last_name}"

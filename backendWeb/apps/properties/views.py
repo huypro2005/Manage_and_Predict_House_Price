@@ -1,13 +1,14 @@
-from time import timezone
 from django.shortcuts import render
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAdminUser
 from django.http import Http404
+from oauth2_provider.contrib.rest_framework import TokenHasReadWriteScope
 from .serializer import PropertyImageSerializer, PropertyV1Serializer, PropertyDetailV1Serializer
 from .models import Property, PropertyImage
 from django.utils.dateparse import parse_datetime
+import datetime
 # Create your views here.
 
 
@@ -21,7 +22,7 @@ class PropertyListView(APIView):
             'end_post': parse_datetime(request.GET.get('end_post')+'T23:59:59') if request.GET.get('end_post') else None,
             'province': request.GET.get('province'),
             'district': request.GET.get('district'),
-            'area_min': request.GET.get('area_min'),
+            'area_min': request.GET.get('area_min   '),
             'area_max': request.GET.get('area_max'),
             'price_min': request.GET.get('price_min'),
             'price_max': request.GET.get('price_max'),
@@ -44,19 +45,31 @@ class PropertyListView(APIView):
         if params['end_post']:
             filters['created_at__lte'] = params['end_post']
         if params['area_min']:
-            filters['area_m2__gte'] = params['area_min']
+            filters['area_m2__gte'] = float(params['area_min'])
         if params['area_max']:
-            filters['area_m2__lte'] = params['area_max']
+            filters['area_m2__lte'] = float(params['area_max'])
         if params['price_min']:
-            filters['price__gte'] = params['price_min']
+            filters['price__gte'] = float(params['price_min'])
         if params['price_max']:
-            filters['price__lte'] = params['price_max']
+            filters['price__lte'] = float(params['price_max'])
         if params['property_type']:
-            filters['property_type'] = params['property_type']
+            # try:
+            property_type = [int(d) for d in str(params['property_type']).split(',')] if ',' in str(params['property_type']) else [int(params['property_type'])]
+            filters['property_type__in'] = property_type
+            print(type(params['property_type']))
+            # except ValueError:
+            #     print(params['property_type'])
+        
         if params['province']:
             filters['province'] = params['province']
         if params['district']:
-            filters['district'] = params['district']
+            # ?district=12,5 or district=12
+            # try:
+            districts = [int(d) for d in str(params['district']).split(',')] if ',' in str(params['district']) else [int(params['district'])]
+            filters['district__in'] = districts
+            print(params['district'])
+            # except ValueError:
+            #     print(params['district'])
         if params['is_active'] and request.user.is_authenticated:
             filters['is_active'] = params['is_active']
 
@@ -73,10 +86,14 @@ class PropertyListView(APIView):
 
 
 class PropertyDetailView(APIView): 
+    permission_classes = [IsAuthenticatedOrReadOnly]
     # retrieve a property with all its images
     def get_object(self, pk):
         try:
-            return Property.objects.get(pk=pk, is_active=True)
+            property = Property.objects.get(pk=pk, is_active=True)
+            property.views += 1
+            property.save()
+            return property
         except Property.DoesNotExist:
             raise Http404('Property not found')
 
@@ -87,6 +104,10 @@ class PropertyDetailView(APIView):
 
     def put(self, request, pk):
         prop = self.get_object(pk)
+        if request.user and request.user.is_staff:
+            pass
+        elif request.user.id != prop.user.id:
+            return Response({'message': 'You are not authorized to update this property'}, status=status.HTTP_403_FORBIDDEN)
         serializer = PropertyDetailV1Serializer(prop, data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -95,14 +116,19 @@ class PropertyDetailView(APIView):
 
     def delete(self, request, pk):
         property = self.get_object(pk)
+        if request.user and request.user.is_staff:
+            pass
+        elif request.user.id != property.user.id:
+            return Response({'message': 'You are not authorized to delete this property'}, status=status.HTTP_403_FORBIDDEN)
         property.is_active = False
-        property.deleted_at = timezone.now()
+        property.deleted_at = datetime.datetime.now()
         property.save()
         return Response({'message': 'Property deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
 
 
 
 class PropertyImageListView(APIView):
+    permission_classes = [IsAuthenticatedOrReadOnly]
     def get_property(self, pk):
         try:
             return Property.objects.get(pk=pk)
@@ -128,6 +154,8 @@ class PropertyImageListView(APIView):
     
 
 class PropertyImageDetailView(APIView):
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
     def get_object(self, pk):
         try:
             return PropertyImage.objects.get(pk=pk)
@@ -141,6 +169,10 @@ class PropertyImageDetailView(APIView):
 
     def put(self, request, pk):
         property_image = self.get_object(pk)
+        if request.user and request.user.is_staff:
+            pass
+        elif request.user.id != property_image.property.user.id:
+            return Response({'message': 'You are not authorized to update this property image'}, status=status.HTTP_403_FORBIDDEN)
         serializer = PropertyImageSerializer(property_image, data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -148,6 +180,10 @@ class PropertyImageDetailView(APIView):
         return Response({'message': 'Property image update failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
+        if request.user and request.user.is_staff:
+            pass
+        elif request.user.id != self.get_object(pk).property.user.id:
+            return Response({'message': 'You are not authorized to delete this property image'}, status=status.HTTP_403_FORBIDDEN)
         property_image = self.get_object(pk)
         property_image.delete()
         return Response({'message': 'Property image deleted successfully'}, status=status.HTTP_204_NO_CONTENT)

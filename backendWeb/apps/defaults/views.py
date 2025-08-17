@@ -3,20 +3,29 @@ from django.shortcuts import render
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny, IsAdminUser
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from .serializer import PropertyTypeSerializer, ProvinceSerializer, DistrictSerializer
 from .models import PropertyType, Province, District
 from django.http import Http404
-
+from apps.permission import IsAdminOrReadOnly
 # Create your views here.
 
 
 class PropertyTypeListView(APIView):
+    permission_classes = [IsAdminOrReadOnly]
+
+
+
+    @method_decorator(cache_page(60 * 40))  # Cache for 40 minutes
     def get(self, request):
         property_types = PropertyType.objects.all()
         serializer = PropertyTypeSerializer(property_types, many=True)
         return Response({'message': 'Property types retrieved successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
 
     def post(self, request):
+        self.permission_classes = [IsAdminUser]
         serializer = PropertyTypeSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -24,6 +33,9 @@ class PropertyTypeListView(APIView):
         return Response({'message': 'Property type creation failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
 class PropertyTypeDetailView(APIView):
+
+    permission_classes = [IsAdminOrReadOnly]
+
     def get_object(self, pk):
         try:
             return PropertyType.objects.get(pk=pk)
@@ -53,6 +65,10 @@ class PropertyTypeDetailView(APIView):
 
 
 class ProvinceListView(APIView):
+    permission_classes = [IsAdminOrReadOnly]
+
+
+    @method_decorator(cache_page(60 * 40))  # Cache for 40 minutes
     def get(self, request):
         provinces = Province.objects.all()
         serializer = ProvinceSerializer(provinces, many=True)
@@ -67,6 +83,9 @@ class ProvinceListView(APIView):
 
 
 class ProvinceDetailView(APIView):
+
+    permission_classes = [IsAdminOrReadOnly]
+
     def get_object(self, pk):
         try:
             return Province.objects.get(pk=pk)
@@ -95,20 +114,33 @@ class ProvinceDetailView(APIView):
 
 
 class DistrictListView(APIView):
-    def get(self, request):
-        districts = District.objects.all()
+    permission_classes = [IsAdminOrReadOnly]
+
+    def get_province(self, province_pk):
+        try:
+            return Province.objects.get(pk=province_pk, is_active=True)
+        except Province.DoesNotExist:
+            raise Http404
+
+    @method_decorator(cache_page(60 * 40))  # Cache for 40 minutes
+    def get(self, request, province_pk):
+        province = self.get_province(province_pk)
+        districts = District.objects.filter(province=province, is_active=True)
         serializer = DistrictSerializer(districts, many=True)
         return Response({'message': 'Districts retrieved successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
 
-    def post(self, request):
+    def post(self, request, province_pk):
+        province = self.get_province(province_pk)
         serializer = DistrictSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(province=province)
             return Response({'message': 'District created successfully', 'data': serializer.data}, status=status.HTTP_201_CREATED)
         return Response({'message': 'District creation failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class DistrictDetailView(APIView):
+    permission_classes = [IsAdminOrReadOnly]
+
     def get_object(self, pk):
         try:
             return District.objects.get(pk=pk)

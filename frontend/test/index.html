@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <button onclick="loginWithGoogle()">Login with Google</button>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script>
+  const firebaseConfig = {
+  apiKey: "AIzaSyAL7R2-9_wvgrwwLgNknZHvlZbHMqgxZCc",
+  authDomain: "auth-e0be2.firebaseapp.com",
+  projectId: "auth-e0be2",
+  storageBucket: "auth-e0be2.firebasestorage.app",
+  messagingSenderId: "301149939517",
+  appId: "1:301149939517:web:d58f814569025813a80754",
+  measurementId: "G-Z7PFZEETT9"
+};
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const provider = new firebase.auth.GoogleAuthProvider();
+
+  async function loginWithGoogle() {
+    const result = await auth.signInWithPopup(provider);
+    const idToken = await result.user.getIdToken(/* forceRefresh? */ true);
+
+    const res = await fetch("/api/auth/firebase/google/", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ id_token: idToken })
+    });
+    const data = await res.json();
+    // data.access / data.refresh -> JWT của server bạn
+  }
+</script>
+
+</body>
+</html>
+

@@ -6,6 +6,6 @@ urlpatterns = [
     path('property-types/<int:pk>/', PropertyTypeDetailView.as_view(), name='property-type-detail'),
     path('provinces/', ProvinceListView.as_view(), name='province-list'),
     path('provinces/<int:pk>/', ProvinceDetailView.as_view(), name='province-detail'),
-    path('districts/', DistrictListView.as_view(), name='district-list'),
-    path('districts/<int:pk>/', DistrictDetailView.as_view(), name='district-detail'),
+    path('provinces/<int:province_pk>/districts/', DistrictListView.as_view(), name='district-list'),
+    path('provinces/<int:province_pk>/districts/<int:pk>/', DistrictDetailView.as_view(), name='district-detail'),
 ]
