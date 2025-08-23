@@ -3,27 +3,17 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import PropertyTypeSelect from '../useAPI/PropertyTypeSelect';
 import LocationSelect from '../useAPI/LocationSelect';
-import DistrictSelect from '../useAPI/DistrictSelect';
 import { 
   Home, 
   Building2, 
   Search, 
-  MapPin, 
-  DollarSign, 
-  Square, 
-  ChevronDown,
   Calendar,
   Filter
 } from 'lucide-react';
 
 function SearchPage() {
   const [activeTab, setActiveTab] = useState('ban');
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState('Thành phố Hồ Chí Minh');
-  const [propertyType, setPropertyType] = useState('Loại nhà đất');
-  const [priceRange, setPriceRange] = useState('Mức giá');
-  const [area, setArea] = useState('Diện tích');
-  const [districts, setDistricts] = useState([]);
   const [selectedDistricts, setSelectedDistricts] = useState([]);
   const [selectedDistrictNames, setSelectedDistrictNames] = useState([]);
   const [selectedPropertyTypes, setSelectedPropertyTypes] = useState([]);

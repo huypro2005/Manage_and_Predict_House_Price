@@ -13,14 +13,16 @@ class ContactRequestListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        contact_requests = ContactRequest.objects.all()
+        user = request.user
+        contact_requests = ContactRequest.objects.filter(user=user)
         serializer = ContactRequestV1Serializer(contact_requests, many=True)
         return Response({'message': 'Contact requests retrieved successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
 
     def post(self, request):
+        user = request.user
         serializer = ContactRequestV1Serializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(user=user)
             return Response({'message': 'Contact request created successfully', 'data': serializer.data}, status=status.HTTP_201_CREATED)
         return Response({'message': 'Contact request creation failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 

@@ -37,7 +37,7 @@ class PropertyV1Serializer(serializers.ModelSerializer):
             return f"{delta.seconds} giây trước"
         
     def get_price(self, obj):
-        if obj.price > 1000:
+        if obj.price >= 1000:
             return f'{obj.price / 1000} tỷ'
         else:
             return f'{obj.price} triệu'
@@ -45,12 +45,49 @@ class PropertyV1Serializer(serializers.ModelSerializer):
 
 class PropertyDetailV1Serializer(serializers.ModelSerializer):
 
-    images = PropertyImageSerializer(many=True, read_only=True)
+    images = PropertyImageSerializer(many=True)
     # user = CustomUserV1Serializer(read_only=True)
 
     user_fullname = serializers.CharField(source='user.get_full_name', read_only=True)
     user_email = serializers.EmailField(source='user.email', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
 
     class Meta:
         model = Property
-        fields = '__all__'
+        fields = ['id', 'user', 'province', 
+                  'username',
+                  'district', 'title', 
+                  'description', 'price', 
+                  'area_m2', 'address', 
+                  'images', 'thumbnail', 
+                  'property_type', 'bedrooms',
+                  'floors', 'coord_x', 'coord_y',
+                  'legal_status', 'tab',
+                  'user_fullname', 'user_email',
+                  'views', 'created_at',
+                  'updated_at']
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at', 'views', 'images']
+
+    
+
+
+
+    
+    
+class PropertyCreateFullV1Serializer(serializers.ModelSerializer):
+    # Nếu bạn muốn thêm hình ảnh, sử dụng PropertyImageSerializer
+    images = PropertyImageSerializer(many=True, required=False)  # Tùy chọn thêm hình ảnh
+
+    class Meta:
+        model = Property
+        fields = [
+            'id', 'province', 'district', 'title', 'description', 'price',
+            'area_m2', 'address', 'images', 'thumbnail', 'property_type',
+            'bedrooms', 'floors', 'coord_x', 'coord_y', 'legal_status',
+            'tab', 'price_per_m2', 'frontage', 'user'
+        ]
+        read_only_fields = ['user', 'id']  # user chỉ được ghi từ context, không từ frontend
+
+    def create(self, validated_data):
+        property = super().create(validated_data)
+        return property

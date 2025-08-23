@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { baseUrl } from './base';
+import { useNavigate } from 'react-router-dom';
+import { baseUrl, ConfigUrl } from './base';
 import PropertyTypeSelect from './useAPI/PropertyTypeSelect';
 import LocationSelect from './useAPI/LocationSelect';
-import DistrictSelect from './useAPI/DistrictSelect';
 import PropertyList from './pages/PropertyList';
+import AuthWrapper from './components/auth/AuthWrapper';
+import UserDropdown from './components/auth/UserDropdown';
+import { useAuth } from './contexts/AuthContext';
 import { 
   Home, 
   User, 
@@ -62,6 +64,8 @@ const pairArea = {
   'Trên 120 m²': [120, Infinity]
 }
 
+
+
 function App() {
   const [activeTab, setActiveTab] = useState('ban');
   const [searchQuery, setSearchQuery] = useState('');
@@ -76,9 +80,10 @@ function App() {
   const [selectedPropertyTypeNames, setSelectedPropertyTypeNames] = useState([]);
   const [currentPage, setCurrentPage] = useState('search'); // 'search' or 'propertyList'
   const [searchParams, setSearchParams] = useState({});
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navigate = useNavigate();
-
+  const { isAuthenticated } = useAuth();
   const navigationItems = [
     { id: 'ban', label: 'Nhà đất bán' },
     { id: 'thue', label: 'Nhà đất thuê' },
@@ -201,11 +206,11 @@ function App() {
     }
   ];
 
-  const propertyListings = [
+  const propertyListing = [
     {
       id: 1,
       title: 'Elysian - Giỏ hàng trực tiếp CĐT, CK 9%',
-      decription: 'TT 50% nhận nhà, CĐT hỗ trợ trả chậm đến 2029',
+      description: 'TT 50% nhận nhà, CĐT hỗ trợ trả chậm đến 2029',
       price: '9 tỷ',
       area: '50 m²',
       address: 'Quận 7, Thành phố Hồ Chí Minh',
@@ -216,7 +221,7 @@ function App() {
     {
       id: 2,
       title: 'Căn hộ cao cấp tại Quận 1',
-      decription: 'Vị trí đắc địa, view sông Sài Gòn',
+      description: 'Vị trí đắc địa, view sông Sài Gòn',
       price: '15 tỷ',
       area: '80 m²',
       address: 'Quận 1, Thành phố Hồ Chí Minh',
@@ -226,6 +231,47 @@ function App() {
     }
     
   ];
+
+  const handleNavigateToPropertyList = (tab) => {
+    if (tab === 'ban') {
+      navigate(`/property-list?tab=ban`);
+    } else if (tab === 'thue') {
+      navigate(`/property-list?tab=thue`);
+    } else {
+      navigate('/property-list');
+    }
+  }
+  const [propertyListings, setPropertyListings] = useState(propertyListing);
+  useEffect(() => {
+    fetch(baseUrl + 'properties/')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        // Kiểm tra xem data có đúng format không
+        if (Array.isArray(data.data)) {
+          setPropertyListings(data.data);
+        } else {
+          console.warn('API returned non-array data:', data.data);
+          // Giữ lại data mặc định nếu API trả về sai format
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching properties:', error);
+        // Giữ lại data mặc định khi có lỗi
+      });
+  }, []);
+
+  const handelNavigateToPostProperty = () => {
+    if (!isAuthenticated) {
+      alert('Vui lòng đăng nhập để đăng tin!');
+      return;
+    }
+    navigate('/post-property');
+  };
 
   // Render PropertyList page if currentPage is 'propertyList'
   if (currentPage === 'propertyList') {
@@ -264,7 +310,7 @@ function App() {
                 <button
                   key={item.id}
                   className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
-                  onClick={() => navigate('/property-list')}
+                  onClick={() => handleNavigateToPropertyList(item.id)}
                 >
                   {item.label}
                 </button>
@@ -272,28 +318,69 @@ function App() {
             </nav>
 
             {/* Header Actions */}
-            <div className="flex items-center space-x-4">
-              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                <Heart className="h-5 w-5" />
-              </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                <Bell className="h-5 w-5" />
-              </button>
-              <button className="text-gray-600 hover:text-gray-900 font-medium">
-                Đăng Nhập
-              </button>
-              <button className="text-gray-600 hover:text-gray-900 font-medium">
-                Đăng Ký
-              </button>
-              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                Đăng tin
-              </button>
-              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                Dự đoán giá
+            <div className="flex items-center space-x-2">
+              <div className="hidden sm:flex items-center space-x-3">
+                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                  <Heart className="h-5 w-5" />
+                </button>
+                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                  <Bell className="h-5 w-5" />
+                </button>
+                <AuthWrapper />
+                <button className="hidden md:inline-flex bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors" onClick={handelNavigateToPostProperty}>
+                  Đăng tin
+                </button>
+                <button className="hidden lg:inline-flex bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                  Dự đoán giá
+                </button>
+              </div>
+              {/* Mobile user avatar */}
+              {isAuthenticated && (
+                <div className="md:hidden">
+                  <UserDropdown />
+                </div>
+              )}
+              {/* Mobile menu button */}
+              <button
+                className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:bg-gray-100"
+                onClick={() => setMobileMenuOpen((v) => !v)}
+                aria-label="Mở menu"
+              >
+                <ChevronDown className={`h-5 w-5 transition-transform ${mobileMenuOpen ? 'rotate-180' : ''}`} />
               </button>
             </div>
           </div>
         </div>
+
+        {/* Mobile dropdown menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-gray-100 bg-white">
+            <div className="max-w-7xl mx-auto px-4 py-3 space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {navigationItems.map((item) => (
+                  <button
+                    key={item.id}
+                    className="px-3 py-2 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleNavigateToPropertyList(item.id);
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <button className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium" onClick={handelNavigateToPostProperty}>
+                  Đăng tin
+                </button>
+                <button className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium">
+                  Dự đoán giá
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Search Section */}
@@ -328,7 +415,7 @@ function App() {
 
             {/* Main Search Bar */}
             <div className="space-y-4">
-            <div className="flex items-stretch border border-gray-300 rounded-lg overflow-visible w-full">
+            <div className="flex flex-col md:flex-row items-stretch border border-gray-300 rounded-lg overflow-visible w-full">
                 {/* Location Input - sẽ hiển thị DistrictSelect bên dưới khi cần */}
                 <LocationSelect 
                   onProvinceSelect={handleProvinceSelect} 
@@ -338,7 +425,7 @@ function App() {
                 {/* Search Button */}
                 <button 
                   onClick={handleSearch}
-                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 font-medium transition-colors whitespace-nowrap flex-shrink-0" 
+                  className="hidden md:inline-flex items-center justify-center bg-red-600 hover:bg-red-700 text-white px-6 py-3 font-medium transition-colors whitespace-nowrap flex-shrink-0 md:rounded-l-none md:rounded-r-lg" 
                   id="search-RealEstate"
                 >
                   Tìm kiếm
@@ -388,13 +475,23 @@ function App() {
                 </div>
               </div>
 
+              {/* Mobile search button at bottom */}
+              <div className="md:hidden">
+                <button 
+                  onClick={handleSearch}
+                  className="w-full mt-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                >
+                  Tìm kiếm
+                </button>
+              </div>
+
  
             </div>
           </div>
         </div>
       </div>
       {/* Hero Banner */}
-      <div className="relative bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 py-16 overflow-hidden">
+      <div className="relative bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 py-12 md:py-16 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 to-orange-500/20"></div>
         <div className="absolute right-0 top-0 w-1/3 h-full bg-gradient-to-l from-yellow-400/10 to-transparent"></div>
         
@@ -416,7 +513,7 @@ function App() {
                   <span className="text-yellow-400 font-medium">PropertyGuru Vietnam Property Awards</span>
                 </div>
               </div>
-              <h2 className="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
                 11 năm tôn vinh chủ đầu tư xuất sắc ngành bất động sản
               </h2>
               <button className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-8 py-4 rounded-lg font-bold text-lg transition-colors">
@@ -429,7 +526,7 @@ function App() {
               animate={{ opacity: 1, x: 0 }}
               className="relative"
             >
-              <div className="w-full h-64 bg-gradient-to-br from-yellow-400/20 to-orange-500/20 rounded-2xl flex items-center justify-center">
+              <div className="w-full h-48 sm:h-64 bg-gradient-to-br from-yellow-400/20 to-orange-500/20 rounded-2xl flex items-center justify-center">
                 <div className="text-center">
                   <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Play className="h-8 w-8 text-gray-900" />
@@ -510,7 +607,8 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h3 className="text-2xl font-bold text-gray-900 mb-8">Bất động sản nổi bật</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Mobile: list rows, Desktop: keep grid */}
+          <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {propertyListings.map((property, index) => (
               <motion.div
                 key={property.id}
@@ -518,47 +616,62 @@ function App() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
                 className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                onClick={() => navigate(`/property/${property.id}`)}
+                style={{ cursor: 'pointer' }}
               >
-                {/* Property Image with Overlay */}
-                <div className="relative h-64">
-                  <img
-                    src={property.thumbnail}
-                    alt={property.title.slice(0, 10)}
-                    className="w-full h-full object-cover"
-                  />
+                <div className="relative h-48">
+                  <img src={ConfigUrl(property.thumbnail)} alt={property.title.slice(0, 10)} className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                  
-             
-
                 </div>
-
-                {/* Property Details */}
-                <div className="p-6">
-                  <h4 className="text-lg font-bold text-gray-900 mb-2">
-                    {property.title}
-                  </h4>
-                  <p className="text-gray-600 text-sm mb-4">
-                    {property.decription.slice(0, 100)}
-                  </p>
-                  
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center space-x-4">
-                      <div className="text-lg font-bold text-red-600">{property.price}</div>
-                      <div className="text-gray-600">{property.area}</div>
+                <div className="p-4">
+                  <h4 className="text-base font-bold text-gray-900 mb-2 line-clamp-2">{property.title.slice(0, 40)}...</h4>
+                  <p className="text-gray-600 text-xs mb-3 line-clamp-2">{property.description?.slice(0, 60) || 'Không có mô tả'}</p>
+                  <div className="flex justify-between items-center mb-3">
+                    <div className="flex items-center space-x-2">
+                      <div className="text-base font-bold text-red-600">{property.price}</div>
+                      <div className="text-gray-600 text-sm">{property.area}</div>
                     </div>
-                    <button className="text-gray-400 hover:text-red-500 transition-colors">
-                      <Heart className="h-6 w-6" />
-                    </button>
+                    <button className="text-gray-400 hover:text-red-500 transition-colors"><Heart className="h-5 w-5" /></button>
                   </div>
-
-                  <div className="flex justify-between items-center text-sm text-gray-500">
-                    <span>{property.address}</span>
+                  <div className="flex justify-between items-center text-xs text-gray-500">
+                    <span className="truncate">{property.address}</span>
                     <span>{property.time}</span>
                   </div>
                 </div>
               </motion.div>
             ))}
-          
+          </div>
+
+          {/* Mobile list rows */}
+          <div className="sm:hidden space-y-4">
+            {propertyListings.map((property, index) => (
+              <motion.div
+                key={property.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300"
+                onClick={() => navigate(`/property/${property.id}`)}
+              >
+                <div className="flex">
+                  <div className="relative w-36 h-28 flex-shrink-0">
+                    <img src={ConfigUrl(property.thumbnail)} alt={property.title.slice(0, 10)} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1 p-3">
+                    <h4 className="text-base font-bold text-gray-900 mb-1 line-clamp-2">{property.title}</h4>
+                    <p className="text-gray-600 text-xs mb-2 line-clamp-2">{property.description?.slice(0, 100) || 'Không có mô tả'}</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="text-base font-bold text-red-600">{property.price}</div>
+                        <div className="text-gray-600 text-xs">{property.area}</div>
+                      </div>
+                      <span className="text-xs text-gray-500">{property.time}</span>
+                    </div>
+                    <div className="mt-1 text-xs text-gray-500 truncate">{property.address}</div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
           </div>
             {/* Button xem thêm bất động sản */}
             <div className="flex justify-center" style={{ marginTop: '20px' }}>

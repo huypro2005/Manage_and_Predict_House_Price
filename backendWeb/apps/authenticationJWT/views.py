@@ -10,24 +10,33 @@ from apps.accounts.models import CustomUser as User
 from apps.accounts.views import CustomUserListView, CustomUserDetailView
 from django.core.mail import send_mail
 import random
+from django.contrib.auth.signals import user_logged_in
+from apps.predicts.models import Dashboard
+from apps.accounts.serializer import CustomUserV1Serializer
 
 
-class CreateUserView(CustomUserListView):
+class CreateUserView(APIView):
     authentication_classes = []
-    permission_classes = (AllowAny,)
-    
-    def post(self, request):
-        return super().post(request)
-
-
+    permission_classes = [AllowAny]
+    def post(self, request, *args, **kwargs):
+        serializer = CustomUserV1Serializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            try:
+                dashboard = Dashboard.objects.create(user=serializer.instance)
+                dashboard.save()
+            except Exception as e:
+                return Response({'message': 'Error created dashboard, please contact admin to assit.', 'errors': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'message': 'User created successfully', 'data': serializer.data}, status=status.HTTP_201_CREATED)
+        return Response({'message': 'User creation failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
-    permission_classes = (AllowAny,)
+    permission_classes = [AllowAny]
     serializer_class = CustomTokenObtainPairSerializer
 
 class ForgotPasswordView(APIView):
-    permission_classes = (AllowAny,)
+    permission_classes = [AllowAny]
 
     def post(self, request):
         serializer = ForgotPasswordSerializer(data=request.data)
@@ -53,7 +62,7 @@ class ForgotPasswordView(APIView):
 
 
 class ChangePasswordView(APIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated)
 
     def post(self, request):
         serializer = ChangePasswordSerializer(data=request.data)

@@ -13,8 +13,12 @@ class Property(models.Model):
         (1, 'sổ hồng'),
         (2, 'hợp đồng')
     ]
+    STATUS_SELL = [
+        ('thue', 'Cho thuê'),
+        ('ban', 'Bán')
+    ]
 
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='properties')
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='properties', blank=True, null=True)
     province = models.ForeignKey(Province, on_delete=models.CASCADE, related_name='properties')
     district = models.ForeignKey(District, on_delete=models.CASCADE, related_name='properties')
     property_type = models.ForeignKey(PropertyType, on_delete=models.CASCADE, related_name='properties')
@@ -36,6 +40,7 @@ class Property(models.Model):
     deleted_at = models.DateTimeField(blank=True, null=True, default=None)
     is_active = models.BooleanField(default=True)
     views = models.IntegerField(default=0)
+    tab = models.CharField(max_length=10, choices=STATUS_SELL, default='ban')
 
     class Meta:
         db_table = 'Property'
@@ -47,6 +52,9 @@ class Property(models.Model):
 
     thumbnail_tag.allow_tags = True
     thumbnail_tag.short_description = 'Thumbnail'
+
+    def __str__(self):
+        return self.title[:50] + '...' if len(self.title) > 50 else self.title
 
 
 class PropertyImage(models.Model):

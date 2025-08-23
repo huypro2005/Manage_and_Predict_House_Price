@@ -13,7 +13,7 @@ class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
     auth_provider = models.CharField(max_length=20, choices=AUTH_PROVIDERS, default='local')
     google_id = models.CharField(max_length=255, blank=True, null=True)
-    avatar = models.ImageField(upload_to=upload_to_app_model, blank=True, null=True)
+    avatar = models.ImageField(upload_to=upload_to_app_model, blank=True, null=True, default='/accounts/default/user_avatar.png')
     phone = models.CharField(max_length=10, blank=True, null=True, unique=True)
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=50)

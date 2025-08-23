@@ -22,8 +22,8 @@ try { getAnalytics(app); } catch (e) { /* ignore on http */ }
 // Auth + Provider
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
-// (tùy chọn) yêu cầu user chọn account mỗi lần
-// provider.setCustomParameters({ prompt: "select_account" });
+// Bắt buộc user chọn account mỗi lần đăng nhập
+provider.setCustomParameters({ prompt: "select_account" });
 
 // Biến để lưu trạng thái user
 let currentUser = null;
@@ -79,37 +79,76 @@ onAuthStateChanged(auth, (user) => {
         // User is signed in, see docs for a list of available properties
         // https://firebase.google.com/docs/reference/js/auth.user
         const uid = user.uid;
-        console.log("User signed in:", user.email, "UID:", uid);
+        console.log("👤 User đã đăng nhập:", user.email, "UID:", uid);
         showUserInfo(user);
     } else {
         // User is signed out
-        console.log("User signed out");
+        console.log("👋 User đã đăng xuất");
         showUserInfo(null);
     }
 });
 
 async function signInWithGoogle() {
   try {
+    console.log("🔄 Bắt đầu quá trình đăng nhập Google...");
+    
+    // Hiển thị loading state
+    const btnIn = document.getElementById("google-btn-signin");
+    const btnUp = document.getElementById("google-btn-signup");
+    const originalText = btnIn ? btnIn.textContent : "Sign In with Google";
+    
+    if (btnIn) btnIn.textContent = "Đang đăng nhập...";
+    if (btnUp) btnUp.textContent = "Đang đăng nhập...";
+    
+    // Mở popup để user chọn account
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
+    
+    console.log("✅ User đã chọn account:", user.email);
+    console.log("🔄 Đang lấy Firebase ID token...");
 
-    // Lấy Firebase ID token để gửi về backend của bạn
+    // Lấy Firebase ID token mới (force refresh)
     const idToken = await user.getIdToken(true);
-    console.log("Firebase user:", user.email, "ID token (short):", idToken.slice(0, 25) + "...");
+    console.log(`📏 Token length: ${idToken.length}`);
+    console.log(`🔑 Token preview: ${idToken.substring(0, 50)}...`);
 
-    // Gửi ID token lên Django (endpoint bạn đã/ sẽ tạo)
-    const res = await fetch("http://localhost:8000/api/auth/firebase/google/", {
+    // Gửi ID token lên backend
+    console.log("🌐 Đang gửi token lên server...");
+    const res = await fetch("http://localhost:8000/api/v1/oauth/firebase/google/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id_token: idToken })
+      body: JSON.stringify({ token: idToken })
     });
+    
+    if (!res.ok) {
+      throw new Error(`Server error: ${res.status} ${res.statusText}`);
+    }
+    
     const data = await res.json();
-    console.log("Server JWT:", data);
-
-    alert("Google sign-in OK! Mở console để xem chi tiết.");
+    console.log("✅ Server response:", data);
+    
+    // Khôi phục text button
+    if (btnIn) btnIn.textContent = originalText;
+    if (btnUp) btnUp.textContent = originalText;
+    
+    alert("🎉 Đăng nhập thành công! Kiểm tra console để xem chi tiết.");
+    
   } catch (err) {
-    console.error("Google sign-in error:", err.code, err.message);
-    alert("Sign-in failed: " + err.message);
+    console.error("❌ Lỗi đăng nhập:", err);
+    
+    // Khôi phục text button
+    const btnIn = document.getElementById("google-btn-signin");
+    const btnUp = document.getElementById("google-btn-signup");
+    if (btnIn) btnIn.textContent = "Sign In with Google";
+    if (btnUp) btnUp.textContent = "Sign Up with Google";
+    
+    if (err.code === 'auth/popup-closed-by-user') {
+      alert("❌ Bạn đã đóng popup đăng nhập. Vui lòng thử lại.");
+    } else if (err.code === 'auth/popup-blocked') {
+      alert("❌ Popup bị chặn. Vui lòng cho phép popup và thử lại.");
+    } else {
+      alert("❌ Lỗi đăng nhập: " + err.message);
+    }
   }
 }
 

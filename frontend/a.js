@@ -1,8 +1,5 @@
+// require('dotenv').config();
 
-const navigationItems = [
-    { id: 'ban', label: 'Nhà đất bán' },
-    { id: 'thue', label: 'Nhà đất thuê' },
-    { id: 'tintuc', label: 'Tin tức' },
-  ];
+const mapboxToken = process.env.REACT_APP_MAPBOX_TOKEN;
 
-console.log(navigationItems[0].id);
+console.log(mapboxToken);

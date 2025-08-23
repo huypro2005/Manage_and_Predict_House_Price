@@ -2,22 +2,31 @@ from django.shortcuts import render
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAdminUser
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from django.http import Http404
 from oauth2_provider.contrib.rest_framework import TokenHasReadWriteScope
-from .serializer import PropertyImageSerializer, PropertyV1Serializer, PropertyDetailV1Serializer
+from .serializer import PropertyImageSerializer, PropertyV1Serializer, PropertyDetailV1Serializer, PropertyCreateFullV1Serializer
 from .models import Property, PropertyImage
+from apps.permission import IsAuthenticatedOrReadOnly
 from django.utils.dateparse import parse_datetime
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.pagination import PageNumberPagination
 import datetime
 # Create your views here.
 
 
+class CustomPagination(PageNumberPagination):
+    page_size = 12
+    page_size_query_param = 'limit'
+    max_page_size = 100
+
 class PropertyListView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
-    
+    pagination_class = CustomPagination
+
     def get_params(self, request):
         return {
-            'user_id': request.GET.get('user_id'),
+            'username': request.GET.get('username'),
             'start_post': parse_datetime(request.GET.get('start_post')+'T00:00:00') if request.GET.get('start_post') else None,
             'end_post': parse_datetime(request.GET.get('end_post')+'T23:59:59') if request.GET.get('end_post') else None,
             'province': request.GET.get('province'),
@@ -28,18 +37,17 @@ class PropertyListView(APIView):
             'price_max': request.GET.get('price_max'),
             'property_type': request.GET.get('property_type'),
             'is_active': request.GET.get('is_active'),
+            'tab' : request.GET.get('tab')
         }
 
     def get(self, request):
         params = self.get_params(request)
         filters = {}
 
-        if params['user_id']:
-            if int(params['user_id']) == request.user.id:
-                filters['user_id'] = params['user_id']
-            else:
-                return Response({'message': 'You are not authorized to view this property'}, status=status.HTTP_403_FORBIDDEN)
-
+        if params['username']:
+            filters['user__username'] = params['username']
+        if params['tab']:
+            filters['tab'] = params['tab']
         if params['start_post']:
             filters['created_at__gte'] = params['start_post']
         if params['end_post']:
@@ -74,15 +82,25 @@ class PropertyListView(APIView):
             filters['is_active'] = params['is_active']
 
         properties = Property.objects.filter(**filters).order_by('-created_at') # trả về danh sách bất động sản sắp xếp theo thời gian tạo gần nhất
-        serializer = PropertyV1Serializer(properties, many=True)
-        return Response({'message': 'Properties retrieved successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(properties, request)
+        serializer = PropertyV1Serializer(page, many=True)
+        return Response({'message': 'Properties retrieved successfully', 'data': serializer.data, 'count': properties.count()}, status=status.HTTP_200_OK)
 
     def post(self, request):
-        serializer = PropertyV1Serializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
+        try:
+            user = request.user
+            serializer = PropertyCreateFullV1Serializer(data=request.data, context={'request': request})
+            serializer.is_valid(raise_exception=True)
+            property = serializer.save(user=user)
+
+            if 'images' in request.FILES:
+                for image in request.FILES.getlist('images'):
+                    PropertyImage.objects.create(property=property, image=image)
+
             return Response({'message': 'Property created successfully', 'data': serializer.data}, status=status.HTTP_201_CREATED)
-        return Response({'message': 'Property creation failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'message': 'Property creation failed', 'errors': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PropertyDetailView(APIView): 
@@ -104,7 +122,7 @@ class PropertyDetailView(APIView):
 
     def put(self, request, pk):
         prop = self.get_object(pk)
-        if request.user and request.user.is_staff:
+        if request.user and request.user.is_staff and request.user.is_active:
             pass
         elif request.user.id != prop.user.id:
             return Response({'message': 'You are not authorized to update this property'}, status=status.HTTP_403_FORBIDDEN)
@@ -116,7 +134,7 @@ class PropertyDetailView(APIView):
 
     def delete(self, request, pk):
         property = self.get_object(pk)
-        if request.user and request.user.is_staff:
+        if request.user and request.user.is_staff and request.user.is_active:
             pass
         elif request.user.id != property.user.id:
             return Response({'message': 'You are not authorized to delete this property'}, status=status.HTTP_403_FORBIDDEN)
@@ -124,6 +142,8 @@ class PropertyDetailView(APIView):
         property.deleted_at = datetime.datetime.now()
         property.save()
         return Response({'message': 'Property deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
+
 
 
 
@@ -187,3 +207,6 @@ class PropertyImageDetailView(APIView):
         property_image = self.get_object(pk)
         property_image.delete()
         return Response({'message': 'Property image deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
+
+

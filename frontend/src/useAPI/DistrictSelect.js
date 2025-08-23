@@ -6,7 +6,7 @@ function DistrictUrl(provinceId) {
     return baseUrl + 'provinces/' + provinceId + '/districts/';
 }
 
-function DistrictSelect({ selectedProvince, selectedProvinceId, onDistrictSelect, onClose, onRequireProvince, isProvinceSelected }) {
+function DistrictSelect({ selectedProvince, selectedProvinceId, onDistrictSelect, onClose, onRequireProvince, isProvinceSelected, maxSelections = 5 }) {
     const [districts, setDistricts] = useState([]);
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -73,9 +73,9 @@ function DistrictSelect({ selectedProvince, selectedProvinceId, onDistrictSelect
             return;
         }
 
-        // Kiểm tra giới hạn 5 district
-        if (selectedDistricts.length >= 5) {
-            alert('Bạn chỉ có thể chọn tối đa 5 địa điểm');
+        // Kiểm tra giới hạn tối đa
+        if (selectedDistricts.length >= maxSelections) {
+            alert(`Bạn chỉ có thể chọn tối đa ${maxSelections} địa điểm`);
             return;
         }
 
@@ -116,7 +116,7 @@ function DistrictSelect({ selectedProvince, selectedProvinceId, onDistrictSelect
     );
 
     return (
-        <div className="relative w-full z-40" ref={dropdownRef}>
+        <div className="relative w-full z-20" ref={dropdownRef}>
             <div className="flex items-center bg-white border border-gray-300 rounded-lg min-h-[48px] focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 overflow-hidden">
                 <Search className="h-5 w-5 text-gray-500 ml-3 mr-2 flex-shrink-0" />
                 <div className="flex flex-nowrap items-center gap-1 py-2 pr-2 flex-1 overflow-x-auto">
@@ -138,8 +138,8 @@ function DistrictSelect({ selectedProvince, selectedProvinceId, onDistrictSelect
                             !isProvinceSelected
                                 ? 'Chọn tỉnh thành để bắt đầu'
                                 : (selectedDistricts.length === 0
-                                    ? `Nhập tối đa 5 địa điểm tại ${selectedProvince}. Ví dụ: Quận 1`
-                                    : `Thêm địa điểm (còn lại ${5 - selectedDistricts.length})`)
+                                    ? `Nhập tối đa ${maxSelections} địa điểm tại ${selectedProvince}. Ví dụ: Quận 1`
+                                    : `Thêm địa điểm (còn lại ${Math.max(0, maxSelections - selectedDistricts.length)})`)
                         }
                         className="flex-1 outline-none text-sm min-w-[220px] placeholder-gray-400 truncate"
                         value={searchTerm}
@@ -158,24 +158,24 @@ function DistrictSelect({ selectedProvince, selectedProvinceId, onDistrictSelect
                                 onRequireProvince();
                             }
                         }}
-                        disabled={selectedDistricts.length >= 5}
+                        disabled={selectedDistricts.length >= maxSelections}
                     />
                 </div>
                 
                 {/* Indicator cho số lượng đã chọn */}
                 <div className="flex items-center mr-3">
                     <span className={`text-xs px-2 py-1 rounded-full ${
-                        selectedDistricts.length >= 5 
+                        selectedDistricts.length >= maxSelections 
                             ? 'bg-red-100 text-red-600' 
                             : 'bg-gray-100 text-gray-600'
                     }`}>
-                        {selectedDistricts.length}/5
+                        {selectedDistricts.length}/{maxSelections}
                     </span>
                 </div>
             </div>
 
             {isOpen && isProvinceSelected && (
-                <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-xl z-[9998] mt-1 max-h-96 overflow-hidden">
+                <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-xl z-40 mt-1 max-h-96 overflow-hidden">
                     {loading ? (
                         <div className="p-4 text-center">
                             <div className="inline-flex items-center">
@@ -269,11 +269,11 @@ function DistrictSelect({ selectedProvince, selectedProvinceId, onDistrictSelect
                                     </div>
                                 )}
 
-                                {/* Thông báo khi đã chọn đủ 5 */}
-                                {selectedDistricts.length >= 5 && (
+                                {/* Thông báo khi đã chọn đủ giới hạn */}
+                                {selectedDistricts.length >= maxSelections && (
                                     <div className="bg-orange-50 border border-orange-200 p-3 rounded-lg">
                                         <div className="text-orange-800 text-sm text-center">
-                                            Bạn đã chọn đủ 5 địa điểm. Hãy bỏ chọn một số địa điểm để thêm địa điểm mới.
+                                            {`Bạn đã chọn đủ ${maxSelections} địa điểm. Hãy bỏ chọn một số địa điểm để thêm địa điểm mới.`}
                                         </div>
                                     </div>
                                 )}

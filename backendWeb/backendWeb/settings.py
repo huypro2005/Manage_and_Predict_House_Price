@@ -59,8 +59,10 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
-    'allauth.socialaccount.providers.google',   
-    'apps.authenticationJWT.apps.AuthenticationjwtConfig'
+    'allauth.socialaccount.providers.google',
+    'apps.authenticationJWT.apps.AuthenticationjwtConfig',
+    'apps.oauth.apps.OAuthConfig',
+    'apps.love_cart.apps.LoveCartConfig'
 ]
 
 MIDDLEWARE = [
@@ -171,7 +173,7 @@ AUTH_USER_MODEL = 'accounts.CustomUser'
 
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
+    'PAGE_SIZE': 12,
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
@@ -192,13 +194,14 @@ MAPBOX_TOKEN = os.environ.get('MAPBOX_TOKEN', 'PUT_YOUR_MAPBOX_TOKEN_HERE')
 # Cors setting
 CORS_ORIGIN_WHITELIST = [
     'http://localhost:3000',
+    'http://localhost:5500'
 ]
 
 # JWT Configs
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -225,5 +228,18 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
 
-cred = credentials.Certificate(os.environ.get("PATH_FIREBASE_ACCOUNT"))
-firebase_admin.initialize_app(cred)
+PATH_ACCOUNT_FIREBASE_SERVICE = os.getenv('PATH_FIREBASE_ACCOUNT')
+
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'SENTINEL_KWARGS': {
+                'socket_timeout': 0.1,
+            },
+        }
+    }
+}

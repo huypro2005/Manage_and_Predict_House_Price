@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { baseUrl, baseUrlImage } from '../base';
+import { baseUrl, ConfigUrl } from '../base';
 import { 
   ArrowLeft, 
   Search, 
@@ -13,7 +13,9 @@ import {
   Filter,
   Grid,
   List,
-  ChevronDown
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 function PropertyList() {
@@ -25,17 +27,18 @@ function PropertyList() {
   const [sortBy, setSortBy] = useState('newest');
   const [showFilters, setShowFilters] = useState(false);
   const [searchParams, setSearchParams] = useState({});
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const itemsPerPage = 12;
+  
   const hasFetched = useRef(false);
 
   // Parse URL parameters and fetch data in one useEffect
   useEffect(() => {
     console.log('PropertyList useEffect triggered, location.search:', location.search);
-    
-    // Prevent multiple API calls
-    if (hasFetched.current) {
-      console.log('Already fetched, skipping...');
-      return;
-    }
     
     const params = new URLSearchParams(location.search);
     const searchParamsObj = {};
@@ -48,21 +51,30 @@ function PropertyList() {
     console.log('Parsed searchParamsObj:', searchParamsObj);
     setSearchParams(searchParamsObj);
     
-    // Fetch properties from API
+    // Reset pagination when search params change
+    setCurrentPage(1);
+    hasFetched.current = false;
+  }, [location.search]);
+
+  // Fetch properties with pagination
+  useEffect(() => {
     const fetchProperties = async () => {
-      console.log('Starting fetchProperties...');
-      hasFetched.current = true;
+      console.log('Starting fetchProperties for page:', currentPage);
       setLoading(true);
       try {
-        // Build API URL with search parameters
+        // Build API URL with search parameters and pagination
         const apiUrl = new URL(`${baseUrl}properties/`);
         
         // Add search parameters to API URL
-        Object.entries(searchParamsObj).forEach(([key, value]) => {
+        Object.entries(searchParams).forEach(([key, value]) => {
           if (value && value !== '') {
             apiUrl.searchParams.append(key, value);
           }
         });
+
+        // Add pagination parameters
+        apiUrl.searchParams.append('page', currentPage.toString());
+        apiUrl.searchParams.append('page_size', itemsPerPage.toString());
 
         console.log('Fetching from API:', apiUrl.toString());
         
@@ -72,30 +84,46 @@ function PropertyList() {
         }
         
         const data = await response.json();
-        console.log('API Response:', data.data);
+        console.log('API Response:', data);
         
-        // Use mock data for now if API doesn't return expected format
+        // Handle API response with pagination
         if (data && data.data) {
           setProperties(data.data);
-          console.log('Properties:', properties);
+          setTotalCount(data.count || 0);
+          setTotalPages(Math.ceil((data.count || 0) / itemsPerPage));
+          console.log('Properties:', data.data);
+          console.log('Total count:', data.count);
+          console.log('Total pages:', Math.ceil((data.count || 0) / itemsPerPage));
         } else {
-          setProperties(mockProperties);
-          console.error('No data found');
-          console.log('Properties:', properties);
+          // Fallback to mock data with pagination simulation
+          const startIndex = (currentPage - 1) * itemsPerPage;
+          const endIndex = startIndex + itemsPerPage;
+          const paginatedMockData = mockProperties.slice(startIndex, endIndex);
+          
+          setProperties(paginatedMockData);
+          setTotalCount(mockProperties.length);
+          setTotalPages(Math.ceil(mockProperties.length / itemsPerPage));
+          console.log('Using mock data with pagination');
         }
       } catch (error) {
         console.error('Error fetching properties:', error);
-        // Fallback to mock data
-        setProperties(mockProperties);
+        // Fallback to mock data with pagination simulation
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const paginatedMockData = mockProperties.slice(startIndex, endIndex);
+        
+        setProperties(paginatedMockData);
+        setTotalCount(mockProperties.length);
+        setTotalPages(Math.ceil(mockProperties.length / itemsPerPage));
       } finally {
         setLoading(false);
       }
     };
 
     fetchProperties();
-  }, [location.search]);
+  }, [currentPage, searchParams]);
 
-  // Mock data for demonstration
+  // Mock data for demonstration (extended for pagination testing)
   const mockProperties = [
     {
       id: 1,
@@ -122,7 +150,7 @@ function PropertyList() {
     {
       id: 3,
       title: 'Nhà riêng 4 tầng tại Thủ Đức',
-      description: "Penthouse sky villa Elysian by Gamuda Land.\r\nVà nhiều siêu phẩm 1 2 3PN.\r\nSiêu phẩm giới hạn diện tích khủng 207 - 332m.\r\n\r\n* Vị trí: 170 đường Lò Lu, Phường Trường Thạnh, TP. Thủ Đức.\r\n- Chủ đầu tư: Gamuda Land Đơn vị phát triển BĐS quốc tế.\r\n- Thiết kế & xây dựng: Hòa Bình Landscape.\r\n\r\n* Thông tin nổi bật:\r\n- Loại hình: Penthouse / Sky Villa.\r\n- Diện tích: 207 - 288 - 332m thiết kế thông tầng cực kỳ đẳng cấp.\r\n- Tầng cao nhất view sông + toàn khu biệt lập cực thoáng.\r\n- Pháp lý: Sở hữu lâu dài cho người Việt.\r\n- Dự kiến bàn giao: 2027.\r\n\r\n- 4 phương án thanh toán linh hoạt tạo nên cách mạng về thanh toán cục giãn như sau:\r\nKí hợp đồng chỉ 5%, 8 tháng sau thanh toán 10%, 8 tháng tiếp theo 15%, Nhận nhà vào quý 3/2027.\r\n\r\n* Ưu đãi miễn phí quản lý đến 5 năm.\r\n* Ký HĐMB trong tháng 8 chiết khấu 5%.\r\n* Chiết khấu tốt nhất dành cho khách thanh toán chuẩn.\r\n* Ngân hàng hỗ trợ tối đa 70% giá trị căn hộ.\r\n* BIDV, Hongleong Bank, MBV Bank, Public Bank, Vietcombank, Vietin Bank.\r\n\r\n- Đặc quyền sống xanh sống chất:\r\nCông viên nội khu lớn hồ bơi dài 50m sky garden trên cao.\r\nKhu trung tâm thương mại nhà trẻ quốc tế gym spa.\r\nQuần thể khép kín, an ninh 3 lớp.",
+      description: 'Penthouse sky villa Elysian by Gamuda Land với diện tích 207-332m²',
       price: '25',
       area_m2: '200',
       address: 'Thủ Đức, Thành phố Hồ Chí Minh',
@@ -149,69 +177,124 @@ function PropertyList() {
     navigate('/');
   };
 
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    // Scroll to top when page changes
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      handlePageChange(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      handlePageChange(currentPage + 1);
+    }
+  };
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      // Show all pages if total is small
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Show limited pages with ellipsis
+      if (currentPage <= 3) {
+        // Near start
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        // Near end
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        // Middle
+        pages.push(1);
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
+  };
+
   const PropertyCard = ({ property }) => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer"
+      className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer h-full flex flex-col"
       onClick={() => navigate(`/property/${property.id}`)}
     >
       {/* Property Image */}
-      <div className="relative h-48">
+      <div className="relative h-48 flex-shrink-0">
         <img
-          src={baseUrlImage + property.thumbnail}
+          src={ConfigUrl(property.thumbnail)}
           alt={property.title}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
         
-        
-
         {/* Favorite Button */}
         <button 
-          className="absolute top-4 right-4 text-white hover:text-red-500 transition-colors"
+          className="absolute top-3 right-3 text-white hover:text-red-500 transition-colors z-10"
           onClick={(e) => e.stopPropagation()}
         >
-          <Heart className="h-6 w-6" />
+          <Heart className="h-5 w-5" />
         </button>
 
-
         {/* Views */}
-        <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1">
-          <span className="text-sm text-gray-700">{property.views} lượt xem</span>
+        <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1">
+          <span className="text-xs text-gray-700 font-medium">{property.views} lượt xem</span>
         </div>
       </div>
 
       {/* Property Details */}
-      <div className="p-4">
-        <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
+      <div className="p-4 flex-1 flex flex-col">
+        <h3 className="text-base font-bold text-gray-900 mb-2 line-clamp-2 min-h-[2.5rem]">
           {property.title || ''}
         </h3>
-        <p className="text-gray-600 text-sm mb-3 line-clamp-1">
-          {/* limit 1 line */}
-          {property.description ? property.description.slice(0, 100) : ''}
+        
+        <p className="text-gray-600 text-sm mb-3 line-clamp-2 min-h-[2rem] flex-shrink-0">
+          {property.description ? property.description.slice(0, 60) : ''}
         </p>
         
-        <div className="flex justify-between items-center mb-3">
-          <div className="flex items-center space-x-4">
-            <div className="text-lg font-bold text-red-600">{property.price || 0}</div>
-            <div className="text-gray-600 flex items-center">
+        <div className="flex justify-between items-center mb-3 flex-shrink-0">
+          <div className="flex items-center space-x-3">
+            <div className="text-base font-bold text-red-600">{property.price || 0}</div>
+            <div className="text-gray-600 flex items-center text-sm">
               <Square className="h-4 w-4 mr-1" />
               {property.area_m2 || 0} m²
             </div>
           </div>
         </div>
 
-        <div className="flex items-center text-sm text-gray-500 mb-3">
-          <MapPin className="h-4 w-4 mr-1" />
+        <div className="flex items-center text-sm text-gray-500 mb-2 flex-shrink-0">
+          <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
           <span className="line-clamp-1">{property.address || ''}</span>
         </div>
 
-                  <div className="text-xs text-gray-500 mb-3">
-            {property.time || ''}
-          </div>
-
-    
+        <div className="text-xs text-gray-500 mt-auto">
+          {property.time || ''}
+        </div>
       </div>
     </motion.div>
   );
@@ -225,46 +308,43 @@ function PropertyList() {
     >
       <div className="flex">
         {/* Property Image */}
-        <div className="relative w-48 h-32 flex-shrink-0">
+        <div className="relative w-36 h-24 md:w-48 md:h-32 flex-shrink-0">
           <img
-            src={baseUrlImage + property.thumbnail}
+            src={ConfigUrl(property.thumbnail)}
             alt={property.title}
             className="w-full h-full object-cover"
           />
-          <div className="absolute top-2 right-2">
-            <button 
-              className="text-white hover:text-red-500 transition-colors"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Heart className="h-5 w-5" />
-            </button>
-          </div>
+          <button 
+            className="absolute top-2 right-2 text-white hover:text-red-500 transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Heart className="h-5 w-5" />
+          </button>
         </div>
 
         {/* Property Details */}
         <div className="flex-1 p-4">
-          <div className="flex justify-between items-start mb-2">
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-gray-900 mb-1">
+          <div className="flex justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base md:text-lg font-bold text-gray-900 mb-1 line-clamp-2">
                 {property.title || ''}
               </h3>
-                             <p className="text-gray-600 text-sm mb-2">
-                 {property.description ? property.description.slice(0, 150) : ''}
-               </p>
+              <p className="text-gray-600 text-sm md:text-[15px] mb-2 line-clamp-2">
+                {property.description || ''}
+              </p>
+              <div className="flex items-center text-sm text-gray-500">
+                <MapPin className="h-4 w-4 mr-1 flex-shrink-0" />
+                <span className="truncate">{property.address || ''}</span>
+              </div>
             </div>
-            <div className="text-right">
-              <div className="text-xl font-bold text-red-600">{property.price || 0}</div>
-              <div className="text-sm text-gray-500">{property.area_m2 || 0} m²</div>
+            <div className="text-right flex-shrink-0">
+              <div className="text-lg md:text-xl font-bold text-red-600">{property.price || 0}</div>
+              <div className="text-xs md:text-sm text-gray-500 flex items-center justify-end"><Square className="h-4 w-4 mr-1" />{property.area_m2 || 0} m²</div>
             </div>
           </div>
 
-          <div className="flex items-center text-sm text-gray-500 mb-2">
-            <MapPin className="h-4 w-4 mr-1" />
-            <span>{property.address || ''}</span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4 text-sm text-gray-500">
+          <div className="mt-2 flex items-center justify-between text-xs md:text-sm text-gray-500">
+            <div className="flex items-center space-x-3">
               <span>{property.time || ''}</span>
               <div className="flex items-center">
                 <Star className="h-4 w-4 text-yellow-500 fill-current mr-1" />
@@ -272,7 +352,7 @@ function PropertyList() {
               </div>
               <span>{property.views || 0} lượt xem</span>
             </div>
-            <div className="text-xs text-gray-500">
+            <div className="hidden sm:block text-xs text-gray-500">
               {property.brand || ''}
             </div>
           </div>
@@ -308,7 +388,7 @@ function PropertyList() {
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Kết quả tìm kiếm</h1>
                 <p className="text-sm text-gray-500">
-                  {properties.length} bất động sản được tìm thấy
+                  {totalCount > 0 ? `${totalCount} bất động sản được tìm thấy` : 'Đang tải...'}
                 </p>
               </div>
             </div>
@@ -387,7 +467,7 @@ function PropertyList() {
 
         {/* Property List */}
         {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {properties.map((property) => (
               <PropertyCard key={property.id} property={property} />
             ))}
@@ -400,12 +480,65 @@ function PropertyList() {
           </div>
         )}
 
-        {/* Load More Button */}
-        <div className="flex justify-center mt-8">
-          <button className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-lg font-medium transition-colors">
-            Xem thêm
-          </button>
-        </div>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center mt-8">
+            <div className="flex items-center space-x-2 bg-white rounded-lg shadow-md px-4 py-2">
+              {/* Previous Button */}
+              <button
+                onClick={handlePreviousPage}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-lg transition-colors ${
+                  currentPage === 1
+                    ? 'text-gray-400 cursor-not-allowed'
+                    : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
+                }`}
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+
+              {/* Page Numbers */}
+              {getPageNumbers().map((page, index) => (
+                <React.Fragment key={index}>
+                  {page === '...' ? (
+                    <span className="px-3 py-2 text-gray-500">...</span>
+                  ) : (
+                    <button
+                      onClick={() => handlePageChange(page)}
+                      className={`px-3 py-2 rounded-lg font-medium transition-colors ${
+                        currentPage === page
+                          ? 'bg-red-600 text-white'
+                          : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )}
+                </React.Fragment>
+              ))}
+
+              {/* Next Button */}
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded-lg transition-colors ${
+                  currentPage === totalPages
+                    ? 'text-gray-400 cursor-not-allowed'
+                    : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
+                }`}
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Pagination Info */}
+        {totalCount > 0 && (
+          <div className="text-center mt-4 text-sm text-gray-600">
+            Hiển thị {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalCount)} trong tổng số {totalCount} bất động sản
+          </div>
+        )}
       </div>
     </div>
   );

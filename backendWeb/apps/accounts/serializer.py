@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import CustomUser
 from django.contrib.auth.hashers import make_password
+from apps.utils import upload_to_app_model
 
 class CustomUserV1Serializer(serializers.ModelSerializer):
     class Meta:
@@ -23,5 +24,15 @@ class CustomUserV1Serializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         if password is not None:
             instance.set_password(password)
+        instance.save()
+        return instance
+
+class CustomUserUpdateAvatarSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['avatar']
+
+    def update(self, instance, validated_data):
+        instance.avatar = validated_data.get('avatar', instance.avatar)
         instance.save()
         return instance

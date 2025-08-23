@@ -5,7 +5,7 @@ import DistrictSelect from './DistrictSelect';
 
 const provinceUrl = baseUrl + 'provinces/';
 
-function LocationSelect({ onProvinceSelect, onDistrictSelect }) {
+function LocationSelect({ onProvinceSelect, onDistrictSelect, maxDistrictSelections = 5 }) {
     const [provinces, setProvinces] = useState([]);
     const [selectedProvince, setSelectedProvince] = useState('');
     const [selectedProvinceId, setSelectedProvinceId] = useState(null);
@@ -99,28 +99,22 @@ function LocationSelect({ onProvinceSelect, onDistrictSelect }) {
     // Loading state với thông tin debug
     if (loading) {
         return (
-            <div className="relative">
-                <div className="flex items-center px-4 py-3 border-r border-gray-300 bg-gray-50 min-w-[200px]">
+            <div className="relative w-full">
+                <div className="flex items-center px-4 py-3 bg-gray-50 w-full">
                     <MapPin className="h-5 w-5 text-gray-400 mr-2" />
                     <span className="text-gray-400">Đang tải tỉnh thành...</span>
                     <div className="ml-2 w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
-                </div>
-                {/* Debug info - có thể bỏ sau khi fix */}
-                <div className="absolute top-full left-0 right-0 bg-yellow-50 border border-yellow-200 p-2 text-xs text-yellow-800 z-50">
-                    Loading: {loading ? 'true' : 'false'} | 
-                    Provinces: {provinces.length} | 
-                    Selected: {selectedProvince || 'none'}
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex w-full">
+        <div className="flex flex-col md:flex-row w-full">
             {/* Province Selector */}
-            <div className="relative z-50 w-[250px]" ref={dropdownRef}>
+            <div className="relative z-10 w-full md:w-[260px]" ref={dropdownRef}>
                 <div 
-                    className="flex items-center px-4 py-3 border-r border-gray-300 bg-gray-50 min-w-[250px] cursor-pointer hover:bg-gray-100 transition-colors"
+                    className="flex items-center px-4 py-3 md:border-r border-b md:border-b-0 border-gray-300 bg-gray-50 md:min-w-[260px] cursor-pointer hover:bg-gray-100 transition-colors"
                     onClick={() => setIsOpen(!isOpen)}
                 >
                     <MapPin className="h-5 w-5 text-gray-500 mr-2" />
@@ -131,7 +125,7 @@ function LocationSelect({ onProvinceSelect, onDistrictSelect }) {
                 </div>
                 
                 {isOpen && (
-                    <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-xl z-[9999] max-h-60 overflow-y-auto">
+                    <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-xl z-40 max-h-60 overflow-y-auto">
                         <div className="p-2">
                             <div className="px-3 py-2 text-sm font-medium text-gray-500 border-b border-gray-200">
                                 Tất cả tỉnh thành ({provinces.length})
@@ -188,6 +182,7 @@ function LocationSelect({ onProvinceSelect, onDistrictSelect }) {
                     onClose={handleDistrictClose}
                     onRequireProvince={openProvinceDropdown}
                     isProvinceSelected={Boolean(selectedProvinceId) && selectedProvince !== 'Chọn tỉnh thành'}
+                    maxSelections={maxDistrictSelections}
                 />
             </div>
         </div>

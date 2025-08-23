@@ -197,7 +197,7 @@ function PropertyTypeSelect({ onPropertyTypeSelect }) {
 
                 {/* Dropdown menu */}
                 {isOpen && (
-                    <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-xl z-50 mt-1 max-h-60 overflow-y-auto">
+                    <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-xl z-40 mt-1 max-h-60 overflow-y-auto">
                         <div className="p-2">
                             {/* Tất cả option */}
                             <div 

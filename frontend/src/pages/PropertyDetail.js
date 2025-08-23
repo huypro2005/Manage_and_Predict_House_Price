@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
-import { baseUrl, baseUrlImage } from '../base';
+import { baseUrl, ConfigUrl } from '../base';
+import PropertyMap from '../components/PropertyMap';
+import AuthWrapper from '../components/auth/AuthWrapper';
+import UserDropdown from '../components/auth/UserDropdown';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   ArrowLeft, 
   MapPin, 
@@ -26,16 +30,31 @@ import {
   FileText,
   Facebook,
   Instagram,
-  Twitter
+  Twitter,
+  Send
 } from 'lucide-react';
 
 function PropertyDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { isAuthenticated } = useAuth();
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  // Image modal (lightbox) state
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [modalImageIndex, setModalImageIndex] = useState(0);
+  const [zoomScale, setZoomScale] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [contactMessage, setContactMessage] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [contactInfo, setContactInfo] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    content: ''
+  });
 
   const navigationItems = [
         { id: 'ban', label: 'Nhà đất bán' },
@@ -78,6 +97,20 @@ function PropertyDetail() {
     navigate(-1);
   };
 
+  const handleUserClick = () => {
+    if (property?.username) {
+      navigate(`/my-properties?username=${property.username}`);
+    }
+  };
+  
+  const handelNavigateToPostProperty = () => {
+    if (!isAuthenticated) {
+      alert('Vui lòng đăng nhập để đăng tin!');
+      return;
+    }
+    navigate('/post-property');
+  };
+
   const nextImage = () => {
     if (property?.images && property.images.length > 0) {
       setCurrentImageIndex((prev) => 
@@ -94,6 +127,34 @@ function PropertyDetail() {
     }
   };
 
+  // Lightbox helpers
+  const openImageModal = (index) => {
+    setModalImageIndex(index);
+    setZoomScale(1);
+    setIsImageModalOpen(true);
+  };
+
+  const closeImageModal = () => {
+    setIsImageModalOpen(false);
+    setZoomScale(1);
+  };
+
+  const modalNext = () => {
+    if (!property?.images?.length) return;
+    setModalImageIndex((prev) => (prev === property.images.length - 1 ? 0 : prev + 1));
+    setZoomScale(1);
+  };
+
+  const modalPrev = () => {
+    if (!property?.images?.length) return;
+    setModalImageIndex((prev) => (prev === 0 ? property.images.length - 1 : prev - 1));
+    setZoomScale(1);
+  };
+
+  const zoomIn = () => setZoomScale((z) => Math.min(3, +(z + 0.25).toFixed(2)));
+  const zoomOut = () => setZoomScale((z) => Math.max(1, +(z - 0.25).toFixed(2)));
+  const resetZoom = () => setZoomScale(1);
+
   const formatPrice = (price) => {
     if (!price) return '0';
     const numPrice = parseFloat(price);
@@ -106,6 +167,100 @@ function PropertyDetail() {
   const formatArea = (area) => {
     if (!area) return '0';
     return `${parseFloat(area).toFixed(0)} m²`;
+  };
+
+  // Xử lý nút liên hệ
+  const handleContactClick = () => {
+    if (!isAuthenticated) {
+      // Nếu chưa đăng nhập, chuyển đến trang đăng nhập
+      alert('Vui lòng đăng nhập để liên hệ!');
+      return;
+    }
+    // Nếu đã đăng nhập, hiển thị form liên hệ
+    setShowContactForm(true);
+  };
+
+  // Xử lý gửi tin nhắn liên hệ
+  const handleSendMessage = async () => {
+    // Kiểm tra các trường bắt buộc
+    if (!contactInfo.name.trim()) {
+      alert('Vui lòng nhập tên của bạn!');
+      return;
+    }
+    if (!contactInfo.phone.trim()) {
+      alert('Vui lòng nhập số điện thoại!');
+      return;
+    }
+    if (!contactInfo.content.trim()) {
+      alert('Vui lòng nhập nội dung tin nhắn!');
+      return;
+    }
+
+    // Tạo message tổng hợp
+    const fullMessage = `
+Thông tin liên hệ:
+- Tên: ${contactInfo.name}
+- Số điện thoại: ${contactInfo.phone}
+- Email: ${contactInfo.email || 'Không có'}
+
+Nội dung tin nhắn:
+${contactInfo.content}
+    `.trim();
+
+    setSendingMessage(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Vui lòng đăng nhập để liên hệ!');
+        return;
+      }
+      
+      console.log('Token:', token);
+      console.log('Property ID:', id);
+      console.log('Full Message:', fullMessage);
+      
+      const response = await fetch(`${baseUrl}contact-requests/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          property: id,
+          message: fullMessage
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Contact request sent:', data);
+      
+      alert('Tin nhắn đã được gửi thành công!');
+      setContactInfo({ name: '', phone: '', email: '', content: '' });
+      setShowContactForm(false);
+    } catch (error) {
+      console.error('Error sending contact request:', error);
+      alert('Có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại!');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  // Đóng form liên hệ
+  const handleCloseContactForm = () => {
+    setShowContactForm(false);
+    setContactInfo({ name: '', phone: '', email: '', content: '' });
+  };
+
+  // Xử lý thay đổi thông tin liên hệ
+  const handleContactInfoChange = (field, value) => {
+    setContactInfo(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   if (loading) {
@@ -163,26 +318,29 @@ function PropertyDetail() {
               ))}
             </nav>
 
-         {/* Header Actions (match App.js) */}
-            <div className="flex items-center space-x-4">
-              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                <Heart className="h-5 w-5" />
-              </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                <Bell className="h-5 w-5" />
-              </button>
-              <button className="text-gray-600 hover:text-gray-900 font-medium">
-                Đăng Nhập
-              </button>
-              <button className="text-gray-600 hover:text-gray-900 font-medium">
-                Đăng Ký
-              </button>
-              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                Đăng tin
-              </button>
-              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                Dự đoán giá
-              </button>
+         {/* Header Actions - desktop vs mobile */}
+            <div className="flex items-center space-x-3">
+              <div className="hidden sm:flex items-center space-x-3">
+                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                  <Heart className="h-5 w-5" />
+                </button>
+                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                  <Bell className="h-5 w-5" />
+                </button>
+                <AuthWrapper />
+                <button className="hidden md:inline-flex bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors" onClick={handelNavigateToPostProperty}>
+                  Đăng tin
+                </button>
+                <button className="hidden lg:inline-flex bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                  Dự đoán giá
+                </button>
+              </div>
+              {/* Mobile user avatar */}
+              {isAuthenticated && (
+                <div className="sm:hidden">
+                  <UserDropdown />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -199,9 +357,10 @@ function PropertyDetail() {
                 {property.images && property.images.length > 0 ? (
                   <>
                     <img
-                      src={baseUrlImage + property.images[currentImageIndex].image}
+                      src={ConfigUrl(property.images[currentImageIndex].image)}
                       alt={property.title}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover cursor-zoom-in"
+                      onClick={() => openImageModal(currentImageIndex)}
                     />
                     
                     {/* Navigation Arrows */}
@@ -249,7 +408,7 @@ function PropertyDetail() {
                         }`}
                       >
                         <img
-                          src={baseUrlImage + image.image}
+                          src={ConfigUrl(image.image)}
                           alt={`Thumbnail ${index + 1}`}
                           className="w-full h-full object-cover"
                         />
@@ -277,7 +436,7 @@ function PropertyDetail() {
                 </div>
                 <div className="flex items-center">
                   <Clock className="h-4 w-4 mr-1" />
-                  <span>Cập nhật {new Date(property.updated_at).toLocaleDateString('vi-VN')}</span>
+                  <span>Đăng ngày {new Date(property.created_at).toLocaleDateString('vi-VN')}</span>
                 </div>
               </div>
 
@@ -383,42 +542,55 @@ function PropertyDetail() {
             </div>
               </div>
 
-              {/* Map section moved to left column */}
+              {/* Map section */}
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Xem trên bản đồ</h3>
-                <div className="bg-gray-100 rounded-lg h-80 flex items-center justify-center">
-                  <div className="text-center text-gray-500">
-                    <MapPin className="h-12 w-12 mx-auto mb-2" />
-                    <p>Bản đồ sẽ được hiển thị tại đây</p>
-                  </div>
-                </div>
+                <PropertyMap property={property} formatPrice={formatPrice} />
               </div>
             </div>
 
             {/* Right Column - Contact and Actions (Sticky) */}
             <div className="lg:sticky lg:top-0 space-y-6 h-fit">
-            {/* Agent Info */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Thông tin liên hệ</h3>
-              <div className="text-center">
-                <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-3 flex items-center justify-center">
-                  <User className="h-8 w-8 text-gray-500" />
+              {/* Agent Info */}
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Thông tin liên hệ</h3>
+                <div className="flex items-center sm:flex-col sm:text-center gap-3">
+                  <div 
+                    className="w-12 h-12 sm:w-16 sm:h-16 rounded-full ring-2 ring-gray-200 overflow-hidden bg-gray-100 flex items-center justify-center text-gray-600 cursor-pointer hover:ring-gray-300 transition-all"
+                    onClick={handleUserClick}
+                  >
+                    <User className="h-6 w-6 sm:h-8 sm:w-8" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-900">Chủ sở hữu</div>
+                    <div 
+                      className="text-sm text-gray-500 truncate cursor-pointer hover:text-gray-700 transition-colors"
+                      onClick={handleUserClick}
+                    >
+                      {property.user_fullname}
+                    </div>
+                    <div className="mt-2 space-y-1 text-sm">
+                      <div className="flex items-center sm:justify-center text-gray-600">
+                        <Phone className="h-4 w-4 mr-2 text-gray-400" />
+                        <span className="truncate">{property.user_phone || 'N/A'}</span>
+                      </div>
+                      <div className="flex items-center sm:justify-center text-gray-600">
+                        <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                        <span className="truncate">{property.user_email || 'N/A'}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="font-medium text-gray-900 mb-1">Chủ sở hữu</div>
-                <div className="text-sm text-gray-500 mb-4">{property.user_fullname}</div>
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-center">
-                    <Phone className="h-4 w-4 mr-2 text-gray-400" />
-                    <span className="text-gray-600">{property.user_phone || 'N/A'}</span>
-                  </div>
-                  <div className="flex items-center justify-center">
-                    <Mail className="h-4 w-4 mr-2 text-gray-400" />
-                    <span className="text-gray-600">{property.user_email || 'N/A'}</span>
-                  </div>
+                <div className="mt-4 flex justify-center">
+                  <button 
+                    onClick={handleContactClick}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center justify-center"
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    <span>Liên hệ</span>
+                  </button>
                 </div>
               </div>
-            </div>
           </div>
         </div>
 
@@ -501,6 +673,152 @@ function PropertyDetail() {
           </div>
         </div>
       </footer>
+
+             {/* Contact Form Modal */}
+      {showContactForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Gửi tin nhắn liên hệ</h3>
+              <button
+                onClick={handleCloseContactForm}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600 mb-1">
+                <span className="font-medium">Bất động sản:</span> {property?.title}
+              </p>
+              <p className="text-sm text-gray-600">
+                <span className="font-medium">Chủ sở hữu:</span> {property?.user_fullname}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Thông tin cá nhân */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tên của bạn *
+                </label>
+                <input
+                  type="text"
+                  value={contactInfo.name}
+                  onChange={(e) => handleContactInfoChange('name', e.target.value)}
+                  placeholder="Nhập tên của bạn"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  disabled={sendingMessage}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Số điện thoại *
+                </label>
+                <input
+                  type="tel"
+                  value={contactInfo.phone}
+                  onChange={(e) => handleContactInfoChange('phone', e.target.value)}
+                  placeholder="Nhập số điện thoại"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  disabled={sendingMessage}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email (tùy chọn)
+                </label>
+                <input
+                  type="email"
+                  value={contactInfo.email}
+                  onChange={(e) => handleContactInfoChange('email', e.target.value)}
+                  placeholder="Nhập email của bạn"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  disabled={sendingMessage}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nội dung tin nhắn *
+                </label>
+                <textarea
+                  value={contactInfo.content}
+                  onChange={(e) => handleContactInfoChange('content', e.target.value)}
+                  placeholder="Nhập nội dung tin nhắn bạn muốn gửi đến chủ sở hữu..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                  rows={4}
+                  disabled={sendingMessage}
+                />
+              </div>
+            </div>
+
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={handleCloseContactForm}
+                disabled={sendingMessage}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSendMessage}
+                disabled={sendingMessage || !contactInfo.name.trim() || !contactInfo.phone.trim() || !contactInfo.content.trim()}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center"
+              >
+                {sendingMessage ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Đang gửi...
+                  </>
+                ) : (
+                  'Gửi tin nhắn'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Modal (Lightbox with Zoom) */}
+      {isImageModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" onClick={closeImageModal}>
+          <div className="relative w-full max-w-5xl h-[80vh]" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={ConfigUrl(property.images[modalImageIndex].image)}
+              alt={`Image ${modalImageIndex + 1}`}
+              className="w-full h-full object-contain select-none"
+              style={{ transform: `scale(${zoomScale})`, transition: 'transform 150ms ease' }}
+            />
+            {/* Controls */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/10 rounded-full px-3 py-2">
+              <button onClick={zoomOut} className="px-3 py-1 text-white hover:text-yellow-300">-</button>
+              <span className="text-white text-sm w-10 text-center">{Math.round(zoomScale * 100)}%</span>
+              <button onClick={zoomIn} className="px-3 py-1 text-white hover:text-yellow-300">+</button>
+              <button onClick={resetZoom} className="ml-2 px-2 py-1 text-white/80 hover:text-white text-xs">Reset</button>
+            </div>
+            {property.images.length > 1 && (
+              <>
+                <button onClick={modalPrev} className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full">
+                  <ChevronLeft className="h-6 w-6" />
+                </button>
+                <button onClick={modalNext} className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full">
+                  <ChevronRight className="h-6 w-6" />
+                </button>
+              </>
+            )}
+            <button onClick={closeImageModal} className="absolute top-4 right-4 text-white/80 hover:text-white">Đóng</button>
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm">
+              {modalImageIndex + 1} / {property.images.length}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
