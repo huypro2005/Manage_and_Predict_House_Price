@@ -13,7 +13,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
 });
 
-const PropertyMap = ({ property, formatPrice }) => {
+const PropertyMap = ({ property, formatPrice, lat, lng, onMapClick, showMarker = false }) => {
   const [mapError, setMapError] = React.useState(false);
   const [mapLoaded, setMapLoaded] = React.useState(false);
   const mapRef = useRef(null);
@@ -27,8 +27,19 @@ const PropertyMap = ({ property, formatPrice }) => {
     }
   }, []);
 
+  // Determine coordinates - either from props or property object
+  let coordinates = null;
+  if (lat && lng) {
+    coordinates = { lat: parseFloat(lat), lng: parseFloat(lng) };
+  } else if (property && property.coord_x && property.coord_y) {
+    coordinates = { 
+      lat: parseFloat(property.coord_x), 
+      lng: parseFloat(property.coord_y) 
+    };
+  }
+
   // Kiểm tra xem có tọa độ không
-  if (!property.coord_x || !property.coord_y) {
+  if (!coordinates) {
     return (
       <div className="property-map-fallback">
         <div className="property-map-fallback-content">
@@ -39,9 +50,17 @@ const PropertyMap = ({ property, formatPrice }) => {
     );
   }
 
-  // Parse tọa độ
-  const lat = parseFloat(property.coord_x);
-  const lng = parseFloat(property.coord_y);
+  // Kiểm tra tọa độ hợp lệ
+  if (isNaN(coordinates.lat) || isNaN(coordinates.lng)) {
+    return (
+      <div className="property-map-fallback">
+        <div className="property-map-fallback-content">
+          <MapPin className="h-12 w-12 mx-auto mb-2" />
+          <p>Tọa độ không hợp lệ</p>
+        </div>
+      </div>
+    );
+  }
 
 
   // Kiểm tra tọa độ hợp lệ
@@ -96,13 +115,14 @@ const PropertyMap = ({ property, formatPrice }) => {
       )}
       <MapContainer
         ref={mapRef}
-        center={[lat, lng]}
+        center={[coordinates.lat, coordinates.lng]}
         zoom={15}
         style={{ height: '100%', width: '100%' }}
         scrollWheelZoom={false}
         zoomControl={true}
         attributionControl={true}
         whenReady={handleMapLoad}
+        onClick={onMapClick ? (e) => onMapClick(e.latlng.lat, e.latlng.lng) : undefined}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -111,28 +131,30 @@ const PropertyMap = ({ property, formatPrice }) => {
             error: handleMapError
           }}
         />
-        <Marker position={[lat, lng]}>
-          <Popup>
-            <div className="text-center">
-              <h4 className="font-semibold text-gray-900 text-sm">
-                {property.title || 'Bất động sản'}
-              </h4>
-              <p className="text-xs text-gray-600 mt-1">
-                {property.address || 'Không có địa chỉ'}
-              </p>
-              {property.price && (
-                <p className="text-xs font-medium text-red-600 mt-1">
-                  {formatPrice(property.price)}
+        {showMarker && (
+          <Marker position={[coordinates.lat, coordinates.lng]}>
+            <Popup>
+              <div className="text-center">
+                <h4 className="font-semibold text-gray-900 text-sm">
+                  {property?.title || 'Vị trí đã chọn'}
+                </h4>
+                <p className="text-xs text-gray-600 mt-1">
+                  {property?.address || 'Tọa độ: ' + coordinates.lat.toFixed(4) + ', ' + coordinates.lng.toFixed(4)}
                 </p>
-              )}
-              {property.area_m2 && (
-                <p className="text-xs text-gray-500 mt-1">
-                  {parseFloat(property.area_m2).toFixed(0)} m²
-                </p>
-              )}
-            </div>
-          </Popup>
-        </Marker>
+                {property?.price && (
+                  <p className="text-xs font-medium text-red-600 mt-1">
+                    {formatPrice ? formatPrice(property.price) : property.price}
+                  </p>
+                )}
+                {property?.area_m2 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {parseFloat(property.area_m2).toFixed(0)} m²
+                  </p>
+                )}
+              </div>
+            </Popup>
+          </Marker>
+        )}
       </MapContainer>
     </div>
   );

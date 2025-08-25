@@ -62,7 +62,10 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
     'apps.authenticationJWT.apps.AuthenticationjwtConfig',
     'apps.oauth.apps.OAuthConfig',
-    'apps.love_cart.apps.LoveCartConfig'
+    'apps.love_cart.apps.LoveCartConfig',
+    'channels',
+    'apps.news.apps.NewsConfig',
+    'ckeditor'
 ]
 
 MIDDLEWARE = [
@@ -243,3 +246,6 @@ CACHES = {
         }
     }
 }
+
+
+ASGI_APPLICATION = "backendWeb.asgi.application"

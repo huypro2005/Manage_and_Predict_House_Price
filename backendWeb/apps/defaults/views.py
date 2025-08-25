@@ -16,8 +16,6 @@ from apps.permission import IsAdminOrReadOnly
 class PropertyTypeListView(APIView):
     permission_classes = [IsAdminOrReadOnly]
 
-
-
     @method_decorator(cache_page(60 * 40))  # Cache for 40 minutes
     def get(self, request):
         property_types = PropertyType.objects.all()

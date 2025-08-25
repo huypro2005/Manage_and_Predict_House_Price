@@ -11,16 +11,20 @@ import { Building2,
   Phone, 
   Mail,
   ChevronLeft,
-  ChevronRight } from 'lucide-react';
+  ChevronRight,
+  Search,
+  Bell,
+  Heart } from 'lucide-react';
 import AuthWrapper from '../components/auth/AuthWrapper';
 import { useAuth } from '../contexts/AuthContext';
 
 function MyProperties() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, handleApiResponse } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [favoriteIds, setFavoriteIds] = useState([]);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -28,6 +32,67 @@ function MyProperties() {
   const [totalPages, setTotalPages] = useState(0);
   const [user_search, setUser_search] = useState(null);
   const itemsPerPage = 12;
+  
+  // Fetch favorite IDs
+  const fetchFavoriteIds = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const res = await fetch(`${baseUrl}favorites/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const apiCheck = await handleApiResponse(res);
+      if (apiCheck.expired) {
+        return;
+      }
+      
+      const data = await res.json();
+      setFavoriteIds(data.data || []);
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+    }
+  };
+
+  // Toggle favorite
+  const toggleFavorite = async (propertyId) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const isFavorite = favoriteIds.includes(propertyId);
+      const url = isFavorite ? `${baseUrl}favorites/${propertyId}/` : `${baseUrl}favorites/`;
+      const method = isFavorite ? 'DELETE' : 'POST';
+      const body = isFavorite ? null : JSON.stringify({ property_id: propertyId });
+      
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        ...(body && { body })
+      });
+      
+      const apiCheck = await handleApiResponse(res);
+      if (apiCheck.expired) {
+        return;
+      }
+      
+      if (res.ok) {
+        setFavoriteIds(prev => {
+          if (isFavorite) {
+            return prev.filter(id => id !== propertyId);
+          } else {
+            return [...prev, propertyId];
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
   
   useEffect(() => {
     const fetchData = async () => {
@@ -58,6 +123,13 @@ function MyProperties() {
         const res = await fetch(apiUrl.toString(), {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
+        
+        // Check for token expiration
+        const apiCheck = await handleApiResponse(res);
+        if (apiCheck.expired) {
+          return; // handleApiResponse already redirected
+        }
+        
         const data = await res.json();
         
         const propertyData = Array.isArray(data.data) ? data.data : (Array.isArray(data.results) ? data.results : []);
@@ -75,6 +147,7 @@ function MyProperties() {
 
     if (!authLoading) {
       fetchData();
+      fetchFavoriteIds();
     }
   }, [authLoading, user, currentPage, location.search, user_search]);
 
@@ -82,7 +155,17 @@ function MyProperties() {
     if (!window.confirm('Xóa bất động sản này?')) return;
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${baseUrl}properties/${id}/`, { method: 'DELETE', headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const res = await fetch(`${baseUrl}properties/${id}/`, { 
+        method: 'DELETE', 
+        headers: token ? { Authorization: `Bearer ${token}` } : {} 
+      });
+      
+      // Check for token expiration
+      const apiCheck = await handleApiResponse(res);
+      if (apiCheck.expired) {
+        return; // handleApiResponse already redirected
+      }
+      
       setItems((prev) => prev.filter((x) => x.id !== id));
     } catch (e) {}
   };
@@ -151,9 +234,67 @@ function MyProperties() {
               </div>
               <h1 className="text-xl font-bold text-gray-900">RealEstate</h1>
             </div>
-            <div className="hidden md:flex items-center space-x-6">
-              <AuthWrapper />
-              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium" onClick={() => navigate('/post-property')}>Đăng tin</button>
+            <div className="flex items-center space-x-2">
+              {/* Desktop Actions */}
+              <div className="hidden sm:flex items-center space-x-3">
+                {/* Heart Icon */}
+                <button 
+                  className="p-2 text-gray-600 hover:text-red-500 transition-colors relative"
+                  onClick={() => navigate('/favorites')}
+                  aria-label="Yêu thích"
+                >
+                  <Heart className="h-5 w-5" />
+                  {favoriteIds.length > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
+                      {favoriteIds.length > 9 ? '9+' : favoriteIds.length}
+                    </div>
+                  )}
+                </button>
+
+
+                {/* Bell Icon */}
+                <button
+                  className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
+                  aria-label="Thông báo"
+                >
+                  <Bell className="h-5 w-5" />
+                </button>
+                
+
+                
+                <AuthWrapper />
+                <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium" onClick={() => navigate('/post-property')}>Đăng tin</button>
+              </div>
+              
+              {/* Mobile Actions */}
+              <div className="flex sm:hidden items-center space-x-2">
+                {/* Bell Icon */}
+                <button
+                  className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
+                  aria-label="Thông báo"
+                >
+                  <Bell className="h-5 w-5" />
+                </button>
+                
+                {/* Heart Icon */}
+                <button 
+                  className="p-2 text-gray-600 hover:text-red-500 transition-colors relative"
+                  onClick={() => navigate('/favorites')}
+                  aria-label="Yêu thích"
+                >
+                  <Heart className="h-5 w-5" />
+                  {favoriteIds.length > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
+                      {favoriteIds.length > 9 ? '9+' : favoriteIds.length}
+                    </div>
+                  )}
+                </button>
+                
+                {/* User Avatar - Always visible on mobile */}
+                <div className="flex items-center">
+                  <AuthWrapper />
+                </div>
+              </div>
             </div>
           </div>
         </div>

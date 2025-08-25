@@ -1,6 +1,35 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { baseUrl } from '../base';
 
+// Utility function to handle token expiration
+const handleTokenExpiration = () => {
+  localStorage.removeItem('token');
+  // Redirect to homepage instead of login page
+  window.location.href = '/';
+};
+
+// Global fetch interceptor to handle token expiration
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+  const response = await originalFetch(...args);
+  
+  // Check if the request includes Authorization header (has token)
+  const url = args[0];
+  const options = args[1] || {};
+  const headers = options.headers || {};
+  
+  // Check if this is an authenticated request
+  const isAuthenticatedRequest = headers.Authorization && headers.Authorization.includes('Bearer');
+  
+  if (isAuthenticatedRequest && (response.status === 401 || response.status === 403)) {
+    // Token expired - handle globally
+    handleTokenExpiration();
+    return response; // Return the original response
+  }
+  
+  return response;
+};
+
 const AuthContext = createContext();
 
 export const useAuth = () => {
@@ -42,10 +71,9 @@ export const AuthProvider = ({ children }) => {
               setUser_fullname(userData.full_name);
             }
           } else if (response.status === 401 || response.status === 403) {
-            // Only clear token on unauthorized/forbidden
-            localStorage.removeItem('token');
-            setToken(null);
-            setUser(null);
+            // Token expired or invalid - logout and redirect to homepage
+            handleTokenExpiration();
+            return; // Exit early since we're redirecting
           } else {
             // Keep token on other errors (e.g., 404 if no check endpoint)
           }
@@ -194,6 +222,16 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  // Function to handle API responses and check for token expiration
+  const handleApiResponse = async (response) => {
+    if (response.status === 401 || response.status === 403) {
+      // Token expired or invalid - logout and redirect to homepage
+      handleTokenExpiration();
+      return { expired: true };
+    }
+    return { expired: false, response };
+  };
+
   const updateUser = (userData) => {
     setUser(userData);
   };
@@ -207,6 +245,7 @@ export const AuthProvider = ({ children }) => {
     googleLogin,
     logout,
     updateUser,
+    handleApiResponse,
     isAuthenticated: !!token,
   };
 

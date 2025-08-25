@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { baseUrl, ConfigUrl } from '../base';
+import AuthWrapper from '../components/auth/AuthWrapper';
 import { 
   ArrowLeft, 
   Search, 
@@ -15,7 +16,8 @@ import {
   List,
   ChevronDown,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Bell
 } from 'lucide-react';
 
 function PropertyList() {
@@ -27,14 +29,77 @@ function PropertyList() {
   const [sortBy, setSortBy] = useState('newest');
   const [showFilters, setShowFilters] = useState(false);
   const [searchParams, setSearchParams] = useState({});
+  const [favoriteIds, setFavoriteIds] = useState([]);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const itemsPerPage = 12;
-  
-  const hasFetched = useRef(false);
+
+  // Fetch favorite IDs
+  useEffect(() => {
+    const fetchFavoriteIds = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await fetch(`${baseUrl}favourites/listID/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setFavoriteIds(data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching favorite IDs:', error);
+      }
+    };
+
+    fetchFavoriteIds();
+  }, []);
+
+  // Toggle favorite function
+  const toggleFavorite = async (propertyId, e) => {
+    e.stopPropagation();
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        // Redirect to login or show login modal
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch(`${baseUrl}favourites/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ property_id: propertyId })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Toggle favorite response:', data);
+        
+        // Update favorite IDs state
+        setFavoriteIds(prev => {
+          if (prev.includes(propertyId)) {
+            return prev.filter(id => id !== propertyId);
+          } else {
+            return [...prev, propertyId];
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
 
   // Parse URL parameters and fetch data in one useEffect
   useEffect(() => {
@@ -53,7 +118,6 @@ function PropertyList() {
     
     // Reset pagination when search params change
     setCurrentPage(1);
-    hasFetched.current = false;
   }, [location.search]);
 
   // Fetch properties with pagination
@@ -98,23 +162,63 @@ function PropertyList() {
           // Fallback to mock data with pagination simulation
           const startIndex = (currentPage - 1) * itemsPerPage;
           const endIndex = startIndex + itemsPerPage;
-          const paginatedMockData = mockProperties.slice(startIndex, endIndex);
-          
-          setProperties(paginatedMockData);
-          setTotalCount(mockProperties.length);
-          setTotalPages(Math.ceil(mockProperties.length / itemsPerPage));
-          console.log('Using mock data with pagination');
+          const mockData = [
+            {
+              id: 1,
+              title: 'Căn hộ cao cấp tại Quận 1',
+              description: 'Căn hộ 2 phòng ngủ, view hồ bơi, gần trung tâm thương mại',
+              price: '15',
+              area_m2: '85',
+              address: 'Quận 1, Thành phố Hồ Chí Minh',
+              time: '2 giờ trước',
+              thumbnail: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+              views: 1234
+            },
+            {
+              id: 2,
+              title: 'Nhà phố 3 tầng tại Quận 7',
+              description: 'Nhà phố mặt tiền, 4 phòng ngủ, gara ô tô',
+              price: '45',
+              area_m2: '150',
+              address: 'Quận 7, Thành phố Hồ Chí Minh',
+              time: '5 giờ trước',
+              thumbnail: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+              views: 892
+            },
+            {
+              id: 3,
+              title: 'Nhà riêng 4 tầng tại Thủ Đức',
+              description: 'Penthouse sky villa Elysian by Gamuda Land với diện tích 207-332m²',
+              price: '25',
+              area_m2: '200',
+              address: 'Thủ Đức, Thành phố Hồ Chí Minh',
+              time: '1 ngày trước',
+              thumbnail: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+              views: 892
+            },
+            {
+              id: 4,
+              title: 'Văn phòng cho thuê tại Quận 3',
+              description: 'Văn phòng A, tầng 15, view toàn cảnh',
+              price: '50',
+              area_m2: '120',
+              address: 'Quận 3, Thành phố Hồ Chí Minh',
+              time: '3 giờ trước',
+              thumbnail: 'https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+              views: 567
+            }
+          ];
+
+          const paginatedData = mockData.slice(startIndex, endIndex);
+          setProperties(paginatedData);
+          setTotalCount(mockData.length);
+          setTotalPages(Math.ceil(mockData.length / itemsPerPage));
         }
       } catch (error) {
         console.error('Error fetching properties:', error);
-        // Fallback to mock data with pagination simulation
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
-        const paginatedMockData = mockProperties.slice(startIndex, endIndex);
-        
-        setProperties(paginatedMockData);
-        setTotalCount(mockProperties.length);
-        setTotalPages(Math.ceil(mockProperties.length / itemsPerPage));
+        setProperties([]);
+        setTotalCount(0);
+        setTotalPages(0);
       } finally {
         setLoading(false);
       }
@@ -254,12 +358,13 @@ function PropertyList() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
         
         {/* Favorite Button */}
-        <button 
-          className="absolute top-3 right-3 text-white hover:text-red-500 transition-colors z-10"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Heart className="h-5 w-5" />
-        </button>
+         <button 
+           className={`absolute top-3 right-3 z-10 transition-all duration-300 ${favoriteIds.includes(property.id) ? 'text-red-500 scale-110' : 'text-white hover:text-red-500'}`}
+           onClick={(e) => toggleFavorite(property.id, e)}
+         >
+           <Heart className={`h-5 w-5 transition-all duration-300 ${favoriteIds.includes(property.id) ? 'fill-current scale-110' : ''}`} />
+         </button>
+         
 
         {/* Views */}
         <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1">
@@ -314,12 +419,12 @@ function PropertyList() {
             alt={property.title}
             className="w-full h-full object-cover"
           />
-          <button 
-            className="absolute top-2 right-2 text-white hover:text-red-500 transition-colors"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Heart className="h-5 w-5" />
-          </button>
+                     <button 
+             className={`absolute top-2 right-2 transition-all duration-300 ${favoriteIds.includes(property.id) ? 'text-red-500 scale-110' : 'text-white hover:text-red-500'}`}
+             onClick={(e) => toggleFavorite(property.id, e)}
+           >
+             <Heart className={`h-5 w-5 transition-all duration-300 ${favoriteIds.includes(property.id) ? 'fill-current scale-110' : ''}`} />
+           </button>
         </div>
 
         {/* Property Details */}
@@ -374,43 +479,92 @@ function PropertyList() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={handleBack}
-                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <ArrowLeft className="h-6 w-6" />
-              </button>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Kết quả tìm kiếm</h1>
-                <p className="text-sm text-gray-500">
-                  {totalCount > 0 ? `${totalCount} bất động sản được tìm thấy` : 'Đang tải...'}
-                </p>
-              </div>
-            </div>
+             {/* Header */}
+       <header className="bg-white shadow-sm border-b border-gray-100">
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+           <div className="flex items-center justify-between h-16">
+             <div className="flex items-center space-x-4">
+               <button
+                 onClick={handleBack}
+                 className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+               >
+                 <ArrowLeft className="h-6 w-6" />
+               </button>
+               <div>
+                 <h1 className="text-xl font-bold text-gray-900">Kết quả tìm kiếm</h1>
+                 <p className="text-sm text-gray-500">
+                   {totalCount > 0 ? `${totalCount} bất động sản được tìm thấy` : 'Đang tải...'}
+                 </p>
+               </div>
+             </div>
 
-            {/* Search Summary */}
-            <div className="hidden md:flex items-center space-x-4 text-sm text-gray-600">
-              {searchParams?.province && (
-                <span className="flex items-center">
-                  <MapPin className="h-4 w-4 mr-1" />
-                  {searchParams.province}
-                </span>
-              )}
-              {searchParams?.districts?.length > 0 && (
-                <span>{searchParams.districts.length} quận/huyện</span>
-              )}
-              {searchParams?.propertyTypes?.length > 0 && (
-                <span>{searchParams.propertyTypes.length} loại nhà đất</span>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+             {/* Header Actions */}
+             <div className="flex items-center space-x-2">
+               {/* Desktop Actions */}
+               <div className="hidden sm:flex items-center space-x-3">
+                 {/* Search Summary */}
+                 <div className="hidden md:flex items-center space-x-4 text-sm text-gray-600">
+                   {searchParams?.province && (
+                     <span className="flex items-center">
+                       <MapPin className="h-4 w-4 mr-1" />
+                       {searchParams.province}
+                     </span>
+                   )}
+                   {searchParams?.districts?.length > 0 && (
+                     <span>{searchParams.districts.length} quận/huyện</span>
+                   )}
+                   {searchParams?.propertyTypes?.length > 0 && (
+                     <span>{searchParams.propertyTypes.length} loại nhà đất</span>
+                   )}
+                 </div>
+
+                 {/* Heart Icon with Count */}
+                 <button 
+                   className="p-2 text-gray-400 hover:text-red-500 transition-colors relative"
+                   onClick={() => navigate('/favorites')}
+                 >
+                   <Heart className="h-5 w-5" />
+                   {favoriteIds.length > 0 && (
+                     <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
+                       {favoriteIds.length > 9 ? '9+' : favoriteIds.length}
+                     </div>
+                   )}
+                 </button>
+               </div>
+               
+               {/* Mobile Actions */}
+               <div className="flex sm:hidden items-center space-x-2">
+                 {/* Bell Icon */}
+                 <button
+                   className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
+                   aria-label="Thông báo"
+                 >
+                   <Bell className="h-5 w-5" />
+                 </button>
+                 
+                 {/* Heart Icon */}
+                 <button 
+                   className="p-2 text-gray-600 hover:text-red-500 transition-colors relative"
+                   onClick={() => navigate('/favorites')}
+                   aria-label="Yêu thích"
+                 >
+                   <Heart className="h-5 w-5" />
+                   {favoriteIds.length > 0 && (
+                     <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
+                       {favoriteIds.length > 9 ? '9+' : favoriteIds.length}
+                     </div>
+                   )}
+                 </button>
+                 
+                 {/* User Avatar - Always visible on mobile */}
+                 <div className="flex items-center">
+                   <AuthWrapper />
+                 </div>
+               </div>
+             </div>
+           </div>
+         </div>
+       </header>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

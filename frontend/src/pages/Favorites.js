@@ -11,12 +11,16 @@ import { Heart,
   Phone, 
   Mail,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Bell,
+  Search
 } from 'lucide-react';
 import AuthWrapper from '../components/auth/AuthWrapper';
+import { useAuth } from '../contexts/AuthContext';
 
 function Favorites() {
   const navigate = useNavigate();
+  const { handleApiResponse } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -34,20 +38,31 @@ function Favorites() {
         const token = localStorage.getItem('token');
         
         // Build API URL with pagination
-        const apiUrl = new URL(`${baseUrl}favorites/`);
+        const apiUrl = new URL(`${baseUrl}favourites/`);
         apiUrl.searchParams.append('page', currentPage.toString());
         apiUrl.searchParams.append('page_size', itemsPerPage.toString());
         
         const res = await fetch(apiUrl.toString(), {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          method: 'GET'
         });
-        const data = await res.json();
         
-        const favoritesData = Array.isArray(data.data) ? data.data : (Array.isArray(data.results) ? data.results : []);
+        // Check for token expiration
+        const apiCheck = await handleApiResponse(res);
+        if (apiCheck.expired) {
+          return; // handleApiResponse already redirected
+        }
+        
+        const data = await res.json();
+        console.log(data);
+        
+        // Handle the API response structure properly
+        const favoritesData = Array.isArray(data.data) ? data.data : [];
         setItems(favoritesData);
-        setTotalCount(data.count || 0);
-        setTotalPages(Math.ceil((data.count || 0) / itemsPerPage));
+        setTotalCount(data.count || favoritesData.length);
+        setTotalPages(Math.ceil((data.count || favoritesData.length) / itemsPerPage));
       } catch (e) {
+        console.error('Error fetching favorites:', e);
         setItems([]);
         setTotalCount(0);
         setTotalPages(0);
@@ -61,9 +76,24 @@ function Favorites() {
   const removeItem = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${baseUrl}favorites/${id}/`, { method: 'DELETE', headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const res = await fetch(`${baseUrl}favourites/`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : {},
+        body: JSON.stringify({ property_id: id })
+      });
+      
+      // Check for token expiration
+      const apiCheck = await handleApiResponse(res);
+      if (apiCheck.expired) {
+        return; // handleApiResponse already redirected
+      }
+      
+      const data = await res.json();
+      console.log(data);
       setItems((prev) => prev.filter((x) => x.id !== id));
-    } catch (e) {}
+    } catch (e) {
+      console.error('Error removing favorite:', e);
+    }
   };
 
   // Pagination functions
@@ -130,9 +160,53 @@ function Favorites() {
               </div>
               <h1 className="text-xl font-bold text-gray-900">RealEstate</h1>
             </div>
-            <div className="hidden md:flex items-center space-x-6">
-              <AuthWrapper />
-              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium" onClick={() => navigate('/post-property')}>Đăng tin</button>
+            
+            <div className="flex items-center space-x-2">
+              {/* Desktop Actions */}
+              <div className="hidden sm:flex items-center space-x-3">
+                <button className="p-2 text-red-500 transition-colors relative">
+                  <Heart className="h-5 w-5 fill-current" />
+                  {totalCount > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
+                      {totalCount > 9 ? '9+' : totalCount}
+                    </div>
+                  )}
+                </button>
+                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                  <Bell className="h-5 w-5" />
+                </button>
+                <AuthWrapper />
+                <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium" onClick={() => navigate('/post-property')}>Đăng tin</button>
+              </div>
+              
+              {/* Mobile Actions */}
+              <div className="flex sm:hidden items-center space-x-2">
+                {/* Bell Icon */}
+                <button
+                  className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
+                  aria-label="Thông báo"
+                >
+                  <Bell className="h-5 w-5" />
+                </button>
+                
+                {/* Heart Icon */}
+                <button 
+                  className="p-2 text-red-500 transition-colors relative"
+                  aria-label="Yêu thích"
+                >
+                  <Heart className="h-5 w-5 fill-current" />
+                  {totalCount > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
+                      {totalCount > 9 ? '9+' : totalCount}
+                    </div>
+                  )}
+                </button>
+                
+                {/* User Avatar - Always visible on mobile */}
+                <div className="flex items-center">
+                  <AuthWrapper />
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -164,67 +238,73 @@ function Favorites() {
           <div className="text-gray-600">Chưa có bất động sản nào.</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {items.map((item) => (
-              <div key={item.id} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group" onClick={() => navigate(`/property/${item.property?.id || item.id}`)} style={{cursor:'pointer'}}>
-                {/* Image Section */}
-                <div className="relative h-48 overflow-hidden">
-                  <img 
-                    src={ConfigUrl(item.thumbnail || item.property?.thumbnail)} 
-                    alt={item.title || item.property?.title} 
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" 
-                  />
-                  <div className="absolute top-3 right-3">
-                    <button 
-                      className="bg-white/90 hover:bg-red-500 hover:text-white text-gray-600 p-2 rounded-full transition-all duration-300" 
-                      onClick={(e)=>{e.stopPropagation(); removeItem(item.id);}}
-                    >
-                      <Trash2 className="h-4 w-4"/>
-                    </button>
+            {items.map((item) => {
+              // Extract property data from the correct structure
+              const property = item.property_detail;
+              if (!property) return null;
+              
+              return (
+                <div key={item.id} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group" onClick={() => navigate(`/property/${property.id}`)} style={{cursor:'pointer'}}>
+                  {/* Image Section */}
+                  <div className="relative h-48 overflow-hidden">
+                    <img 
+                      src={ConfigUrl(property.thumbnail)} 
+                      alt={property.title} 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" 
+                    />
+                    <div className="absolute top-3 right-3">
+                      <button 
+                        className="bg-white/90 hover:bg-red-500 hover:text-white text-gray-600 p-2 rounded-full transition-all duration-300" 
+                        onClick={(e)=>{e.stopPropagation(); removeItem(item.property_detail.id);}}
+                      >
+                        <Trash2 className="h-4 w-4"/>
+                      </button>
+                    </div>
+                    <div className="absolute bottom-3 left-3">
+                      <div className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+                        Yêu thích
+                      </div>
+                    </div>
                   </div>
-                  <div className="absolute bottom-3 left-3">
-                    <div className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                      Yêu thích
+                  
+                  {/* Content Section */}
+                  <div className="p-4">
+                    <h3 className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-red-600 transition-colors">
+                      {property.title}
+                    </h3>
+                    
+                    <div className="flex items-center text-sm text-gray-500 mb-3">
+                      <MapPin className="h-4 w-4 mr-1 flex-shrink-0"/>
+                      <span className="line-clamp-1">{property.address}</span>
+                    </div>
+                    
+                    {/* Price and Area */}
+                    <div className="flex items-center justify-between">
+                      <div className="text-lg font-bold text-red-600">
+                        {property.price ? `${parseFloat(property.price).toLocaleString()} triệu` : 'Liên hệ'}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {property.area_m2 ? `${property.area_m2} m²` : ''}
+                      </div>
+                    </div>
+                    
+                    {/* Additional Info */}
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                      <div className="flex items-center text-xs text-gray-500">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                        <span>{property.tab === 'ban' ? 'Đang bán' : 'Cho thuê'}</span>
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {property.created_at ? 
+                          new Date(property.created_at).toLocaleDateString('vi-VN') : 
+                          'Mới đăng'
+                        }
+                      </div>
                     </div>
                   </div>
                 </div>
-                
-                {/* Content Section */}
-                <div className="p-4">
-                  <h3 className="font-bold text-gray-900 line-clamp-2 mb-2 group-hover:text-red-600 transition-colors">
-                    {item.title || item.property?.title}
-                  </h3>
-                  
-                  <div className="flex items-center text-sm text-gray-500 mb-3">
-                    <MapPin className="h-4 w-4 mr-1 flex-shrink-0"/>
-                    <span className="line-clamp-1">{item.address || item.property?.address}</span>
-                  </div>
-                  
-                  {/* Price and Area */}
-                  <div className="flex items-center justify-between">
-                    <div className="text-lg font-bold text-red-600">
-                      {item.price || item.property?.price ? `${parseFloat(item.price || item.property?.price).toLocaleString()} triệu` : 'Liên hệ'}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {item.area_m2 || item.property?.area_m2 ? `${item.area_m2 || item.property?.area_m2} m²` : ''}
-                    </div>
-                  </div>
-                  
-                  {/* Additional Info */}
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                    <div className="flex items-center text-xs text-gray-500">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                      <span>Đang bán</span>
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      {item.created_at || item.property?.created_at ? 
-                        new Date(item.created_at || item.property?.created_at).toLocaleDateString('vi-VN') : 
-                        'Mới đăng'
-                      }
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

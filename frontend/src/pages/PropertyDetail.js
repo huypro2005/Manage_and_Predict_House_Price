@@ -31,13 +31,14 @@ import {
   Facebook,
   Instagram,
   Twitter,
-  Send
+  Send,
+  Search
 } from 'lucide-react';
 
 function PropertyDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, handleApiResponse } = useAuth();
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -46,6 +47,7 @@ function PropertyDetail() {
   const [modalImageIndex, setModalImageIndex] = useState(0);
   const [zoomScale, setZoomScale] = useState(1);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState([]);
   const [showContactForm, setShowContactForm] = useState(false);
   const [contactMessage, setContactMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
@@ -92,6 +94,83 @@ function PropertyDetail() {
       fetchPropertyDetail();
     }
   }, [id, navigate]);
+
+  // Check if property is in favorites
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await fetch(`${baseUrl}favourites/listID/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        // Check for token expiration
+        const apiCheck = await handleApiResponse(response);
+        if (apiCheck.expired) {
+          return; // handleApiResponse already redirected
+        }
+        
+        if (response.ok) {
+          const data = await response.json();
+          const favoriteIdsList = data.data || [];
+          setFavoriteIds(favoriteIdsList);
+          setIsFavorite(favoriteIdsList.includes(parseInt(id)));
+        }
+      } catch (error) {
+        console.error('Error checking favorite status:', error);
+      }
+    };
+
+    checkFavoriteStatus();
+  }, [id]);
+
+  // Toggle favorite function
+  const toggleFavorite = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        // Redirect to login or show login modal
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch(`${baseUrl}favourites/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ property_id: parseInt(id) })
+      });
+
+      // Check for token expiration
+      const apiCheck = await handleApiResponse(response);
+      if (apiCheck.expired) {
+        return; // handleApiResponse already redirected
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Toggle favorite response:', data);
+        setIsFavorite(!isFavorite);
+        
+        // Update favoriteIds list
+        setFavoriteIds(prev => {
+          if (isFavorite) {
+            return prev.filter(favId => favId !== parseInt(id));
+          } else {
+            return [...prev, parseInt(id)];
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
 
   const handleBack = () => {
     navigate(-1);
@@ -231,6 +310,12 @@ ${contactInfo.content}
         })
       });
 
+      // Check for token expiration
+      const apiCheck = await handleApiResponse(response);
+      if (apiCheck.expired) {
+        return; // handleApiResponse already redirected
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -319,10 +404,19 @@ ${contactInfo.content}
             </nav>
 
          {/* Header Actions - desktop vs mobile */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
+              {/* Desktop Actions */}
               <div className="hidden sm:flex items-center space-x-3">
-                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                <button 
+                  className="p-2 text-gray-400 hover:text-red-500 transition-colors relative"
+                  onClick={() => navigate('/favorites')}
+                >
                   <Heart className="h-5 w-5" />
+                  {favoriteIds && favoriteIds.length > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
+                      {favoriteIds.length > 9 ? '9+' : favoriteIds.length}
+                    </div>
+                  )}
                 </button>
                 <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
                   <Bell className="h-5 w-5" />
@@ -335,12 +429,36 @@ ${contactInfo.content}
                   Dự đoán giá
                 </button>
               </div>
-              {/* Mobile user avatar */}
-              {isAuthenticated && (
-                <div className="sm:hidden">
-                  <UserDropdown />
+              
+              {/* Mobile Actions */}
+              <div className="flex sm:hidden items-center space-x-2">
+                {/* Bell Icon */}
+                <button
+                  className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
+                  aria-label="Thông báo"
+                >
+                  <Bell className="h-5 w-5" />
+                </button>
+                
+                {/* Heart Icon */}
+                <button 
+                  className="p-2 text-gray-600 hover:text-red-500 transition-colors relative"
+                  onClick={() => navigate('/favorites')}
+                  aria-label="Yêu thích"
+                >
+                  <Heart className="h-5 w-5" />
+                  {favoriteIds && favoriteIds.length > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
+                      {favoriteIds.length > 9 ? '9+' : favoriteIds.length}
+                    </div>
+                  )}
+                </button>
+                
+                {/* User Avatar - Always visible on mobile */}
+                <div className="flex items-center">
+                  <AuthWrapper />
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
@@ -425,20 +543,28 @@ ${contactInfo.content}
                 {property.title || 'Không có tiêu đề'}
               </h2>
               
-              <div className="flex items-center space-x-4 text-sm text-gray-500 mb-6">
-                <div className="flex items-center">
-                  <MapPin className="h-4 w-4 mr-1" />
-                  <span>{property.address || 'Không có địa chỉ'}</span>
-                </div>
-                <div className="flex items-center">
-                  <Eye className="h-4 w-4 mr-1" />
-                  <span>{property.views || 0} lượt xem</span>
-                </div>
-                <div className="flex items-center">
-                  <Clock className="h-4 w-4 mr-1" />
-                  <span>Đăng ngày {new Date(property.created_at).toLocaleDateString('vi-VN')}</span>
-                </div>
-              </div>
+                             <div className="flex items-center justify-between text-sm text-gray-500 mb-6">
+                 <div className="flex items-center space-x-4">
+                   <div className="flex items-center">
+                     <MapPin className="h-4 w-4 mr-1" />
+                     <span>{property.address || 'Không có địa chỉ'}</span>
+                   </div>
+                   <div className="flex items-center">
+                     <Eye className="h-4 w-4 mr-1" />
+                     <span>{property.views || 0} lượt xem</span>
+                   </div>
+                   <div className="flex items-center">
+                     <Clock className="h-4 w-4 mr-1" />
+                     <span>Đăng ngày {new Date(property.created_at).toLocaleDateString('vi-VN')}</span>
+                   </div>
+                 </div>
+                                   <button 
+                    className={`p-2 rounded-full transition-all duration-300 ${isFavorite ? 'text-red-500 bg-red-50 scale-110' : 'text-gray-400 hover:text-red-500 hover:bg-red-50'}`}
+                    onClick={toggleFavorite}
+                  >
+                    <Heart className={`h-5 w-5 transition-all duration-300 ${isFavorite ? 'fill-current scale-110' : ''}`} />
+                  </button>
+               </div>
 
                              {/* Key Features */}
                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

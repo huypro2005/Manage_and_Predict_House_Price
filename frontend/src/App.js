@@ -81,6 +81,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState('search'); // 'search' or 'propertyList'
   const [searchParams, setSearchParams] = useState({});
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState([]);
 
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -89,6 +90,70 @@ function App() {
     { id: 'thue', label: 'Nhà đất thuê' },
     { id: 'tintuc', label: 'Tin tức' },
   ];
+
+  // Fetch favorite IDs
+  useEffect(() => {
+    const fetchFavoriteIds = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await fetch(`${baseUrl}favourites/listID/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setFavoriteIds(data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching favorite IDs:', error);
+      }
+    };
+
+    fetchFavoriteIds();
+  }, []);
+
+  // Toggle favorite function
+  const toggleFavorite = async (propertyId, e) => {
+    e.stopPropagation();
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        // Redirect to login or show login modal
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch(`${baseUrl}favourites/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ property_id: propertyId })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Toggle favorite response:', data);
+        
+        // Update favorite IDs state
+        setFavoriteIds(prev => {
+          if (prev.includes(propertyId)) {
+            return prev.filter(id => id !== propertyId);
+          } else {
+            return [...prev, propertyId];
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
 
   const handleProvinceSelect = (provinceName, provinceId) => {
     console.log('Đã chọn tỉnh thành:', provinceName, 'ID:', provinceId);
@@ -103,7 +168,7 @@ function App() {
     // Log để debug
     console.log('Đã reset danh sách districts đã chọn');
   };
-
+  
   const handlePropertyTypeSelect = (propertyTypeIds, propertyTypeNames) => {
     setSelectedPropertyTypes(propertyTypeIds || []);
     setSelectedPropertyTypeNames(propertyTypeNames || []);
@@ -319,27 +384,61 @@ function App() {
 
             {/* Header Actions */}
             <div className="flex items-center space-x-2">
+              {/* Desktop Actions */}
               <div className="hidden sm:flex items-center space-x-3">
-                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                  <Heart className="h-5 w-5" />
-                </button>
-                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                  <Bell className="h-5 w-5" />
-                </button>
+                <button 
+                  className="p-2 text-gray-400 hover:text-red-500 transition-colors relative"
+                  onClick={() => navigate('/favorites')}
+                >
+                <Heart className="h-5 w-5" />
+                  {favoriteIds.length > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
+                      {favoriteIds.length > 9 ? '9+' : favoriteIds.length}
+                    </div>
+                  )}
+              </button>
+              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                <Bell className="h-5 w-5" />
+              </button>
                 <AuthWrapper />
                 <button className="hidden md:inline-flex bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors" onClick={handelNavigateToPostProperty}>
-                  Đăng tin
-                </button>
-                <button className="hidden lg:inline-flex bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                  Dự đoán giá
+                Đăng tin
+              </button>
+                <button className="hidden lg:inline-flex bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors" onClick={() => navigate('/price-prediction')}>
+                Dự đoán giá
                 </button>
               </div>
-              {/* Mobile user avatar */}
-              {isAuthenticated && (
-                <div className="md:hidden">
-                  <UserDropdown />
+              
+              {/* Mobile Actions */}
+              <div className="flex sm:hidden items-center space-x-2">
+                {/* Bell Icon */}
+                <button
+                  className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
+                  aria-label="Thông báo"
+                >
+                  <Bell className="h-5 w-5" />
+                </button>
+                
+                {/* Heart Icon */}
+                <button 
+                  className="p-2 text-gray-600 hover:text-red-500 transition-colors relative"
+                  onClick={() => navigate('/favorites')}
+                  aria-label="Yêu thích"
+                >
+                  <Heart className="h-5 w-5" />
+                  {favoriteIds.length > 0 && (
+                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
+                      {favoriteIds.length > 9 ? '9+' : favoriteIds.length}
+                    </div>
+                  )}
+                </button>
+                
+                {/* User Avatar - Always visible on mobile */}
+                <div className="flex items-center">
+                  <AuthWrapper />
                 </div>
-              )}
+              </div>
+              
               {/* Mobile menu button */}
               <button
                 className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:bg-gray-100"
@@ -374,7 +473,7 @@ function App() {
                 <button className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium" onClick={handelNavigateToPostProperty}>
                   Đăng tin
                 </button>
-                <button className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium">
+                <button className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium" onClick={() => navigate('/price-prediction')}>
                   Dự đoán giá
                 </button>
               </div>
@@ -385,7 +484,7 @@ function App() {
 
       {/* Search Section */}
       
-      <div className="bg-white py-8">
+      <div id="search-section" className="bg-white py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="bg-white rounded-xl shadow-lg p-6">
             {/* Tabs */}
@@ -483,7 +582,7 @@ function App() {
                 >
                   Tìm kiếm
                 </button>
-              </div>
+                  </div>
 
  
             </div>
@@ -622,7 +721,15 @@ function App() {
                 <div className="relative h-48">
                   <img src={ConfigUrl(property.thumbnail)} alt={property.title.slice(0, 10)} className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                </div>
+                  
+                  {/* Favorite Button */}
+                  <button 
+                    className={`absolute top-3 right-3 z-10 transition-all duration-300 ${favoriteIds.includes(property.id) ? 'text-red-500 scale-110' : 'text-white hover:text-red-500'}`}
+                    onClick={(e) => toggleFavorite(property.id, e)}
+                  >
+                    <Heart className={`h-5 w-5 transition-all duration-300 ${favoriteIds.includes(property.id) ? 'fill-current scale-110' : ''}`} />
+                  </button>
+                      </div>
                 <div className="p-4">
                   <h4 className="text-base font-bold text-gray-900 mb-2 line-clamp-2">{property.title.slice(0, 40)}...</h4>
                   <p className="text-gray-600 text-xs mb-3 line-clamp-2">{property.description?.slice(0, 60) || 'Không có mô tả'}</p>
@@ -631,7 +738,6 @@ function App() {
                       <div className="text-base font-bold text-red-600">{property.price}</div>
                       <div className="text-gray-600 text-sm">{property.area}</div>
                     </div>
-                    <button className="text-gray-400 hover:text-red-500 transition-colors"><Heart className="h-5 w-5" /></button>
                   </div>
                   <div className="flex justify-between items-center text-xs text-gray-500">
                     <span className="truncate">{property.address}</span>
@@ -640,7 +746,7 @@ function App() {
                 </div>
               </motion.div>
             ))}
-          </div>
+                </div>
 
           {/* Mobile list rows */}
           <div className="sm:hidden space-y-4">
@@ -656,6 +762,14 @@ function App() {
                 <div className="flex">
                   <div className="relative w-36 h-28 flex-shrink-0">
                     <img src={ConfigUrl(property.thumbnail)} alt={property.title.slice(0, 10)} className="w-full h-full object-cover" />
+                    
+                    {/* Favorite Button */}
+                    <button 
+                      className={`absolute top-2 right-2 transition-all duration-300 ${favoriteIds.includes(property.id) ? 'text-red-500 scale-110' : 'text-white hover:text-red-500'}`}
+                      onClick={(e) => toggleFavorite(property.id, e)}
+                    >
+                      <Heart className={`h-5 w-5 transition-all duration-300 ${favoriteIds.includes(property.id) ? 'fill-current scale-110' : ''}`} />
+                    </button>
                   </div>
                   <div className="flex-1 p-3">
                     <h4 className="text-base font-bold text-gray-900 mb-1 line-clamp-2">{property.title}</h4>

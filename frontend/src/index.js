@@ -12,6 +12,7 @@ import Favorites from './pages/Favorites';
 import MyProperties from './pages/MyProperties';
 import MapTest from './components/MapTest';
 import PostProperty from './pages/PostProperty';
+import PricePrediction from './pages/PricePrediction';
 
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -76,6 +77,15 @@ root.render(
           element={
             <ProtectedRoute>
               <MyProperties />
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path='/price-prediction' 
+          element={
+            <ProtectedRoute>
+              <PricePrediction />
             </ProtectedRoute>
           } 
         />
