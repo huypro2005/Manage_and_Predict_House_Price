@@ -73,3 +73,12 @@ class CustomUserChangeAvatarView(APIView):
             serializer.save()
             return Response({'message': 'User avatar updated successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
         return Response({'message': 'User avatar update failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        serializer = CustomUserV1Serializer(user)
+        return Response({'message': 'User profile retrieved successfully', 'data': serializer.data}, status=status.HTTP_200_OK)

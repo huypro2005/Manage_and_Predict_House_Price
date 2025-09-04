@@ -26,7 +26,7 @@ const MapTest = () => {
       <h1 className="text-2xl font-bold mb-4">Test Bản Đồ</h1>
       <div className="bg-white rounded-xl shadow-lg p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-3">Xem trên bản đồ</h3>
-        <PropertyMap property={testProperty} formatPrice={formatPrice} />
+        <PropertyMap property={testProperty} formatPrice={formatPrice} showMarker={true} />
       </div>
       
       <div className="mt-4 p-4 bg-gray-100 rounded-lg">

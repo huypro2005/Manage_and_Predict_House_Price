@@ -1,38 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { baseUrl, ConfigUrl } from '../base';
 import PropertyMap from '../components/PropertyMap';
 import AuthWrapper from '../components/auth/AuthWrapper';
-import UserDropdown from '../components/auth/UserDropdown';
 import { useAuth } from '../contexts/AuthContext';
+import webSocketService from '../services/WebSocketService';
+import WebSocketStatus from '../components/WebSocketStatus';
+import HeaderActions from '../components/HeaderActions';
+
 import { 
-  ArrowLeft, 
   MapPin, 
-  DollarSign, 
-  Square, 
-  Heart, 
-  Star,
-  Bed,
-  Home,
-  Ruler,
-  Calendar,
   Phone,
   Mail,
-  Share2,
   ChevronLeft,
   ChevronRight,
   Eye,
   Clock,
   User,
-  Bell,
   Youtube,
-  FileText,
   Facebook,
   Instagram,
   Twitter,
   Send,
-  Search
+  Heart
 } from 'lucide-react';
 
 function PropertyDetail() {
@@ -49,7 +39,6 @@ function PropertyDetail() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [showContactForm, setShowContactForm] = useState(false);
-  const [contactMessage, setContactMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [contactInfo, setContactInfo] = useState({
     name: '',
@@ -128,6 +117,18 @@ function PropertyDetail() {
     checkFavoriteStatus();
   }, [id]);
 
+  // Kiểm tra WebSocket connection khi component mount
+  useEffect(() => {
+    console.log('🔌 PropertyDetail - Kiểm tra WebSocket connection');
+    console.log('WebSocket status:', webSocketService.getConnectionStatus());
+    
+    // Thử kết nối WebSocket nếu chưa kết nối
+    if (webSocketService.getConnectionStatus() !== 'connected') {
+      console.log('🔄 Thử kết nối WebSocket...');
+      webSocketService.connect();
+    }
+  }, []);
+
   // Toggle favorite function
   const toggleFavorite = async () => {
     try {
@@ -188,6 +189,14 @@ function PropertyDetail() {
       return;
     }
     navigate('/post-property');
+  };
+
+  const handelNavigateToPricePrediction = () => {
+    if (!isAuthenticated) {
+      alert('Vui lòng đăng nhập để dự đoán giá!');
+      return;
+    }
+    navigate('/price-prediction');
   };
 
   const nextImage = () => {
@@ -259,80 +268,9 @@ function PropertyDetail() {
     setShowContactForm(true);
   };
 
-  // Xử lý gửi tin nhắn liên hệ
-  const handleSendMessage = async () => {
-    // Kiểm tra các trường bắt buộc
-    if (!contactInfo.name.trim()) {
-      alert('Vui lòng nhập tên của bạn!');
-      return;
-    }
-    if (!contactInfo.phone.trim()) {
-      alert('Vui lòng nhập số điện thoại!');
-      return;
-    }
-    if (!contactInfo.content.trim()) {
-      alert('Vui lòng nhập nội dung tin nhắn!');
-      return;
-    }
 
-    // Tạo message tổng hợp
-    const fullMessage = `
-Thông tin liên hệ:
-- Tên: ${contactInfo.name}
-- Số điện thoại: ${contactInfo.phone}
-- Email: ${contactInfo.email || 'Không có'}
 
-Nội dung tin nhắn:
-${contactInfo.content}
-    `.trim();
 
-    setSendingMessage(true);
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Vui lòng đăng nhập để liên hệ!');
-        return;
-      }
-      
-      console.log('Token:', token);
-      console.log('Property ID:', id);
-      console.log('Full Message:', fullMessage);
-      
-      const response = await fetch(`${baseUrl}contact-requests/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          property: id,
-          message: fullMessage
-        })
-      });
-
-      // Check for token expiration
-      const apiCheck = await handleApiResponse(response);
-      if (apiCheck.expired) {
-        return; // handleApiResponse already redirected
-      }
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Contact request sent:', data);
-      
-      alert('Tin nhắn đã được gửi thành công!');
-      setContactInfo({ name: '', phone: '', email: '', content: '' });
-      setShowContactForm(false);
-    } catch (error) {
-      console.error('Error sending contact request:', error);
-      alert('Có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại!');
-    } finally {
-      setSendingMessage(false);
-    }
-  };
 
   // Đóng form liên hệ
   const handleCloseContactForm = () => {
@@ -347,6 +285,77 @@ ${contactInfo.content}
       [field]: value
     }));
   };
+
+  // Gửi tin nhắn liên hệ chỉ qua WebSocket
+  const handleSendContact = async () => {
+    console.log('🚀 handleSendContact được gọi');
+    
+    // Kiểm tra các trường bắt buộc
+    if (!contactInfo.name.trim()) {
+      alert('Vui lòng nhập tên của bạn!');
+      return;
+    }
+    if (!contactInfo.phone.trim()) {
+      alert('Vui lòng nhập số điện thoại!');
+      return;
+    }
+    if (!contactInfo.content.trim()) {
+      alert('Vui lòng nhập nội dung tin nhắn!');
+      return;
+    }
+
+    console.log('✅ Validation passed, bắt đầu gửi WebSocket');
+    setSendingMessage(true);
+    
+    try {
+      // Kiểm tra WebSocket connection
+      console.log('🔍 Kiểm tra WebSocket connection...');
+      console.log('webSocketService:', webSocketService);
+      console.log('Connection status:', webSocketService.getConnectionStatus());
+      
+      if (webSocketService.getConnectionStatus() !== 'connected') {
+        alert('Kết nối không ổn định. Vui lòng thử lại sau!');
+        return;
+      }
+
+      // Tạo message tổng hợp đầy đủ thông tin với format HTML
+      const fullMessage = `
+        Thông tin liên hệ:
+        - Tên: ${contactInfo.name}
+        - Số điện thoại: ${contactInfo.phone}
+        - Email: ${contactInfo.email || 'Không có'}<br/>
+        Nội dung tin nhắn:
+        ${contactInfo.content}
+      `.trim();
+
+      console.log('📝 Message được tạo:', fullMessage);
+
+      // Gửi thông báo qua WebSocket với format đúng
+      const notificationData = {
+        type: 'contact_request',
+        data: {
+          property_id: parseInt(id),
+          message: fullMessage,
+        }
+      };
+      
+      const sent = webSocketService.send(notificationData);
+      if (sent) {
+        console.log('✅ Contact request sent via WebSocket:', notificationData);
+        alert('Tin nhắn đã được gửi thành công!');
+        setContactInfo({ name: '', phone: '', email: '', content: '' });
+        setShowContactForm(false);
+      } else {
+        throw new Error('WebSocket send failed');
+      }
+    } catch (error) {
+      console.error('❌ Error sending contact request:', error);
+      alert('Có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại!');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -405,60 +414,17 @@ ${contactInfo.content}
 
          {/* Header Actions - desktop vs mobile */}
             <div className="flex items-center space-x-2">
-              {/* Desktop Actions */}
-              <div className="hidden sm:flex items-center space-x-3">
-                <button 
-                  className="p-2 text-gray-400 hover:text-red-500 transition-colors relative"
-                  onClick={() => navigate('/favorites')}
-                >
-                  <Heart className="h-5 w-5" />
-                  {favoriteIds && favoriteIds.length > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
-                      {favoriteIds.length > 9 ? '9+' : favoriteIds.length}
-                    </div>
-                  )}
-                </button>
-                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                  <Bell className="h-5 w-5" />
-                </button>
-                <AuthWrapper />
-                <button className="hidden md:inline-flex bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors" onClick={handelNavigateToPostProperty}>
-                  Đăng tin
-                </button>
-                <button className="hidden lg:inline-flex bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-                  Dự đoán giá
-                </button>
-              </div>
-              
-              {/* Mobile Actions */}
-              <div className="flex sm:hidden items-center space-x-2">
-                {/* Bell Icon */}
-                <button
-                  className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
-                  aria-label="Thông báo"
-                >
-                  <Bell className="h-5 w-5" />
-                </button>
-                
-                {/* Heart Icon */}
-                <button 
-                  className="p-2 text-gray-600 hover:text-red-500 transition-colors relative"
-                  onClick={() => navigate('/favorites')}
-                  aria-label="Yêu thích"
-                >
-                  <Heart className="h-5 w-5" />
-                  {favoriteIds && favoriteIds.length > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
-                      {favoriteIds.length > 9 ? '9+' : favoriteIds.length}
-                    </div>
-                  )}
-                </button>
-                
-                {/* User Avatar - Always visible on mobile */}
-                <div className="flex items-center">
-                  <AuthWrapper />
-                </div>
-              </div>
+              <HeaderActions 
+                favoriteCount={favoriteIds ? favoriteIds.length : 0}
+                onFavoriteClick={() => navigate('/favorites')}
+              />
+              <AuthWrapper />
+              <button className="hidden md:inline-flex bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors" onClick={handelNavigateToPostProperty}>
+                Đăng tin
+              </button>
+              <button className="hidden lg:inline-flex bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors" onClick={handelNavigateToPricePrediction}>
+                Dự đoán giá
+              </button>
             </div>
           </div>
         </div>
@@ -543,7 +509,7 @@ ${contactInfo.content}
                 {property.title || 'Không có tiêu đề'}
               </h2>
               
-                             <div className="flex items-center justify-between text-sm text-gray-500 mb-6">
+                <div className="flex items-center justify-between text-sm text-gray-500 mb-6">
                  <div className="flex items-center space-x-4">
                    <div className="flex items-center">
                      <MapPin className="h-4 w-4 mr-1" />
@@ -671,7 +637,7 @@ ${contactInfo.content}
               {/* Map section */}
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Xem trên bản đồ</h3>
-                <PropertyMap property={property} formatPrice={formatPrice} />
+                <PropertyMap property={property} formatPrice={formatPrice} showMarker={true} />
               </div>
             </div>
 
@@ -802,10 +768,14 @@ ${contactInfo.content}
 
              {/* Contact Form Modal */}
       {showContactForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
           <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Gửi tin nhắn liên hệ</h3>
+              <div className="flex items-center space-x-2">
+                <h3 className="text-lg font-semibold text-gray-900">Gửi tin nhắn liên hệ</h3>
+                {/* WebSocket Status Indicator */}
+                <WebSocketStatus showText={true} />
+              </div>
               <button
                 onClick={handleCloseContactForm}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -893,7 +863,7 @@ ${contactInfo.content}
                 Hủy
               </button>
               <button
-                onClick={handleSendMessage}
+                onClick={handleSendContact}
                 disabled={sendingMessage || !contactInfo.name.trim() || !contactInfo.phone.trim() || !contactInfo.content.trim()}
                 className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center"
               >

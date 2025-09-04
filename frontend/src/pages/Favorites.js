@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { baseUrl, ConfigUrl } from '../base';
-import { Heart, 
+import { 
   Trash2, 
   MapPin, 
   Facebook, 
@@ -12,11 +12,12 @@ import { Heart,
   Mail,
   ChevronLeft,
   ChevronRight,
-  Bell,
-  Search
+  Search,
+  Heart
 } from 'lucide-react';
 import AuthWrapper from '../components/auth/AuthWrapper';
 import { useAuth } from '../contexts/AuthContext';
+import HeaderActions from '../components/HeaderActions';
 
 function Favorites() {
   const navigate = useNavigate();
@@ -162,51 +163,13 @@ function Favorites() {
             </div>
             
             <div className="flex items-center space-x-2">
-              {/* Desktop Actions */}
-              <div className="hidden sm:flex items-center space-x-3">
-                <button className="p-2 text-red-500 transition-colors relative">
-                  <Heart className="h-5 w-5 fill-current" />
-                  {totalCount > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
-                      {totalCount > 9 ? '9+' : totalCount}
-                    </div>
-                  )}
-                </button>
-                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                  <Bell className="h-5 w-5" />
-                </button>
-                <AuthWrapper />
-                <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium" onClick={() => navigate('/post-property')}>Đăng tin</button>
-              </div>
-              
-              {/* Mobile Actions */}
-              <div className="flex sm:hidden items-center space-x-2">
-                {/* Bell Icon */}
-                <button
-                  className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
-                  aria-label="Thông báo"
-                >
-                  <Bell className="h-5 w-5" />
-                </button>
-                
-                {/* Heart Icon */}
-                <button 
-                  className="p-2 text-red-500 transition-colors relative"
-                  aria-label="Yêu thích"
-                >
-                  <Heart className="h-5 w-5 fill-current" />
-                  {totalCount > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
-                      {totalCount > 9 ? '9+' : totalCount}
-                    </div>
-                  )}
-                </button>
-                
-                {/* User Avatar - Always visible on mobile */}
-                <div className="flex items-center">
-                  <AuthWrapper />
-                </div>
-              </div>
+                                                   <HeaderActions
+                        favoriteCount={totalCount}
+                        onFavoriteClick={() => navigate('/favorites')}
+                        isFavoritePage={true}
+                      />
+              <AuthWrapper />
+              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium" onClick={() => navigate('/post-property')}>Đăng tin</button>
             </div>
           </div>
         </div>

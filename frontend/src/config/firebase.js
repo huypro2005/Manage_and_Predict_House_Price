@@ -1,26 +1,42 @@
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getAnalytics } from 'firebase/analytics';
+
 // Firebase Configuration
 export const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.REACT_APP_FIREBASE_APP_ID,
-  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
+  apiKey: "AIzaSyAL7R2-9_wvgrwwLgNknZHvlZbHMqgxZCc",
+  authDomain: "auth-e0be2.firebaseapp.com",
+  projectId: "auth-e0be2",
+  storageBucket: "auth-e0be2.appspot.com",
+  messagingSenderId: "301149939517",
+  appId: "1:301149939517:web:d58f814569025813a80754",
+  measurementId: "G-Z7PFZEETT9"
 };
 
-// Kiểm tra xem tất cả biến môi trường Firebase đã được cấu hình chưa
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
+// Initialize Firebase Authentication and get a reference to the service
+export const auth = getAuth(app);
+
+// Initialize Analytics (only works on https or localhost)
+export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
+
+// Export the app instance
+export { app };
+
+// Validate Firebase config
 export const validateFirebaseConfig = () => {
   const requiredFields = [
-    'REACT_APP_FIREBASE_API_KEY',
-    'REACT_APP_FIREBASE_AUTH_DOMAIN',
-    'REACT_APP_FIREBASE_PROJECT_ID',
-    'REACT_APP_FIREBASE_STORAGE_BUCKET',
-    'REACT_APP_FIREBASE_MESSAGING_SENDER_ID',
-    'REACT_APP_FIREBASE_APP_ID'
+    'apiKey',
+    'authDomain',
+    'projectId',
+    'storageBucket',
+    'messagingSenderId',
+    'appId'
   ];
 
-  const missingFields = requiredFields.filter(field => !process.env[field]);
+  const missingFields = requiredFields.filter(field => !firebaseConfig[field]);
   
   if (missingFields.length > 0) {
     console.warn('⚠️ Firebase configuration missing:', missingFields);
@@ -28,15 +44,4 @@ export const validateFirebaseConfig = () => {
   }
   
   return true;
-};
-
-// Khởi tạo Firebase nếu cần
-export const initializeFirebase = () => {
-  if (typeof window !== 'undefined' && window.firebase) {
-    if (!window.firebase.apps.length) {
-      window.firebase.initializeApp(firebaseConfig);
-    }
-    return window.firebase;
-  }
-  return null;
 };

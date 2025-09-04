@@ -2,30 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Lock, Eye, EyeOff, AlertCircle, User, Phone } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
-import { GoogleAuthProvider, getAuth, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-// Firebase config của bạn — sửa storageBucket nếu cần
-const firebaseConfig = {
-  apiKey: "AIzaSyAL7R2-9_wvgrwwLgNknZHvlZbHMqgxZCc",
-  authDomain: "auth-e0be2.firebaseapp.com",
-  projectId: "auth-e0be2",
-  storageBucket: "auth-e0be2.appspot.com", // <- thường là dạng này
-  messagingSenderId: "301149939517",
-  appId: "1:301149939517:web:d58f814569025813a80754",
-  measurementId: "G-Z7PFZEETT9"
-};
-
-const app = initializeApp(firebaseConfig);
-// Analytics chỉ hoạt động trên https hoặc localhost – có thể comment nếu chưa cần
-try { getAnalytics(app); } catch (e) { /* ignore on http */ }
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
-
-provider.setCustomParameters({ prompt: "select_account" });
-
-
+import { useFirebaseAuth } from '../../hooks/useFirebaseAuth';
 
 const RegisterModal = ({ isOpen, onClose, onSwitchToLogin }) => {
   const [formData, setFormData] = useState({
@@ -43,6 +20,25 @@ const RegisterModal = ({ isOpen, onClose, onSwitchToLogin }) => {
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const { register, googleLogin } = useAuth();
+  const { signInWithGoogle: firebaseSignIn, error: firebaseError } = useFirebaseAuth();
+
+  const handleGoogleSignInResult = async (result) => {
+    try {
+      const user = result.user;
+      const idToken = await user.getIdToken(true);
+      
+      // Gọi hàm googleLogin từ context để backend phát hành JWT và lưu localStorage
+      const resp = await googleLogin(idToken);
+      if (resp.success) {
+        onClose();
+      } else {
+        setError(resp.error || 'Đăng nhập Google thất bại');
+      }
+    } catch (err) {
+      console.error('Google sign-in result error:', err);
+      setError('Không thể xử lý đăng nhập Google');
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -93,22 +89,24 @@ const RegisterModal = ({ isOpen, onClose, onSwitchToLogin }) => {
   const handleGoogleRegister = async () => {
     setGoogleLoading(true);
     setError('');
+    
     try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      const idToken = await user.getIdToken(true);
+      const result = await firebaseSignIn();
       
-      // Gọi hàm googleLogin từ context để backend phát hành JWT và lưu localStorage
-      const resp = await googleLogin(idToken);
-      if (resp.success) {
-        onClose();
+      if (result.success && result.user) {
+        // Xử lý kết quả popup thành công
+        await handleGoogleSignInResult(result);
+      } else if (result.success && result.redirect) {
+        // Redirect đang xử lý, không cần làm gì thêm
+        console.log('Redirect initiated, waiting for result...');
       } else {
-        setError(resp.error || 'Đăng nhập Google thất bại');
+        // Có lỗi
+        setError(result.error || 'Đăng nhập Google thất bại');
+        setGoogleLoading(false);
       }
-
     } catch (error) {
-      setError('Lỗi đăng ký Google');
-    } finally {
+      console.error('Unexpected error:', error);
+      setError('Lỗi không mong muốn. Vui lòng thử lại.');
       setGoogleLoading(false);
     }
   };

@@ -10,6 +10,7 @@ class NewsArticle(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     is_checked = models.BooleanField(default=False)
     is_approved = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False)
 
     def __str__(self):
         return self.title
@@ -22,6 +23,8 @@ class Comment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     answer = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies')
+    is_deleted = models.BooleanField(default=False)
+
 
     def __str__(self):
         return f"Comment by {self.author} on {self.article}"

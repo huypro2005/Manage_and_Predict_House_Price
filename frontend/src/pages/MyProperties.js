@@ -12,11 +12,10 @@ import { Building2,
   Mail,
   ChevronLeft,
   ChevronRight,
-  Search,
-  Bell,
-  Heart } from 'lucide-react';
+  Search } from 'lucide-react';
 import AuthWrapper from '../components/auth/AuthWrapper';
 import { useAuth } from '../contexts/AuthContext';
+import HeaderActions from '../components/HeaderActions';
 
 function MyProperties() {
   const navigate = useNavigate();
@@ -235,66 +234,12 @@ function MyProperties() {
               <h1 className="text-xl font-bold text-gray-900">RealEstate</h1>
             </div>
             <div className="flex items-center space-x-2">
-              {/* Desktop Actions */}
-              <div className="hidden sm:flex items-center space-x-3">
-                {/* Heart Icon */}
-                <button 
-                  className="p-2 text-gray-600 hover:text-red-500 transition-colors relative"
-                  onClick={() => navigate('/favorites')}
-                  aria-label="Yêu thích"
-                >
-                  <Heart className="h-5 w-5" />
-                  {favoriteIds.length > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
-                      {favoriteIds.length > 9 ? '9+' : favoriteIds.length}
-                    </div>
-                  )}
-                </button>
-
-
-                {/* Bell Icon */}
-                <button
-                  className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
-                  aria-label="Thông báo"
-                >
-                  <Bell className="h-5 w-5" />
-                </button>
-                
-
-                
-                <AuthWrapper />
-                <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium" onClick={() => navigate('/post-property')}>Đăng tin</button>
-              </div>
-              
-              {/* Mobile Actions */}
-              <div className="flex sm:hidden items-center space-x-2">
-                {/* Bell Icon */}
-                <button
-                  className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
-                  aria-label="Thông báo"
-                >
-                  <Bell className="h-5 w-5" />
-                </button>
-                
-                {/* Heart Icon */}
-                <button 
-                  className="p-2 text-gray-600 hover:text-red-500 transition-colors relative"
-                  onClick={() => navigate('/favorites')}
-                  aria-label="Yêu thích"
-                >
-                  <Heart className="h-5 w-5" />
-                  {favoriteIds.length > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
-                      {favoriteIds.length > 9 ? '9+' : favoriteIds.length}
-                    </div>
-                  )}
-                </button>
-                
-                {/* User Avatar - Always visible on mobile */}
-                <div className="flex items-center">
-                  <AuthWrapper />
-                </div>
-              </div>
+              <HeaderActions 
+                favoriteCount={favoriteIds.length}
+                onFavoriteClick={() => navigate('/favorites')}
+              />
+              <AuthWrapper />
+              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium" onClick={() => navigate('/post-property')}>Đăng tin</button>
             </div>
           </div>
         </div>

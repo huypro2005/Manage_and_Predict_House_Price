@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { baseUrl } from '../base';
-import { Calculator, MapPin, Home, AlertCircle, CheckCircle, Loader, Search, Bell, Heart } from 'lucide-react';
+import { Calculator, MapPin, Home, AlertCircle, CheckCircle, Loader, Search } from 'lucide-react';
 import AuthWrapper from '../components/auth/AuthWrapper';
 import { useAuth } from '../contexts/AuthContext';
+import HeaderActions from '../components/HeaderActions';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -55,6 +56,7 @@ function PricePrediction() {
   const [propertyTypes, setPropertyTypes] = useState([]);
   const [provinces, setProvinces] = useState([]);
   const [districts, setDistricts] = useState([]);
+  const [favoriteIds, setFavoriteIds] = useState([]);
   
   const [formData, setFormData] = useState({
     propertyType: '',
@@ -69,6 +71,31 @@ function PricePrediction() {
     coordinates: { lat: 10.8624, lng: 106.5894 }
   });
   const [centerMap, setCenterMap] = useState(false);
+
+  // Fetch favorite IDs
+  useEffect(() => {
+    const fetchFavoriteIds = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await fetch(`${baseUrl}favourites/listID/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setFavoriteIds(data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching favorite IDs:', error);
+      }
+    };
+
+    fetchFavoriteIds();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -293,36 +320,12 @@ function PricePrediction() {
               <h1 className="text-xl font-bold text-gray-900">RealEstate</h1>
             </div>
             <div className="flex items-center space-x-2">
-              {/* Desktop Actions */}
-              <div className="hidden sm:flex items-center space-x-3">
-                <AuthWrapper />
-                <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium" onClick={() => navigate('/post-property')}>Đăng tin</button>
-              </div>
-              
-              {/* Mobile Actions */}
-              <div className="flex sm:hidden items-center space-x-2">
-                {/* Bell Icon */}
-                <button
-                  className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
-                  aria-label="Thông báo"
-                >
-                  <Bell className="h-5 w-5" />
-                </button>
-                
-                {/* Heart Icon */}
-                <button 
-                  className="p-2 text-gray-600 hover:text-red-500 transition-colors"
-                  onClick={() => navigate('/favorites')}
-                  aria-label="Yêu thích"
-                >
-                  <Heart className="h-5 w-5" />
-                </button>
-                
-                {/* User Avatar - Always visible on mobile */}
-                <div className="flex items-center">
-                  <AuthWrapper />
-                </div>
-              </div>
+              <HeaderActions 
+                favoriteCount={favoriteIds.length}
+                onFavoriteClick={() => navigate('/favorites')}
+              />
+              <AuthWrapper />
+              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium" onClick={() => navigate('/post-property')}>Đăng tin</button>
             </div>
           </div>
         </div>

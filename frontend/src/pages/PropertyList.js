@@ -3,11 +3,11 @@ import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { baseUrl, ConfigUrl } from '../base';
 import AuthWrapper from '../components/auth/AuthWrapper';
+import HeaderActions from '../components/HeaderActions';
 import { 
   ArrowLeft, 
   Search, 
   MapPin, 
-  DollarSign, 
   Square, 
   Heart, 
   Star,
@@ -16,8 +16,7 @@ import {
   List,
   ChevronDown,
   ChevronLeft,
-  ChevronRight,
-  Bell
+  ChevronRight
 } from 'lucide-react';
 
 function PropertyList() {
@@ -101,36 +100,35 @@ function PropertyList() {
     }
   };
 
-  // Parse URL parameters and fetch data in one useEffect
+  // Combined useEffect to parse URL parameters and fetch data
   useEffect(() => {
     console.log('PropertyList useEffect triggered, location.search:', location.search);
     
-    const params = new URLSearchParams(location.search);
-    const searchParamsObj = {};
+    // Add a flag to prevent duplicate calls
+    let isMounted = true;
     
-    // Convert URLSearchParams to object
-    for (const [key, value] of params.entries()) {
-      searchParamsObj[key] = value;
-    }
-    
-    console.log('Parsed searchParamsObj:', searchParamsObj);
-    setSearchParams(searchParamsObj);
-    
-    // Reset pagination when search params change
-    setCurrentPage(1);
-  }, [location.search]);
-
-  // Fetch properties with pagination
-  useEffect(() => {
     const fetchProperties = async () => {
       console.log('Starting fetchProperties for page:', currentPage);
       setLoading(true);
+      
       try {
+        // Parse URL parameters
+        const params = new URLSearchParams(location.search);
+        const searchParamsObj = {};
+        
+        // Convert URLSearchParams to object
+        for (const [key, value] of params.entries()) {
+          searchParamsObj[key] = value;
+        }
+        
+        console.log('Parsed searchParamsObj:', searchParamsObj);
+        setSearchParams(searchParamsObj);
+        
         // Build API URL with search parameters and pagination
         const apiUrl = new URL(`${baseUrl}properties/`);
         
         // Add search parameters to API URL
-        Object.entries(searchParams).forEach(([key, value]) => {
+        Object.entries(searchParamsObj).forEach(([key, value]) => {
           if (value && value !== '') {
             apiUrl.searchParams.append(key, value);
           }
@@ -141,6 +139,7 @@ function PropertyList() {
         apiUrl.searchParams.append('page_size', itemsPerPage.toString());
 
         console.log('Fetching from API:', apiUrl.toString());
+        console.log('Request timestamp:', new Date().toISOString());
         
         const response = await fetch(apiUrl.toString());
         if (!response.ok) {
@@ -150,14 +149,23 @@ function PropertyList() {
         const data = await response.json();
         console.log('API Response:', data);
         
+        // Check if component is still mounted before updating state
+        if (!isMounted) return;
+        
         // Handle API response with pagination
-        if (data && data.data) {
+        if (data && data.data && data.data.length > 0) {
           setProperties(data.data);
           setTotalCount(data.count || 0);
           setTotalPages(Math.ceil((data.count || 0) / itemsPerPage));
           console.log('Properties:', data.data);
           console.log('Total count:', data.count);
           console.log('Total pages:', Math.ceil((data.count || 0) / itemsPerPage));
+        } else if (data && data.data && data.data.length === 0) {
+          // API returned empty array - no properties found
+          setProperties([]);
+          setTotalCount(0);
+          setTotalPages(0);
+          console.log('No properties found for the given criteria');
         } else {
           // Fallback to mock data with pagination simulation
           const startIndex = (currentPage - 1) * itemsPerPage;
@@ -216,16 +224,31 @@ function PropertyList() {
         }
       } catch (error) {
         console.error('Error fetching properties:', error);
-        setProperties([]);
-        setTotalCount(0);
-        setTotalPages(0);
+        if (isMounted) {
+          setProperties([]);
+          setTotalCount(0);
+          setTotalPages(0);
+          // You could also set an error state here to show a different message
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
+    // Reset pagination when search params change (but not when page changes)
+    if (location.search !== window.location.search) {
+      setCurrentPage(1);
+    }
+    
     fetchProperties();
-  }, [currentPage, searchParams]);
+    
+    // Cleanup function to prevent state updates on unmounted component
+    return () => {
+      isMounted = false;
+    };
+  }, [location.search, currentPage]);
 
   // Mock data for demonstration (extended for pagination testing)
   const mockProperties = [
@@ -278,7 +301,7 @@ function PropertyList() {
 
 
   const handleBack = () => {
-    navigate('/');
+    navigate('/?page=1');
   };
 
   // Pagination handlers
@@ -346,7 +369,7 @@ function PropertyList() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer h-full flex flex-col"
-      onClick={() => navigate(`/property/${property.id}`)}
+      onClick={() => navigate(`/property/${property.id}?page=1`)}
     >
       {/* Property Image */}
       <div className="relative h-48 flex-shrink-0">
@@ -409,7 +432,7 @@ function PropertyList() {
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer"
-      onClick={() => navigate(`/property/${property.id}`)}
+      onClick={() => navigate(`/property/${property.id}?page=1`)}
     >
       <div className="flex">
         {/* Property Image */}
@@ -468,10 +491,33 @@ function PropertyList() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Đang tải danh sách bất động sản...</p>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b border-gray-100">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={handleBack}
+                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <ArrowLeft className="h-6 w-6" />
+                </button>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">Kết quả tìm kiếm</h1>
+                  <p className="text-sm text-gray-500">Đang tải...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Loading Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-16">
+            <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Đang tải danh sách bất động sản...</p>
+          </div>
         </div>
       </div>
     );
@@ -490,77 +536,39 @@ function PropertyList() {
                >
                  <ArrowLeft className="h-6 w-6" />
                </button>
-               <div>
-                 <h1 className="text-xl font-bold text-gray-900">Kết quả tìm kiếm</h1>
-                 <p className="text-sm text-gray-500">
-                   {totalCount > 0 ? `${totalCount} bất động sản được tìm thấy` : 'Đang tải...'}
-                 </p>
-               </div>
+                               <div>
+                  <h1 className="text-xl font-bold text-gray-900">Kết quả tìm kiếm</h1>
+                  <p className="text-sm text-gray-500">
+                    {loading ? 'Đang tải...' : 
+                     totalCount > 0 ? `${totalCount} bất động sản được tìm thấy` : 
+                     'Không tìm thấy bất động sản nào'}
+                  </p>
+                </div>
              </div>
 
              {/* Header Actions */}
              <div className="flex items-center space-x-2">
-               {/* Desktop Actions */}
-               <div className="hidden sm:flex items-center space-x-3">
-                 {/* Search Summary */}
-                 <div className="hidden md:flex items-center space-x-4 text-sm text-gray-600">
-                   {searchParams?.province && (
-                     <span className="flex items-center">
-                       <MapPin className="h-4 w-4 mr-1" />
-                       {searchParams.province}
-                     </span>
-                   )}
-                   {searchParams?.districts?.length > 0 && (
-                     <span>{searchParams.districts.length} quận/huyện</span>
-                   )}
-                   {searchParams?.propertyTypes?.length > 0 && (
-                     <span>{searchParams.propertyTypes.length} loại nhà đất</span>
-                   )}
-                 </div>
+               {/* Search Summary */}
+               <div className="hidden md:flex items-center space-x-4 text-sm text-gray-600">
+                 {searchParams?.province && (
+                   <span className="flex items-center">
+                     <MapPin className="h-4 w-4 mr-1" />
+                     {searchParams.province}
+                   </span>
+                 )}
+                 {searchParams?.districts?.length > 0 && (
+                   <span>{searchParams.districts.length} quận/huyện</span>
+                 )}
+                 {searchParams?.propertyTypes?.length > 0 && (
+                   <span>{searchParams.propertyTypes.length} loại nhà đất</span>
+                 )}
+               </div>
 
-                 {/* Heart Icon with Count */}
-                 <button 
-                   className="p-2 text-gray-400 hover:text-red-500 transition-colors relative"
-                   onClick={() => navigate('/favorites')}
-                 >
-                   <Heart className="h-5 w-5" />
-                   {favoriteIds.length > 0 && (
-                     <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
-                       {favoriteIds.length > 9 ? '9+' : favoriteIds.length}
-                     </div>
-                   )}
-                 </button>
-               </div>
-               
-               {/* Mobile Actions */}
-               <div className="flex sm:hidden items-center space-x-2">
-                 {/* Bell Icon */}
-                 <button
-                   className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
-                   aria-label="Thông báo"
-                 >
-                   <Bell className="h-5 w-5" />
-                 </button>
-                 
-                 {/* Heart Icon */}
-                 <button 
-                   className="p-2 text-gray-600 hover:text-red-500 transition-colors relative"
-                   onClick={() => navigate('/favorites')}
-                   aria-label="Yêu thích"
-                 >
-                   <Heart className="h-5 w-5" />
-                   {favoriteIds.length > 0 && (
-                     <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
-                       {favoriteIds.length > 9 ? '9+' : favoriteIds.length}
-                     </div>
-                   )}
-                 </button>
-                 
-                 {/* User Avatar - Always visible on mobile */}
-                 <div className="flex items-center">
-                   <AuthWrapper />
-                 </div>
-               </div>
+               <HeaderActions
+                 favoriteCount={favoriteIds.length}
+                 onFavoriteClick={() => navigate('/favorites?page=1')}
+               />
+               <AuthWrapper />
              </div>
            </div>
          </div>
@@ -568,6 +576,57 @@ function PropertyList() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Current Search Info */}
+        {Object.keys(searchParams).length > 0 && (
+          <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Search className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-900">Tiêu chí tìm kiếm hiện tại:</span>
+              </div>
+              <button
+                onClick={() => navigate('/?page=1')}
+                className="text-sm text-blue-600 hover:text-blue-800 underline"
+              >
+                Thay đổi
+              </button>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {searchParams.province && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  <MapPin className="h-3 w-3 mr-1" />
+                  {searchParams.province}
+                </span>
+              )}
+              {searchParams.district && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {searchParams.district}
+                </span>
+              )}
+              {searchParams.property_type && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {searchParams.property_type}
+                </span>
+              )}
+              {searchParams.price_min && searchParams.price_max && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {searchParams.price_min} - {searchParams.price_max} tỷ
+                </span>
+              )}
+              {searchParams.area_min && searchParams.area_max && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {searchParams.area_min} - {searchParams.area_max} m²
+                </span>
+              )}
+              {searchParams.tab && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {searchParams.tab === 'ban' ? 'Nhà đất bán' : 'Nhà đất cho thuê'}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Filters and Controls */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
           <div className="flex items-center space-x-4">
@@ -620,17 +679,115 @@ function PropertyList() {
         </div>
 
         {/* Property List */}
-        {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {properties.map((property) => (
-              <PropertyCard key={property.id} property={property} />
-            ))}
-          </div>
+        {properties.length > 0 ? (
+          <>
+            {viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {properties.map((property) => (
+                  <PropertyCard key={property.id} property={property} />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {properties.map((property) => (
+                  <PropertyListItem key={property.id} property={property} />
+                ))}
+              </div>
+            )}
+          </>
         ) : (
-          <div className="space-y-4">
-            {properties.map((property) => (
-              <PropertyListItem key={property.id} property={property} />
-            ))}
+          /* Empty State - No properties found */
+          <div className="text-center py-16">
+            <div className="max-w-md mx-auto">
+              {/* Empty State Icon */}
+              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Search className="h-12 w-12 text-gray-400" />
+              </div>
+              
+              {/* Empty State Message */}
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                Không tìm thấy bất động sản
+              </h3>
+              
+              <p className="text-gray-600 mb-6">
+                {searchParams.province || searchParams.district ? (
+                  <>
+                    Hiện tại không có bất động sản nào phù hợp với tiêu chí tìm kiếm của bạn tại{' '}
+                    <span className="font-medium text-gray-900">
+                      {searchParams.province && searchParams.district 
+                        ? `${searchParams.province} - ${searchParams.district}`
+                        : searchParams.province || searchParams.district
+                      }
+                    </span>
+                  </>
+                ) : (
+                  'Không có bất động sản nào phù hợp với tiêu chí tìm kiếm của bạn.'
+                )}
+              </p>
+              
+              {/* Suggestions */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h4 className="font-medium text-blue-900 mb-2">Gợi ý tìm kiếm:</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Thử mở rộng phạm vi tìm kiếm (bỏ bớt filter)</li>
+                  <li>• Kiểm tra lại từ khóa tìm kiếm</li>
+                  <li>• Thử tìm kiếm ở khu vực lân cận</li>
+                  <li>• Điều chỉnh khoảng giá hoặc diện tích</li>
+                </ul>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <button
+                  onClick={() => navigate('/?page=1')}
+                  className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
+                >
+                  Tìm kiếm lại
+                </button>
+                <button
+                  onClick={() => {
+                    // Clear all filters and search for all properties
+                    navigate('/property-list?page=1');
+                  }}
+                  className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
+                >
+                  Xem tất cả bất động sản
+                </button>
+              </div>
+              
+              {/* Suggested Properties */}
+              <div className="mt-12">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">Bất động sản gợi ý</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {mockProperties.slice(0, 3).map((property) => (
+                    <div
+                      key={property.id}
+                      className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => navigate(`/property/${property.id}?page=1`)}
+                    >
+                      <div className="relative h-32">
+                        <img
+                          src={ConfigUrl(property.thumbnail)}
+                          alt={property.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                      </div>
+                      <div className="p-3">
+                        <h5 className="font-medium text-gray-900 text-sm line-clamp-2 mb-1">
+                          {property.title}
+                        </h5>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-bold text-red-600">{property.price} tỷ</span>
+                          <span className="text-gray-600">{property.area_m2} m²</span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1 truncate">{property.address}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

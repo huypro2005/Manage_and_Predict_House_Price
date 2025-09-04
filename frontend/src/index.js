@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import App from './App';
 import SearchPage from './pages/SearchPage';
 import PropertyList from './pages/PropertyList';
@@ -13,12 +14,15 @@ import MyProperties from './pages/MyProperties';
 import MapTest from './components/MapTest';
 import PostProperty from './pages/PostProperty';
 import PricePrediction from './pages/PricePrediction';
+import Notifications from './pages/Notifications';
+import Profile from './pages/Profile';
 
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <AuthProvider>
-    <Router>
+    <NotificationProvider>
+      <Router>
       <Routes>
         {/* Trang chủ */}
         <Route path='/' element={<App />} />
@@ -40,7 +44,7 @@ root.render(
           path='/profile' 
           element={
             <ProtectedRoute>
-              <div style={{cursor: 'pointer'}}>Trang hồ sơ cá nhân</div>
+              <Profile />
             </ProtectedRoute>
           } 
         />
@@ -81,15 +85,25 @@ root.render(
           } 
         />
         
-        <Route 
-          path='/price-prediction' 
-          element={
-            <ProtectedRoute>
-              <PricePrediction />
-            </ProtectedRoute>
-          } 
-        />
-      </Routes>
+                  <Route 
+            path='/price-prediction' 
+            element={
+              <ProtectedRoute>
+                <PricePrediction />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path='/notifications' 
+            element={
+              <ProtectedRoute>
+                <Notifications />
+              </ProtectedRoute>
+            } 
+          />
+        </Routes>
     </Router>
+    </NotificationProvider>
   </AuthProvider>
 );

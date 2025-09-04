@@ -22,21 +22,25 @@ class FirebaseAuthView(APIView):
 
     def post(self, request):
 
-
         id_token = str(request.data.get("token"))
         if not id_token:
             return Response({"error": "ID token is required"}, status=status.HTTP_400_BAD_REQUEST)
         print(len(id_token))
         try:
-            sleep(1.5)
+            sleep(2)
             decoded = auth.verify_id_token(id_token)
             print(decoded)
-            
             
         except auth.ExpiredIdTokenError:
             return Response({"error": "ID token has expired"}, status=status.HTTP_400_BAD_REQUEST)
         except auth.InvalidIdTokenError as e:
-            return Response({"error": "Invalid ID token", "details": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            print(e)
+            if "Token used too early" in str(e):
+                sleep(8)
+                try:
+                    decoded = auth.verify_id_token(id_token)
+                except Exception as e:
+                    return Response({"error": "Failed to verify ID token after retry", "details": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": "Failed to verify ID token", "details": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         

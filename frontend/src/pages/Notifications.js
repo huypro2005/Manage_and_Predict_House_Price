@@ -1,0 +1,323 @@
+import React, { useState } from 'react';
+import { useNotificationSystem } from '../hooks/useNotificationSystem';
+import { useNavigate } from 'react-router-dom';
+import { ConfigUrl } from '../base';
+import NotificationTest from '../components/NotificationTest';
+import { 
+  Bell, 
+  MessageCircle, 
+  Check, 
+  Trash2, 
+  Filter,
+  ArrowLeft,
+  Home
+} from 'lucide-react';
+
+const Notifications = () => {
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    clearNotifications,
+    getUnreadNotifications,
+    getReadNotifications,
+    getContactRequests
+  } = useNotificationSystem();
+
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [showRead, setShowRead] = useState(true);
+  const navigate = useNavigate();
+
+  const formatTimeAgo = (timestamp) => {
+    const now = new Date();
+    const notificationTime = new Date(timestamp);
+    const diffInMinutes = Math.floor((now - notificationTime) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Vừa xong';
+    if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
+    
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours} giờ trước`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays} ngày trước`;
+  };
+
+  const getFilteredNotifications = () => {
+    let filtered = notifications;
+
+    // Filter by type
+    switch (activeFilter) {
+      case 'contact_request':
+        filtered = getContactRequests();
+        break;
+      case 'unread':
+        filtered = getUnreadNotifications();
+        break;
+      case 'read':
+        filtered = getReadNotifications();
+        break;
+      default:
+        filtered = notifications;
+    }
+
+    // Filter by read status
+    if (!showRead) {
+      filtered = filtered.filter(notification => !notification.isRead);
+    }
+
+    return filtered;
+  };
+
+  const renderNotificationIcon = (type) => {
+    switch (type) {
+      case 'contact_request':
+        return (
+          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+            <MessageCircle className="h-5 w-5 text-blue-600" />
+          </div>
+        );
+      default:
+        return (
+          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+            <Bell className="h-5 w-5 text-gray-600" />
+          </div>
+        );
+    }
+  };
+
+  const renderNotificationContent = (notification) => {
+    switch (notification.type) {
+      case 'contact_request':
+        return (
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-gray-900">
+                Yêu cầu liên hệ mới
+              </p>
+              <span className="text-xs text-gray-500">
+                {formatTimeAgo(notification.timestamp)}
+              </span>
+            </div>
+            <div className="text-sm text-gray-600 mt-1">
+              {notification.type === 'contact_request' && notification.message ? (
+                <div 
+                  dangerouslySetInnerHTML={{ 
+                    __html: notification.message.replace(/\n/g, '<br>') 
+                  }} 
+                />
+              ) : (
+                notification.message
+              )}
+            </div>
+            {notification.property && (
+              <div className="mt-3 flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                <img 
+                  src={ConfigUrl(notification.property.thumbnail)} 
+                  alt={notification.property.title}
+                  className="w-16 h-16 rounded object-cover"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {notification.property.title}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {notification.property.price} • {notification.property.area_m2}m²
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {notification.property.address}
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate(`/property/${notification.property.id}`)}
+                  className="flex-shrink-0 p-2 text-blue-600 hover:text-blue-800"
+                >
+                  <Home className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      default:
+        return (
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-900">
+                {notification.message || 'Thông báo mới'}
+              </p>
+              <span className="text-xs text-gray-500">
+                {formatTimeAgo(notification.timestamp)}
+              </span>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  const filteredNotifications = getFilteredNotifications();
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => navigate(-1)}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <div>
+                <h1 className="text-xl font-semibold text-gray-900">
+                  Thông báo
+                </h1>
+                <p className="text-sm text-gray-500">
+                  {unreadCount} thông báo chưa đọc
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 transition-colors"
+                >
+                  <Check className="h-4 w-4 mr-1" />
+                  Đánh dấu đã đọc
+                </button>
+              )}
+              <button
+                onClick={clearNotifications}
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 transition-colors"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Xóa tất cả
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Filter className="h-4 w-4 text-gray-400" />
+                <span className="text-sm font-medium text-gray-700">Lọc:</span>
+              </div>
+              
+              <div className="flex space-x-1">
+                <button
+                  onClick={() => setActiveFilter('all')}
+                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                    activeFilter === 'all'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Tất cả ({notifications.length})
+                </button>
+                <button
+                  onClick={() => setActiveFilter('contact_request')}
+                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                    activeFilter === 'contact_request'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Liên hệ ({getContactRequests().length})
+                </button>
+                <button
+                  onClick={() => setActiveFilter('unread')}
+                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                    activeFilter === 'unread'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Chưa đọc ({unreadCount})
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={showRead}
+                  onChange={(e) => setShowRead(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">Hiển thị đã đọc</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Test Component - Only show in development */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <NotificationTest />
+        </div>
+      )}
+
+      {/* Notifications List */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {filteredNotifications.length === 0 ? (
+          <div className="text-center py-12">
+            <Bell className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Không có thông báo nào
+            </h3>
+            <p className="text-gray-500">
+              {activeFilter === 'all' 
+                ? 'Bạn chưa có thông báo nào'
+                : `Không có thông báo nào phù hợp với bộ lọc "${activeFilter}"`
+              }
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredNotifications.map((notification) => (
+              <div
+                key={notification.id}
+                className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 transition-colors ${
+                  !notification.isRead ? 'border-l-4 border-l-blue-500 bg-blue-50' : ''
+                }`}
+              >
+                <div className="flex items-start space-x-4">
+                  {renderNotificationIcon(notification.type)}
+                  
+                  <div className="flex-1">
+                    {renderNotificationContent(notification)}
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    {!notification.isRead && (
+                      <button
+                        onClick={() => markAsRead(notification.id)}
+                        className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
+                        title="Đánh dấu đã đọc"
+                      >
+                        <Check className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Notifications;

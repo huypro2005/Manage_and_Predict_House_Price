@@ -8,6 +8,8 @@ import PropertyList from './pages/PropertyList';
 import AuthWrapper from './components/auth/AuthWrapper';
 import UserDropdown from './components/auth/UserDropdown';
 import { useAuth } from './contexts/AuthContext';
+import HeaderActions from './components/HeaderActions';
+import NotificationManager from './components/NotificationManager';
 import { 
   Home, 
   User, 
@@ -37,6 +39,11 @@ import {
   ChevronRight,
   Play
 } from 'lucide-react';
+
+
+
+
+
 
 const districtUrl = baseUrl + 'districts/';
 const provinceUrl = baseUrl + 'provinces/';
@@ -271,31 +278,7 @@ function App() {
     }
   ];
 
-  const propertyListing = [
-    {
-      id: 1,
-      title: 'Elysian - Giỏ hàng trực tiếp CĐT, CK 9%',
-      description: 'TT 50% nhận nhà, CĐT hỗ trợ trả chậm đến 2029',
-      price: '9 tỷ',
-      area: '50 m²',
-      address: 'Quận 7, Thành phố Hồ Chí Minh',
-      time: '9 giờ trước',
-      thumbnail: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-      views: 1247
-    },
-    {
-      id: 2,
-      title: 'Căn hộ cao cấp tại Quận 1',
-      description: 'Vị trí đắc địa, view sông Sài Gòn',
-      price: '15 tỷ',
-      area: '80 m²',
-      address: 'Quận 1, Thành phố Hồ Chí Minh',
-      time: '2 giờ trước',
-      thumbnail: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-      views: 2156
-    }
-    
-  ];
+
 
   const handleNavigateToPropertyList = (tab) => {
     if (tab === 'ban') {
@@ -306,28 +289,37 @@ function App() {
       navigate('/property-list');
     }
   }
-  const [propertyListings, setPropertyListings] = useState(propertyListing);
+  const [propertyListings, setPropertyListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch featured properties from API
   useEffect(() => {
-    fetch(baseUrl + 'properties/')
-      .then(response => {
+    const fetchFeaturedProperties = async () => {
+      try {
+        setLoading(true);
+        // Try featured properties first, fallback to latest properties
+        let response = await fetch(`${baseUrl}properties/?featured=true&limit=8`);
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          // Fallback to latest properties if featured endpoint doesn't exist
+          response = await fetch(`${baseUrl}properties/?limit=8`);
         }
-        return response.json();
-      })
-      .then(data => {
-        // Kiểm tra xem data có đúng format không
-        if (Array.isArray(data.data)) {
-          setPropertyListings(data.data);
+        
+        if (response.ok) {
+          const data = await response.json();
+          setPropertyListings(data.results || data.data || []);
         } else {
-          console.warn('API returned non-array data:', data.data);
-          // Giữ lại data mặc định nếu API trả về sai format
+          console.error('Failed to fetch properties');
+          setPropertyListings([]);
         }
-      })
-      .catch(error => {
+      } catch (error) {
         console.error('Error fetching properties:', error);
-        // Giữ lại data mặc định khi có lỗi
-      });
+        setPropertyListings([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeaturedProperties();
   }, []);
 
   const handelNavigateToPostProperty = () => {
@@ -351,6 +343,8 @@ function App() {
   // Render Search page
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Notification Manager */}
+      <NotificationManager />
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -386,52 +380,25 @@ function App() {
             <div className="flex items-center space-x-2">
               {/* Desktop Actions */}
               <div className="hidden sm:flex items-center space-x-3">
-                <button 
-                  className="p-2 text-gray-400 hover:text-red-500 transition-colors relative"
-                  onClick={() => navigate('/favorites')}
-                >
-                <Heart className="h-5 w-5" />
-                  {favoriteIds.length > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
-                      {favoriteIds.length > 9 ? '9+' : favoriteIds.length}
-                    </div>
-                  )}
-              </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                <Bell className="h-5 w-5" />
-              </button>
+                <HeaderActions
+                  favoriteCount={favoriteIds.length}
+                  onFavoriteClick={() => navigate('/favorites')}
+                />
                 <AuthWrapper />
                 <button className="hidden md:inline-flex bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors" onClick={handelNavigateToPostProperty}>
-                Đăng tin
-              </button>
+                  Đăng tin
+                </button>
                 <button className="hidden lg:inline-flex bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors" onClick={() => navigate('/price-prediction')}>
-                Dự đoán giá
+                  Dự đoán giá
                 </button>
               </div>
               
               {/* Mobile Actions */}
               <div className="flex sm:hidden items-center space-x-2">
-                {/* Bell Icon */}
-                <button
-                  className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
-                  aria-label="Thông báo"
-                >
-                  <Bell className="h-5 w-5" />
-                </button>
-                
-                {/* Heart Icon */}
-                <button 
-                  className="p-2 text-gray-600 hover:text-red-500 transition-colors relative"
-                  onClick={() => navigate('/favorites')}
-                  aria-label="Yêu thích"
-                >
-                  <Heart className="h-5 w-5" />
-                  {favoriteIds.length > 0 && (
-                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
-                      {favoriteIds.length > 9 ? '9+' : favoriteIds.length}
-                    </div>
-                  )}
-                </button>
+                <HeaderActions
+                  favoriteCount={favoriteIds.length}
+                  onFavoriteClick={() => navigate('/favorites')}
+                />
                 
                 {/* User Avatar - Always visible on mobile */}
                 <div className="flex items-center">
@@ -706,9 +673,31 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h3 className="text-2xl font-bold text-gray-900 mb-8">Bất động sản nổi bật</h3>
           
-          {/* Mobile: list rows, Desktop: keep grid */}
-          <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {propertyListings.map((property, index) => (
+          {loading ? (
+            // Loading skeleton for desktop
+            <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, index) => (
+                <div key={index} className="bg-white rounded-xl shadow-lg overflow-hidden animate-pulse">
+                  <div className="h-48 bg-gray-200"></div>
+                  <div className="p-4">
+                    <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded mb-3 w-3/4"></div>
+                    <div className="flex justify-between items-center mb-3">
+                      <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                    </div>
+                    <div className="flex justify-between">
+                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            // Actual content for desktop
+            <div className="hidden sm:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {propertyListings.map((property, index) => (
               <motion.div
                 key={property.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -731,12 +720,12 @@ function App() {
                   </button>
                       </div>
                 <div className="p-4">
-                  <h4 className="text-base font-bold text-gray-900 mb-2 line-clamp-2">{property.title.slice(0, 40)}...</h4>
-                  <p className="text-gray-600 text-xs mb-3 line-clamp-2">{property.description?.slice(0, 60) || 'Không có mô tả'}</p>
+                  <h4 className="text-base font-bold text-gray-900 mb-2 line-clamp-2">{property.title}</h4>
+                  <p className="text-gray-600 text-xs mb-3 line-clamp-2">{property.description || 'Không có mô tả'}</p>
                   <div className="flex justify-between items-center mb-3">
                     <div className="flex items-center space-x-2">
                       <div className="text-base font-bold text-red-600">{property.price}</div>
-                      <div className="text-gray-600 text-sm">{property.area}</div>
+                      <div className="text-gray-600 text-sm">{property.area_m2}m²</div>
                     </div>
                   </div>
                   <div className="flex justify-between items-center text-xs text-gray-500">
@@ -746,11 +735,34 @@ function App() {
                 </div>
               </motion.div>
             ))}
-                </div>
+            </div>
+          )}
 
-          {/* Mobile list rows */}
-          <div className="sm:hidden space-y-4">
-            {propertyListings.map((property, index) => (
+          {/* Mobile view */}
+          {loading ? (
+            // Loading skeleton for mobile
+            <div className="sm:hidden space-y-4">
+              {[...Array(4)].map((_, index) => (
+                <div key={index} className="bg-white rounded-xl shadow-md overflow-hidden animate-pulse">
+                  <div className="flex">
+                    <div className="w-36 h-28 bg-gray-200 flex-shrink-0"></div>
+                    <div className="flex-1 p-3">
+                      <div className="h-4 bg-gray-200 rounded mb-1"></div>
+                      <div className="h-3 bg-gray-200 rounded mb-2 w-3/4"></div>
+                      <div className="flex items-center justify-between">
+                        <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+                      </div>
+                      <div className="mt-1 h-3 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            // Actual content for mobile
+            <div className="sm:hidden space-y-4">
+              {propertyListings.map((property, index) => (
               <motion.div
                 key={property.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -773,11 +785,11 @@ function App() {
                   </div>
                   <div className="flex-1 p-3">
                     <h4 className="text-base font-bold text-gray-900 mb-1 line-clamp-2">{property.title}</h4>
-                    <p className="text-gray-600 text-xs mb-2 line-clamp-2">{property.description?.slice(0, 100) || 'Không có mô tả'}</p>
+                    <p className="text-gray-600 text-xs mb-2 line-clamp-2">{property.description || 'Không có mô tả'}</p>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <div className="text-base font-bold text-red-600">{property.price}</div>
-                        <div className="text-gray-600 text-xs">{property.area}</div>
+                        <div className="text-gray-600 text-xs">{property.area_m2}m²</div>
                       </div>
                       <span className="text-xs text-gray-500">{property.time}</span>
                     </div>
@@ -786,13 +798,34 @@ function App() {
                 </div>
               </motion.div>
             ))}
-          </div>
-            {/* Button xem thêm bất động sản */}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!loading && propertyListings.length === 0 && (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
+                <span className="text-gray-400 text-2xl">🏠</span>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Không có bất động sản nổi bật</h3>
+              <p className="text-gray-500 mb-4">Hiện tại chưa có bất động sản nào được đánh dấu nổi bật</p>
+              <button 
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                onClick={() => navigate('/property-list')}
+              >
+                Xem tất cả bất động sản
+              </button>
+            </div>
+          )}
+
+          {/* Button xem thêm bất động sản */}
+          {!loading && propertyListings.length > 0 && (
             <div className="flex justify-center" style={{ marginTop: '20px' }}>
               <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors" onClick={() => navigate('/property-list')}>
                 Xem thêm
               </button>
             </div>
+          )}
         </div>
       </div>
 

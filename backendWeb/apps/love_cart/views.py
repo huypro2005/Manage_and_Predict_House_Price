@@ -34,7 +34,7 @@ class FavouritePropertyListView(APIView):
             return Response({'data': cached, 'message': 'Success (from cache)'}, status=status.HTTP_200_OK)
 
         ids = get_ids_from_cache(user.id)
-    
+      
 
         if ids:
             print(list(ids))

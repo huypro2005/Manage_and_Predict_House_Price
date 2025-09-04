@@ -22,6 +22,8 @@ class CustomUser(AbstractUser):
     is_verified = models.BooleanField(default=False)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
+    status = models.BooleanField(default=False)
+    description = models.TextField(blank=True, null=True, max_length=500, default='')
 
 
     REQUIRED_FIELDS = ['email']

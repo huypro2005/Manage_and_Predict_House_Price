@@ -29,13 +29,39 @@ const PropertyMap = ({ property, formatPrice, lat, lng, onMapClick, showMarker =
 
   // Determine coordinates - either from props or property object
   let coordinates = null;
+  
+  console.log('🔍 PropertyMap Debug:', {
+    property,
+    lat,
+    lng,
+    coord_x: property?.coord_x,
+    coord_y: property?.coord_y
+  });
+  
   if (lat && lng) {
     coordinates = { lat: parseFloat(lat), lng: parseFloat(lng) };
+    console.log('📍 Sử dụng tọa độ từ props:', coordinates);
   } else if (property && property.coord_x && property.coord_y) {
     coordinates = { 
-      lat: parseFloat(property.coord_x), 
-      lng: parseFloat(property.coord_y) 
+      lat: parseFloat(property.coord_y), 
+      lng: parseFloat(property.coord_x) 
     };
+    console.log('📍 Sử dụng tọa độ từ property (coord_y=lat, coord_x=lng):', coordinates);
+  } else if (property && property.latitude && property.longitude) {
+    coordinates = { 
+      lat: parseFloat(property.latitude), 
+      lng: parseFloat(property.longitude) 
+    };
+    console.log('📍 Sử dụng tọa độ từ property (latitude/longitude):', coordinates);
+  } else if (property && property.lat && property.lng) {
+    coordinates = { 
+      lat: parseFloat(property.lat), 
+      lng: parseFloat(property.lng) 
+    };
+    console.log('📍 Sử dụng tọa độ từ property (lat/lng):', coordinates);
+  } else {
+    console.log('❌ Không tìm thấy tọa độ trong property');
+    console.log('Available property fields:', Object.keys(property || {}));
   }
 
   // Kiểm tra xem có tọa độ không
@@ -52,28 +78,21 @@ const PropertyMap = ({ property, formatPrice, lat, lng, onMapClick, showMarker =
 
   // Kiểm tra tọa độ hợp lệ
   if (isNaN(coordinates.lat) || isNaN(coordinates.lng)) {
+    console.log('❌ Tọa độ không hợp lệ:', coordinates);
+    console.log('Property data:', property);
     return (
       <div className="property-map-fallback">
         <div className="property-map-fallback-content">
           <MapPin className="h-12 w-12 mx-auto mb-2" />
           <p>Tọa độ không hợp lệ</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Lat: {coordinates.lat}, Lng: {coordinates.lng}
+          </p>
         </div>
       </div>
     );
   }
 
-
-  // Kiểm tra tọa độ hợp lệ
-  if (isNaN(lat) || isNaN(lng)) {
-    return (
-      <div className="property-map-fallback">
-        <div className="property-map-fallback-content">
-          <MapPin className="h-12 w-12 mx-auto mb-2" />
-          <p>Tọa độ không hợp lệ</p>
-        </div>
-      </div>
-    );
-  }
 
   // Handle map load error
   const handleMapError = () => {

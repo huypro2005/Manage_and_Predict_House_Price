@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { baseUrl } from '../base';
+import webSocketService from '../services/WebSocketService';
 
 // Utility function to handle token expiration
 const handleTokenExpiration = () => {
@@ -8,23 +9,30 @@ const handleTokenExpiration = () => {
   window.location.href = '/';
 };
 
-// Global fetch interceptor to handle token expiration
+// Token validation cache to avoid repeated checks
+let tokenValidationCache = {
+  isValid: null,
+  lastChecked: 0,
+  cacheDuration: 5 * 60 * 1000 // 5 minutes cache
+};
+
+// Optimized global fetch interceptor - only check when necessary
 const originalFetch = window.fetch;
 window.fetch = async (...args) => {
   const response = await originalFetch(...args);
   
-  // Check if the request includes Authorization header (has token)
-  const url = args[0];
+  // Only check token expiration for authenticated requests that fail
   const options = args[1] || {};
   const headers = options.headers || {};
-  
-  // Check if this is an authenticated request
   const isAuthenticatedRequest = headers.Authorization && headers.Authorization.includes('Bearer');
   
   if (isAuthenticatedRequest && (response.status === 401 || response.status === 403)) {
+    // Clear cache when token is invalid
+    tokenValidationCache.isValid = false;
+    tokenValidationCache.lastChecked = Date.now();
+    
     // Token expired - handle globally
     handleTokenExpiration();
-    return response; // Return the original response
   }
   
   return response;
@@ -46,61 +54,107 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  // Check token validity on app start
+  // Optimized token validation with caching
+  const validateToken = useCallback(async (storedToken) => {
+    const now = Date.now();
+    
+    // Check cache first
+    if (tokenValidationCache.isValid !== null && 
+        (now - tokenValidationCache.lastChecked) < tokenValidationCache.cacheDuration) {
+      return tokenValidationCache.isValid;
+    }
+
+    try {
+      const response = await fetch(`${baseUrl}auth/check/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${storedToken}`
+        }
+      });
+
+      const isValid = response.ok;
+      
+      // Update cache
+      tokenValidationCache.isValid = isValid;
+      tokenValidationCache.lastChecked = now;
+      
+      return isValid;
+    } catch (error) {
+      console.warn('Token validation failed:', error);
+      tokenValidationCache.isValid = false;
+      tokenValidationCache.lastChecked = now;
+      return false;
+    }
+  }, []);
+
+  // Check token validity on app start - optimized
   useEffect(() => {
     const checkToken = async () => {
       const storedToken = localStorage.getItem('token');
       if (storedToken) {
-        // Optimistically set token to avoid clearing it on transient errors
         setToken(storedToken);
-        try {
-          const response = await fetch(`${baseUrl}auth/check/`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${storedToken}`
-            }
-          });
+        
+        const isValid = await validateToken(storedToken);
+        
+        if (isValid) {
+          try {
+            const response = await fetch(`${baseUrl}auth/check/`, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${storedToken}`
+              }
+            });
 
-          if (response.ok) {
-            const userData = await response.json().catch(() => ({}));
-            console.log('User data from check token:', userData);
-            // Dữ liệu trả về là object trực tiếp chứa thông tin user
-            if (userData && (userData.id || userData.username)) {
-              setUser(userData);
-              setUser_fullname(userData.full_name);
+            if (response.ok) {
+              const userData = await response.json().catch(() => ({}));
+              console.log('User data from check token:', userData);
+              if (userData && (userData.id || userData.username)) {
+                // Ensure is_verified is included in user data
+                const userWithVerification = {
+                  ...userData,
+                  is_verified: userData.is_verified || false
+                };
+                setUser(userWithVerification);
+                setUser_fullname(userData.full_name);
+              }
             }
-          } else if (response.status === 401 || response.status === 403) {
-            // Token expired or invalid - logout and redirect to homepage
-            handleTokenExpiration();
-            return; // Exit early since we're redirecting
-          } else {
-            // Keep token on other errors (e.g., 404 if no check endpoint)
+          } catch (error) {
+            console.warn('Failed to fetch user data:', error);
           }
-        } catch (error) {
-          // Network or server error: keep token, just log
-          console.warn('Token verification skipped due to error:', error);
+        } else {
+          // Token is invalid - logout and redirect
+          handleTokenExpiration();
+          return;
         }
       }
       setLoading(false);
     };
 
     checkToken();
-  }, []);
+  }, [validateToken]);
 
-  const persistAuth = (authResponse) => {
-    // Chỉ lưu token khi login/register, không lưu user data
+  const persistAuth = useCallback((authResponse) => {
     const receivedToken = authResponse?.access || authResponse?.token || authResponse?.jwt;
 
     if (receivedToken) {
       localStorage.setItem('token', receivedToken);
       setToken(receivedToken);
-      // Không set user ở đây, sẽ lấy từ check token
+      
+      // Clear cache when new token is set
+      tokenValidationCache.isValid = null;
+      tokenValidationCache.lastChecked = 0;
+      
+      // Kết nối WebSocket sau khi đăng nhập thành công
+      setTimeout(() => {
+        webSocketService.connect();
+      }, 500);
     }
-  };
+  }, []);
 
-  // Hàm riêng để lấy thông tin user từ API
-  const fetchUserData = async () => {
+  // Optimized user data fetching
+  const fetchUserData = useCallback(async () => {
     const currentToken = localStorage.getItem('token');
     if (!currentToken) return;
 
@@ -113,19 +167,23 @@ export const AuthProvider = ({ children }) => {
         }
       });
 
-             if (response.ok) {
-         const userData = await response.json().catch(() => ({}));
-         // Dữ liệu trả về là object trực tiếp chứa thông tin user
-         if (userData && (userData.id || userData.username)) {
-           setUser(userData);
-         }
-       }
+      if (response.ok) {
+        const userData = await response.json().catch(() => ({}));
+        if (userData && (userData.id || userData.username)) {
+          // Ensure is_verified is included in user data
+          const userWithVerification = {
+            ...userData,
+            is_verified: userData.is_verified || false
+          };
+          setUser(userWithVerification);
+        }
+      }
     } catch (error) {
       console.warn('Failed to fetch user data:', error);
     }
-  };
+  }, []);
 
-  const login = async (username, password) => {
+  const login = useCallback(async (username, password) => {
     try {
       const response = await fetch(`${baseUrl}auth/login/`, {
         method: 'POST',
@@ -138,12 +196,8 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Chỉ lưu token, không lưu user data
         persistAuth(data);
-        
-        // Sau khi lưu token, gọi API để lấy thông tin user
         await fetchUserData();
-        
         return { success: true, data };
       } else {
         return { success: false, error: data.message || data.detail || 'Đăng nhập thất bại' };
@@ -152,9 +206,9 @@ export const AuthProvider = ({ children }) => {
       console.error('Login error:', error);
       return { success: false, error: 'Lỗi kết nối' };
     }
-  };
+  }, [persistAuth, fetchUserData]);
 
-  const register = async (userData) => {
+  const register = useCallback(async (userData) => {
     try {
       console.log(userData);
       const response = await fetch(`${baseUrl}auth/register/`, {
@@ -168,12 +222,8 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Chỉ lưu token, không lưu user data
         persistAuth(data);
-        
-        // Sau khi lưu token, gọi API để lấy thông tin user
         await fetchUserData();
-        
         return { success: true, data };
       } else {
         return { success: false, error: data.message || data.detail || 'Đăng ký thất bại' };
@@ -182,9 +232,9 @@ export const AuthProvider = ({ children }) => {
       console.error('Register error:', error);
       return { success: false, error: 'Lỗi kết nối' };
     }
-  };
+  }, [persistAuth, fetchUserData]);
 
-  const googleLogin = async (googleToken) => {
+  const googleLogin = useCallback(async (googleToken) => {
     try {
       const response = await fetch(`${baseUrl}oauth/firebase/google/`, {
         method: 'POST',
@@ -199,12 +249,8 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Chỉ lưu token, không lưu user data
         persistAuth(data);
-        
-        // Sau khi lưu token, gọi API để lấy thông tin user
         await fetchUserData();
-        
         return { success: true, data };
       } else {
         console.log('data', data);
@@ -214,29 +260,40 @@ export const AuthProvider = ({ children }) => {
       console.error('Google login error:', error);
       return { success: false, error: 'Lỗi kết nối' };
     }
-  };
+  }, [persistAuth, fetchUserData]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
+    // Ngắt kết nối WebSocket trước khi logout
+    webSocketService.disconnect();
+    
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
-  };
+    
+    // Clear cache on logout
+    tokenValidationCache.isValid = null;
+    tokenValidationCache.lastChecked = 0;
+  }, []);
 
-  // Function to handle API responses and check for token expiration
-  const handleApiResponse = async (response) => {
+  // Optimized API response handler
+  const handleApiResponse = useCallback(async (response) => {
     if (response.status === 401 || response.status === 403) {
-      // Token expired or invalid - logout and redirect to homepage
+      // Clear cache when token is invalid
+      tokenValidationCache.isValid = false;
+      tokenValidationCache.lastChecked = Date.now();
+      
       handleTokenExpiration();
       return { expired: true };
     }
     return { expired: false, response };
-  };
+  }, []);
 
-  const updateUser = (userData) => {
+  const updateUser = useCallback((userData) => {
     setUser(userData);
-  };
+  }, []);
 
-  const value = {
+  // Memoized context value to prevent unnecessary re-renders
+  const value = useMemo(() => ({
     user,
     token,
     loading,
@@ -247,7 +304,17 @@ export const AuthProvider = ({ children }) => {
     updateUser,
     handleApiResponse,
     isAuthenticated: !!token,
-  };
+  }), [
+    user,
+    token,
+    loading,
+    login,
+    register,
+    googleLogin,
+    logout,
+    updateUser,
+    handleApiResponse
+  ]);
 
   return (
     <AuthContext.Provider value={value}>

@@ -11,6 +11,8 @@ from apps.permission import IsAuthenticatedOrReadOnly
 from django.utils.dateparse import parse_datetime
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.pagination import PageNumberPagination
+from django.core.cache import cache 
+import hashlib
 import datetime
 # Create your views here.
 
@@ -31,17 +33,25 @@ class PropertyListView(APIView):
             'end_post': parse_datetime(request.GET.get('end_post')+'T23:59:59') if request.GET.get('end_post') else None,
             'province': request.GET.get('province'),
             'district': request.GET.get('district'),
-            'area_min': request.GET.get('area_min   '),
+            'area_min': request.GET.get('area_min'),
             'area_max': request.GET.get('area_max'),
             'price_min': request.GET.get('price_min'),
             'price_max': request.GET.get('price_max'),
             'property_type': request.GET.get('property_type'),
             'is_active': request.GET.get('is_active'),
-            'tab' : request.GET.get('tab')
+            'tab' : request.GET.get('tab'),
+            'page': request.GET.get('page')
         }
 
     def get(self, request):
         params = self.get_params(request)
+        cache_key = 'property_list_'+hashlib.md5(str(params).encode()).hexdigest()
+        res = cache.get(cache_key)
+        if res:
+            print("Cache hit")
+            return Response(res, status=status.HTTP_200_OK)
+
+        print("Cache miss")
         filters = {}
 
         if params['username']:
@@ -85,7 +95,14 @@ class PropertyListView(APIView):
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(properties, request)
         serializer = PropertyV1Serializer(page, many=True)
-        return Response({'message': 'Properties retrieved successfully', 'data': serializer.data, 'count': properties.count()}, status=status.HTTP_200_OK)
+        result = {
+            'message': 'Properties retrieved successfully',
+            'data': serializer.data,
+            'count': properties.count()
+        }
+        cache.set(cache_key, result, 300)  # Cache for 5 minutes
+
+        return Response(result, status=status.HTTP_200_OK)
 
     def post(self, request):
         try:

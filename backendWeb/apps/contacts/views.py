@@ -6,15 +6,22 @@ from .models import ContactRequest
 from rest_framework.permissions import IsAuthenticated
 from .serializer import ContactRequestV1Serializer
 from django.http import Http404
+from rest_framework.pagination import PageNumberPagination
 # Create your views here.
+
+class CustomPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'limit'
+    max_page_size = 100
 
 
 class ContactRequestListView(APIView):
     permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
 
     def get(self, request):
         user = request.user
-        contact_requests = ContactRequest.objects.filter(user=user)
+        contact_requests = ContactRequest.objects.filter(user=user).order_by('-created_at')
         serializer = ContactRequestV1Serializer(contact_requests, many=True)
         return Response({'message': 'Contact requests retrieved successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
 
@@ -54,3 +61,5 @@ class ContactRequestDetailView(APIView):
         contact_request.is_active = False
         contact_request.save()
         return Response({'message': 'Contact request deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
+
