@@ -1,11 +1,10 @@
-from email.mime import message
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from asgiref.sync import sync_to_async
 from .models import CustomUser, ContactRequest, Property
 from redis import asyncio as aioredis
 from rest_framework_simplejwt.tokens import AccessToken
 from apps.properties.serializer import PropertyV1Serializer
-from celery import group, shared_task
+from celery import shared_task
 from .tasks import send_message_to_user
 
 '''
@@ -16,6 +15,16 @@ nếu người dùng đó online thì gửi trực tiếp qua websocket
 '''
 
 redis = aioredis.from_url("redis://localhost:6379/0", encoding='utf-8', decode_responses=True)
+
+'''
+{
+    "type": "contact_request",
+    "data": {
+        "property": 18,
+        "message": "Tôi muốn liên lạc với bạn"
+    }
+}
+'''
 
 class NotificationConsumer(AsyncJsonWebsocketConsumer):
     

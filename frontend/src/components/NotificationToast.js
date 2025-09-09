@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Phone, Home, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ConfigUrl } from '../base';
+import { formatMessageWithRanges } from '../utils/notificationFormatter';
 
 const NotificationToast = ({ notification, onClose, onMarkAsRead }) => {
   const [isVisible, setIsVisible] = useState(true);
@@ -56,6 +57,14 @@ const NotificationToast = ({ notification, onClose, onMarkAsRead }) => {
     return notification.message || 'Bạn có thông báo mới';
   };
 
+  const safeTime = () => {
+    const src = notification.timestamp || notification.created_at;
+    if (!src) return 'Vừa xong';
+    const d = new Date(src);
+    if (isNaN(d.getTime())) return 'Vừa xong';
+    return d.toLocaleTimeString();
+  };
+
   return (
     <AnimatePresence>
       {isVisible && (
@@ -90,10 +99,10 @@ const NotificationToast = ({ notification, onClose, onMarkAsRead }) => {
           {/* Content */}
           <div className="p-3">
             <div className="text-sm text-gray-800 mb-2">
-              {notification.type === 'contact_request' && notification.message ? (
+              {notification.message ? (
                 <div 
                   dangerouslySetInnerHTML={{ 
-                    __html: notification.message.replace(/\n/g, '<br>') 
+                    __html: formatMessageWithRanges(notification.message, notification.ranges)
                   }} 
                 />
               ) : (
@@ -127,9 +136,7 @@ const NotificationToast = ({ notification, onClose, onMarkAsRead }) => {
             )}
 
             <div className="flex items-center justify-between mt-3">
-              <span className="text-xs text-gray-500">
-                {new Date(notification.timestamp).toLocaleTimeString()}
-              </span>
+              <span className="text-xs text-gray-500">{safeTime()}</span>
               {!notification.isRead && (
                 <div className="w-2 h-2 bg-red-500 rounded-full"></div>
               )}

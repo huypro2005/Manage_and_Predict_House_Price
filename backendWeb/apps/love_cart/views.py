@@ -152,3 +152,10 @@ class AddFavouritePropertyView(APIView):
 
         return Response({'message': 'Favourite property already exists.'}, status=status.HTTP_200_OK)
 
+class CountFavouritePropertyView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        count = FavouriteProperty.objects.filter(user=user, is_active=True).count()
+        return Response({'count': count, 'message': 'Success'}, status=status.HTTP_200_OK)

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, X, Clock, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../contexts/NotificationContext';
-import WebSocketIndicator from './WebSocketIndicator';
+// Removed WebSocketIndicator; show polling status
+import { formatMessageWithRanges } from '../utils/notificationFormatter';
 
 const NotificationDropdown = ({
   className = "relative",
@@ -13,7 +14,7 @@ const NotificationDropdown = ({
   const [notifications, setNotifications] = useState([]);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
-  const { notifications: contextNotifications, unreadCount, markAsRead: contextMarkAsRead, isConnected } = useNotifications();
+  const { notifications: contextNotifications, unreadCount, markAsRead: contextMarkAsRead, fetchNotifications, loadMoreNotifications, hasMore, loading, isPolling } = useNotifications();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -29,15 +30,17 @@ const NotificationDropdown = ({
     };
   }, []);
 
-  // Use notifications from context only (no API calls)
+  // Fetch notifications when dropdown opens
   useEffect(() => {
     if (isOpen) {
-      // Only use context notifications from WebSocket
-      setNotifications(contextNotifications);
+      fetchNotifications();
     }
-  }, [isOpen, contextNotifications]);
+  }, [isOpen, fetchNotifications]);
 
-  // Removed fetchNotifications - only using WebSocket notifications now
+  // Use notifications from context
+  useEffect(() => {
+    setNotifications(contextNotifications);
+  }, [contextNotifications]);
 
   const markAsRead = (notificationId) => {
     // Only update context - no API calls
@@ -54,7 +57,9 @@ const NotificationDropdown = ({
   };
 
   const formatTimeAgo = (dateString) => {
+    if (!dateString) return 'Vừa xong';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Vừa xong';
     const now = new Date();
     const diffInMinutes = Math.floor((now - date) / (1000 * 60));
     
@@ -103,7 +108,10 @@ const NotificationDropdown = ({
           <div className="flex items-center justify-between p-4 border-b border-gray-100">
             <div className="flex items-center space-x-2">
               <h3 className="text-lg font-semibold text-gray-900">Thông báo</h3>
-              <WebSocketIndicator showText={true} />
+              <span className={`text-xs ${isPolling ? 'text-green-600' : 'text-gray-400'}`}>
+                {isPolling ? 'Đang lắng nghe' : 'Tạm dừng'}
+              </span>
+              {loading && <span className="text-xs text-blue-600">Đang tải...</span>}
             </div>
             <button
               onClick={() => setIsOpen(false)}
@@ -114,16 +122,21 @@ const NotificationDropdown = ({
           </div>
 
           {/* Notifications List */}
-          <div className="max-h-96 overflow-y-auto">
+          <div 
+            className="max-h-96 overflow-y-auto"
+            onScroll={(e) => {
+              const { scrollTop, scrollHeight, clientHeight } = e.target;
+              if (scrollHeight - scrollTop === clientHeight && hasMore && !loading) {
+                loadMoreNotifications();
+              }
+            }}
+          >
             {notifications.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
                 <Bell className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                 <p className="text-sm">Chưa có thông báo nào</p>
                 <p className="text-xs text-gray-400 mt-1">
-                  {isConnected 
-                    ? 'Thông báo sẽ xuất hiện khi có người liên hệ' 
-                    : 'Đang kết nối... Thông báo sẽ hiển thị khi online'
-                  }
+                  Bấm chuông để tải thông báo
                 </p>
               </div>
             ) : (
@@ -153,15 +166,13 @@ const NotificationDropdown = ({
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-gray-900 line-clamp-2">
-                          {notification.title ? (
-                            notification.title
-                          ) : (
-                            <div 
-                              dangerouslySetInnerHTML={{ 
-                                __html: notification.message?.replace(/\n/g, '<br>') || 'Thông báo mới' 
-                              }} 
-                            />
-                          )}
+                          <div 
+                            dangerouslySetInnerHTML={{ 
+                              __html: notification.message 
+                                ? formatMessageWithRanges(notification.message, notification.ranges)
+                                : 'Thông báo mới' 
+                            }} 
+                          />
                         </div>
                         {notification.type === 'contact_request' && notification.from_username && (
                           <p className="text-xs text-blue-600 mt-1">
@@ -200,6 +211,15 @@ const NotificationDropdown = ({
               </div>
             )}
           </div>
+
+          {/* Loading indicator at bottom */}
+          {loading && notifications.length > 0 && (
+            <div className="p-4 border-t border-gray-100">
+              <div className="text-center text-sm text-gray-500">
+                Đang tải thêm...
+              </div>
+            </div>
+          )}
 
           {/* Footer */}
           {notifications.length > 0 && (

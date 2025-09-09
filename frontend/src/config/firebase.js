@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getAnalytics } from 'firebase/analytics';
+import { suppressChromeExtensionErrors } from '../utils/chromeExtensionHandler';
 
 // Firebase Configuration
 export const firebaseConfig = {
@@ -13,17 +14,35 @@ export const firebaseConfig = {
   measurementId: "G-Z7PFZEETT9"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase with error handling
+let app;
+let auth;
+let analytics;
 
-// Initialize Firebase Authentication and get a reference to the service
-export const auth = getAuth(app);
+try {
+  app = initializeApp(firebaseConfig);
+  
+  // Initialize Firebase Authentication with error handling
+  auth = getAuth(app);
+  
+  // Suppress Chrome extension errors
+  suppressChromeExtensionErrors();
+  
+  // Initialize Analytics (only works on https or localhost)
+  analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
+  
+} catch (error) {
+  console.error('Firebase initialization error:', error);
+  // Fallback initialization
+  if (!app) {
+    app = initializeApp(firebaseConfig);
+  }
+  if (!auth) {
+    auth = getAuth(app);
+  }
+}
 
-// Initialize Analytics (only works on https or localhost)
-export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
-
-// Export the app instance
-export { app };
+export { app, auth, analytics };
 
 // Validate Firebase config
 export const validateFirebaseConfig = () => {

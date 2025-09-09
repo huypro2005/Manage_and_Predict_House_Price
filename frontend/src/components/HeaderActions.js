@@ -1,17 +1,16 @@
 import React from 'react';
 import NotificationDropdown from './NotificationDropdown';
 import FavoriteHeart from './FavoriteHeart';
-import useNotificationCount from '../hooks/useNotificationCount';
+import { useFavoriteCount } from '../hooks/useFavoriteCount';
 
 const HeaderActions = ({
-  favoriteCount = 0,
   onFavoriteClick,
   isFavoritePage = false,
   showOnMobile = true,
   showOnDesktop = true,
   className = ""
 }) => {
-  const { notificationCount } = useNotificationCount();
+  const { favoriteCount } = useFavoriteCount();
   return (
     <div className={`flex items-center space-x-2 ${className}`}>
                     {/* Desktop Actions */}

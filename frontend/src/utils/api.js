@@ -133,6 +133,40 @@ const apiService = {
     }
   },
 
+  // Authenticated PUT request
+  async authenticatedPut(endpoint, data = {}) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const url = `${baseUrl}${endpoint}`;
+    try {
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Some PUT endpoints may return no content
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        return await response.json();
+      }
+      return {};
+    } catch (error) {
+      console.error('Authenticated API PUT error:', error);
+      throw error;
+    }
+  },
+
   // DELETE request
   async delete(endpoint) {
     const url = `${baseUrl}${endpoint}`;

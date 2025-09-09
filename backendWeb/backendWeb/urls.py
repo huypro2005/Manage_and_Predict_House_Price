@@ -44,6 +44,7 @@ urlpatterns = [
     path('oauth2/', include('oauth2_provider.urls', namespace='oauth2_provider')),
     path('api/v1/', include('apps.properties.urls')),
     path('api/v1/', include('apps.predicts.urls')),
+    path('api/v1/', include('apps.notifications.urls')),
     path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('accounts/', include('allauth.urls')),
     path('api/v1/auth/', include('apps.authenticationJWT.urls')),

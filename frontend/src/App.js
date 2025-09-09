@@ -9,7 +9,7 @@ import AuthWrapper from './components/auth/AuthWrapper';
 import UserDropdown from './components/auth/UserDropdown';
 import { useAuth } from './contexts/AuthContext';
 import HeaderActions from './components/HeaderActions';
-import NotificationManager from './components/NotificationManager';
+// Removed NotificationManager popups
 import { 
   Home, 
   User, 
@@ -343,8 +343,7 @@ function App() {
   // Render Search page
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Notification Manager */}
-      <NotificationManager />
+      {/* Notification popups disabled; bell shows counts */}
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -2,45 +2,51 @@ import { useState, useEffect, useCallback } from 'react';
 import { 
   GoogleAuthProvider, 
   signInWithPopup, 
-  signInWithRedirect, 
-  getRedirectResult,
   signOut as firebaseSignOut,
-  onAuthStateChanged 
+  onAuthStateChanged
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
+import { logExtensionConflict, createUserFriendlyErrorMessage } from '../utils/chromeExtensionHandler';
 
 const provider = new GoogleAuthProvider();
-provider.setCustomParameters({ prompt: "select_account" });
+// Cấu hình provider cho redirect mode
+provider.setCustomParameters({ 
+  prompt: "select_account"
+});
+// Thêm scope để lấy thông tin cơ bản
+provider.addScope('email');
+provider.addScope('profile');
 
 export const useFirebaseAuth = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [redirectResult, setRedirectResult] = useState(null);
 
-  // Check for redirect result when component mounts
-  useEffect(() => {
-    const checkRedirectResult = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result) {
-          setUser(result.user);
-          setError(null);
-        }
-      } catch (error) {
-        console.error('Redirect result error:', error);
-        setError('Lỗi xác thực Google. Vui lòng thử lại.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkRedirectResult();
-  }, []);
+  // Popup flow: không cần kiểm tra redirect result
 
   // Listen for auth state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
+    
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
+      setLoading(false);
+      try {
+        // No-op for popup; keep structure for potential future use
+      } catch (_) {}
+    }, (error) => {
+      console.error('Auth state change error:', error);
+      
+      // Xử lý lỗi Chrome extension conflicts
+      if (logExtensionConflict('auth state change', error)) {
+        return;
+      }
+      
+      setError('Lỗi xác thực. Vui lòng thử lại.');
       setLoading(false);
     });
 
@@ -52,45 +58,48 @@ export const useFirebaseAuth = () => {
     setError(null);
     
     try {
-      // Thử popup với timeout
-      const popupPromise = signInWithPopup(auth, provider);
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Popup timeout')), 10000)
-      );
-      
-      const result = await Promise.race([popupPromise, timeoutPromise]);
-      setUser(result.user);
-      setError(null);
-      return { success: true, user: result.user };
-    } catch (popupError) {
-      console.log('Popup failed, trying redirect:', popupError);
-      
-      // Nếu popup thất bại, thử redirect
-      try {
-        await signInWithRedirect(auth, provider);
-        // Redirect sẽ xử lý kết quả trong useEffect
-        return { success: true, redirect: true };
-      } catch (redirectError) {
-        console.error('Both popup and redirect failed:', redirectError);
-        
-        // Xử lý các loại lỗi cụ thể
-        let errorMessage = 'Không thể đăng nhập với Google. ';
-        if (redirectError.code === 'auth/network-request-failed') {
-          errorMessage += 'Lỗi kết nối mạng. Vui lòng kiểm tra internet và thử lại.';
-        } else if (redirectError.code === 'auth/popup-closed-by-user') {
-          errorMessage += 'Popup bị đóng. Vui lòng thử lại.';
-        } else if (redirectError.code === 'auth/popup-blocked') {
-          errorMessage += 'Popup bị chặn. Vui lòng cho phép popup và thử lại.';
-        } else if (redirectError.code === 'auth/cancelled-popup-request') {
-          errorMessage += 'Yêu cầu popup bị hủy. Vui lòng thử lại.';
-        } else {
-          errorMessage += 'Vui lòng thử lại.';
-        }
-        
-        setError(errorMessage);
-        setLoading(false);
-        return { success: false, error: errorMessage };
+      if (!auth) {
+        throw new Error('Firebase Auth chưa được khởi tạo');
       }
+
+      const result = await signInWithPopup(auth, provider);
+      const signedInUser = result.user;
+      let idToken = null;
+      try {
+        idToken = await signedInUser.getIdToken(true);
+      } catch (tokenError) {
+        console.error('Error getting ID token:', tokenError);
+      }
+      setLoading(false);
+      return { success: true, user: signedInUser, idToken };
+    } catch (popupError) {
+      console.error('Popup sign-in failed:', popupError);
+      
+      if (logExtensionConflict('sign in popup', popupError)) {
+        const friendlyError = createUserFriendlyErrorMessage(popupError);
+        setError(`${friendlyError.title}: ${friendlyError.message}`);
+        setLoading(false);
+        return { success: false, error: `${friendlyError.title}: ${friendlyError.message}` };
+      }
+      
+      let errorMessage = 'Không thể đăng nhập với Google. ';
+      if (popupError.code === 'auth/network-request-failed') {
+        errorMessage += 'Lỗi kết nối mạng. Vui lòng kiểm tra internet và thử lại.';
+      } else if (popupError.code === 'auth/too-many-requests') {
+        errorMessage += 'Quá nhiều yêu cầu. Vui lòng thử lại sau ít phút.';
+      } else if (popupError.code === 'auth/user-disabled') {
+        errorMessage += 'Tài khoản này đã bị vô hiệu hóa.';
+      } else if (popupError.code === 'auth/account-exists-with-different-credential') {
+        errorMessage += 'Tài khoản đã tồn tại với phương thức đăng nhập khác.';
+      } else if (popupError.message?.includes('Firebase Auth chưa được khởi tạo')) {
+        errorMessage += 'Hệ thống xác thực chưa sẵn sàng. Vui lòng tải lại trang.';
+      } else {
+        errorMessage += 'Vui lòng thử lại hoặc liên hệ hỗ trợ.';
+      }
+      
+      setError(errorMessage);
+      setLoading(false);
+      return { success: false, error: errorMessage };
     }
   }, []);
 
@@ -124,6 +133,8 @@ export const useFirebaseAuth = () => {
     signInWithGoogle,
     signOut,
     getIdToken,
-    clearError: () => setError(null)
+    clearError: () => setError(null),
+    clearRedirectResult: () => setRedirectResult(null)
   };
 };
+

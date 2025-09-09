@@ -2,11 +2,14 @@ from django.shortcuts import render
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import ContactRequest
+from .models import ContactRequest, Property
 from rest_framework.permissions import IsAuthenticated
 from .serializer import ContactRequestV1Serializer
 from django.http import Http404
+from django.db import transaction
 from rest_framework.pagination import PageNumberPagination
+from apps.notifications.models import Notification
+from apps.notifications.views import create_notification
 # Create your views here.
 
 class CustomPagination(PageNumberPagination):
@@ -25,14 +28,62 @@ class ContactRequestListView(APIView):
         serializer = ContactRequestV1Serializer(contact_requests, many=True)
         return Response({'message': 'Contact requests retrieved successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
 
+    @transaction.atomic
     def post(self, request):
         user = request.user
         serializer = ContactRequestV1Serializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(user=user)
-            return Response({'message': 'Contact request created successfully', 'data': serializer.data}, status=status.HTTP_201_CREATED)
+            try:
+                contact_request = serializer.save(user=user)
+                def create_notification_after_commit():
+                    try:
+                        self.handle_create_notification(
+                            to_user=contact_request.property.user,
+                            from_user=user,
+                            property=contact_request.property,
+                            contact_request=contact_request
+                        )
+                    except Exception as e:
+                        raise Exception('Notification creation failed: ' + str(e))
+                transaction.on_commit(create_notification_after_commit)
+                return Response({'message': 'Contact request created successfully',
+                                 'data': serializer.data}, 
+                                 status=status.HTTP_201_CREATED)
+            except ValueError as ve:
+                return Response({'message': 'Contact request creation failed', 'errors': str(ve)}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                return Response({'message': 'Contact request creation failed', 'errors': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            
         return Response({'message': 'Contact request creation failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+    
 
+
+    def handle_create_notification(self, to_user, from_user, property: Property, contact_request):
+        notification_message = f'{from_user.username} đã yêu cầu liên lạc từ bài biết {property.title if len(property.title) < 20 else property.title[:17] + "..."}'
+        ranges = [
+            {
+                'offset': 0,
+                'length': len(from_user.username)
+            },
+            {
+                'offset': 33+len(from_user.username),
+                'length': len(property.title if len(property.title) < 20 else property.title[:17] + "...")
+            }
+        ]
+       
+        try:
+            create_notification(
+                user=to_user,
+                type='contact_request',
+                message=notification_message,
+                url=f'/contact-requests/{contact_request.id}/',
+                ranges=ranges,
+                image_representation=property.thumbnail if property.thumbnail else None
+            )
+        except Exception as e:
+            raise Exception('Notification creation failed: ' + str(e))
+    
 
 class ContactRequestDetailView(APIView):
     permission_classes = [IsAuthenticated]

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { baseUrl } from '../base';
-import webSocketService from '../services/WebSocketService';
+// Removed WebSocket usage
 
 // Utility function to handle token expiration
 const handleTokenExpiration = () => {
@@ -146,10 +146,7 @@ export const AuthProvider = ({ children }) => {
       tokenValidationCache.isValid = null;
       tokenValidationCache.lastChecked = 0;
       
-      // Kết nối WebSocket sau khi đăng nhập thành công
-      setTimeout(() => {
-        webSocketService.connect();
-      }, 500);
+      // Long-polling is managed by NotificationContext
     }
   }, []);
 
@@ -236,36 +233,59 @@ export const AuthProvider = ({ children }) => {
 
   const googleLogin = useCallback(async (googleToken) => {
     try {
+      console.log('=== Google Login Process ===');
+      console.log('Token length:', googleToken.length);
+      console.log('Token preview:', googleToken.substring(0, 50) + '...');
+      console.log('Backend URL:', `${baseUrl}oauth/firebase/google/`);
+      
+      // Thêm timeout cho request để tránh chờ quá lâu
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 giây timeout
+
+      const requestBody = { token: googleToken };
+      console.log('Request body prepared');
+
       const response = await fetch(`${baseUrl}oauth/firebase/google/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({ token: googleToken }),
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
       });
 
-      console.log('googleToken is length: ', googleToken.length);
+      clearTimeout(timeoutId);
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (response.ok) {
+        console.log('Backend authentication successful');
         persistAuth(data);
         await fetchUserData();
         return { success: true, data };
       } else {
-        console.log('data', data);
+        console.error('Backend authentication failed:', data);
         return { success: false, error: data.error || 'Đăng nhập Google thất bại' };
       }
     } catch (error) {
       console.error('Google login error:', error);
-      return { success: false, error: 'Lỗi kết nối' };
+      
+      if (error.name === 'AbortError') {
+        return { success: false, error: 'Kết nối quá chậm. Vui lòng thử lại.' };
+      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        return { success: false, error: 'Lỗi kết nối mạng. Vui lòng kiểm tra internet.' };
+      } else {
+        return { success: false, error: 'Lỗi kết nối. Vui lòng thử lại.' };
+      }
     }
   }, [persistAuth, fetchUserData]);
 
   const logout = useCallback(() => {
-    // Ngắt kết nối WebSocket trước khi logout
-    webSocketService.disconnect();
-    
+    // Long-polling will stop when token is cleared
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
