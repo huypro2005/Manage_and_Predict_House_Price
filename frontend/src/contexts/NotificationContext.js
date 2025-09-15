@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import apiService from '../utils/api';
-import { useAppInitialization } from '../hooks/useAppInitialization';
+import { useLongPollingNotifications } from '../hooks/useLongPollingNotifications';
+import { debugLocalStorage, clearNotificationData } from '../utils/localStorageDebug';
+import { baseUrl } from '../base';
 
 const NotificationContext = createContext();
 
@@ -16,46 +18,141 @@ export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [nextPage, setNextPage] = useState(null);
   const [loading, setLoading] = useState(false);
-  
-  // Use app initialization service for unread count and polling
-  const { unreadCount, isPolling, fetchUnreadCount } = useAppInitialization();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const pendingMarkIdsRef = React.useRef(new Set());
+  const flushTimerRef = React.useRef(null);
+  const isFlushingMarksRef = React.useRef(false);
+
+  // ---- LocalStorage short-term cache (3 minutes) ----
+  const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes
+  const CACHE_KEY_LIST = 'notifications:list';
+  const CACHE_KEY_META = 'notifications:meta';
+
+  const readCache = useCallback(() => {
+    try {
+      const listRaw = localStorage.getItem(CACHE_KEY_LIST);
+      const metaRaw = localStorage.getItem(CACHE_KEY_META);
+      if (!listRaw || !metaRaw) return null;
+      const list = JSON.parse(listRaw);
+      const meta = JSON.parse(metaRaw);
+      if (!meta?.expiresAt || Date.now() > meta.expiresAt) {
+        // expired
+        localStorage.removeItem(CACHE_KEY_LIST);
+        localStorage.removeItem(CACHE_KEY_META);
+        return null;
+      }
+      if (!Array.isArray(list)) return null;
+      return { items: list, next: meta.next ?? null };
+    } catch (_) {
+      return null;
+    }
+  }, []);
+
+  const writeCache = useCallback((items, next) => {
+    try {
+      localStorage.setItem(CACHE_KEY_LIST, JSON.stringify(items || []));
+      localStorage.setItem(
+        CACHE_KEY_META,
+        JSON.stringify({ next: next ?? null, expiresAt: Date.now() + CACHE_TTL_MS })
+      );
+    } catch (_) {
+      // ignore quota errors
+    }
+  }, []);
+
+  const appendCache = useCallback((newItems, newNext) => {
+    try {
+      const current = readCache();
+      const existing = current?.items || [];
+      const idSet = new Set(existing.map(n => n.id));
+      const merged = [...existing];
+      for (const item of newItems || []) {
+        if (!idSet.has(item.id)) {
+          idSet.add(item.id);
+          merged.push(item);
+        }
+      }
+      writeCache(merged, newNext ?? current?.next ?? null);
+    } catch (_) {}
+  }, [readCache, writeCache]);
+
+  // Fetch unread notifications count (declared early so it can be used in other hooks)
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const data = await apiService.authenticatedGet('notifications/not-read-count/', {}, false);
+      const count = Number(data?.not_readed) || 0;
+      setUnreadCount(count);
+      return count;
+    } catch (error) {
+      console.error('Failed to fetch unread count:', error);
+      setUnreadCount(0);
+      return 0;
+    }
+  }, []);
 
   // Fetch notifications via HTTP
   const fetchNotifications = useCallback(async (page = 1, append = false) => {
     try {
+      console.log('🔔 fetchNotifications called with page:', page, 'append:', append);
       setLoading(true);
+      
+      // When fetching the first page (not append), try local cache first
+      if (!append && page === 1) {
+        const cached = readCache();
+        if (cached && Array.isArray(cached.items)) {
+          console.log('📦 Using notifications from localStorage cache');
+          setNotifications(cached.items);
+          setNextPage(cached.next ?? null);
+          setLoading(false);
+          return; // skip network call, UI will show cached results
+        }
+      }
+
       const data = await apiService.authenticatedGet(`notifications/?page=${page}`, {}, false);
       console.log('🔔 API Response:', data);
+      console.log('🔔 API Response type:', typeof data);
+      console.log('🔔 API Response keys:', Object.keys(data || {}));
+      console.log('🔔 API Response results:', data?.results);
+      console.log('🔔 API Response results type:', typeof data?.results);
+      console.log('🔔 API Response results length:', data?.results?.length);
       
-      // Handle nested structure: results[].notification
+      // Handle API response structure
       const results = Array.isArray(data?.results) ? data.results : [];
-      const normalized = results.map((item) => {
-        const n = item.notification || item; // Handle both structures
-        return {
-          id: n.id,
-          type: n.type,
-          message: n.message,
-          isRead: !!n.is_read,
-          is_read: !!n.is_read,
-          url: n.url,
-          created_at: n.created_at,
-          timestamp: n.created_at,
-          image_representation: n.image_representation,
-          ranges: n.ranges,
-          user: n.user,
-        };
-      });
+      console.log('🔔 Results array:', results);
+      console.log('🔔 Results length:', results.length);
       
-      if (append) {
-        setNotifications(prev => [...prev, ...normalized]);
-      } else {
-        setNotifications(normalized);
+      // Log first few items in detail
+      if (results.length > 0) {
+        console.log('🔔 First item:', results[0]);
+        console.log('🔔 First item keys:', Object.keys(results[0] || {}));
+        console.log('🔔 First item values:', Object.values(results[0] || {}));
       }
       
-      setNextPage(data?.next);
-      console.log('🔔 Processed notifications:', normalized.length);
+      console.log('data:', data);
+      console.log('results:', results);
+      
+      if (append) {
+        setNotifications(prev => {
+          const idSet = new Set(prev.map(n => n.id));
+          const merged = [...prev, ...results.filter(r => !idSet.has(r.id))];
+          console.log('🔔 Appending notifications. Total:', merged.length);
+          return merged;
+        });
+        // Update cache with appended items
+        appendCache(results, data?.next ?? null);
+      } else {
+        console.log('🔔 Setting notifications. Count:', results.length);
+        setNotifications(results);
+        // Write fresh cache for first page
+        writeCache(results, data?.next ?? null);
+      }
+
+      setNextPage(data?.next ?? null);
+      console.log('🔔 Next page:', data?.next);
     } catch (e) {
-      console.error('Failed to fetch notifications:', e);
+      console.error('❌ Failed to fetch notifications:', e);
+      console.error('❌ Error details:', e.message, e.stack);
     } finally {
       setLoading(false);
     }
@@ -63,27 +160,83 @@ export const NotificationProvider = ({ children }) => {
 
   // Load more notifications
   const loadMoreNotifications = useCallback(async () => {
-    if (nextPage && !loading) {
-      const pageNumber = new URL(nextPage).searchParams.get('page');
-      if (pageNumber) {
-        await fetchNotifications(parseInt(pageNumber), true);
+    if (!nextPage || loading) return;
+
+    let pageNumber = null;
+
+    if (typeof nextPage === 'number') {
+      pageNumber = nextPage;
+    } else if (typeof nextPage === 'string') {
+      // Try to extract page from URL or plain string number
+      try {
+        const url = new URL(nextPage, window.location.origin);
+        const pageParam = url.searchParams.get('page');
+        if (pageParam) pageNumber = parseInt(pageParam, 10);
+      } catch (e) {
+        const maybeNumber = parseInt(nextPage, 10);
+        if (!Number.isNaN(maybeNumber)) pageNumber = maybeNumber;
       }
+    }
+
+    if (pageNumber && Number.isFinite(pageNumber)) {
+      await fetchNotifications(pageNumber, true);
     }
   }, [nextPage, loading, fetchNotifications]);
 
-  const markAsRead = async (notificationId) => {
+  // Debounced queue flush for mark-as-read to avoid server overload
+  const flushMarkAsReadQueue = useCallback(async () => {
+    if (isFlushingMarksRef.current) return;
+    const ids = Array.from(pendingMarkIdsRef.current);
+    if (ids.length === 0) return;
+    isFlushingMarksRef.current = true;
+    pendingMarkIdsRef.current.clear();
+    try {
+      // Send sequentially to avoid burst; could be changed to limited parallelism
+      for (const id of ids) {
+        try {
+          // fire-and-forget but await to limit concurrency to 1
+          // backend expects PUT notifications/{id}/ with action 'readed'
+          // ignore response body
+          // eslint-disable-next-line no-await-in-loop
+          await apiService.authenticatedPut(`notifications/${id}/`, { action: 'readed' });
+        } catch (err) {
+          console.warn('markAsRead failed for id', id, err?.message);
+        }
+      }
+      // Refresh unread count once after batch
+      await fetchUnreadCount();
+    } finally {
+      isFlushingMarksRef.current = false;
+    }
+  }, [fetchUnreadCount]);
+
+  const scheduleFlushMarks = useCallback(() => {
+    if (flushTimerRef.current) {
+      clearTimeout(flushTimerRef.current);
+    }
+    flushTimerRef.current = setTimeout(() => {
+      flushTimerRef.current = null;
+      flushMarkAsReadQueue();
+    }, 800); // debounce 800ms
+  }, [flushMarkAsReadQueue]);
+
+  const markAsRead = useCallback((notificationId) => {
     // Optimistic update
     setNotifications(prev => prev.map(notif => notif.id === notificationId ? { ...notif, isRead: true, is_read: true } : notif));
-    
+
+    // Update cache optimistically
     try {
-      await apiService.authenticatedPut(`notifications/${notificationId}/`, { action: 'readed' });
-      // App initialization service will handle unread count update via long-polling
-    } catch (e) {
-      // Revert if failed
-      setNotifications(prev => prev.map(notif => notif.id === notificationId ? { ...notif, isRead: false, is_read: false } : notif));
-      console.error('Failed to mark notification as read:', e);
-    }
-  };
+      const cached = readCache();
+      if (cached?.items) {
+        const updated = cached.items.map(n => n.id === notificationId ? { ...n, isRead: true, is_read: true } : n);
+        writeCache(updated, cached.next ?? null);
+      }
+    } catch (_) {}
+
+    // Enqueue id for debounced PUT
+    pendingMarkIdsRef.current.add(notificationId);
+    scheduleFlushMarks();
+  }, [readCache, writeCache, scheduleFlushMarks]);
 
   const markAllAsRead = () => {
     setNotifications(prev => 
@@ -95,6 +248,142 @@ export const NotificationProvider = ({ children }) => {
     setNotifications([]);
     setNextPage(null);
   };
+
+  // fetchUnreadCount is declared earlier (above) so it can be referenced here
+
+  // Refresh all notification data
+  const refreshNotifications = useCallback(async () => {
+    await Promise.all([
+      fetchUnreadCount(),
+      fetchNotifications(1, false)
+    ]);
+  }, [fetchUnreadCount, fetchNotifications]);
+
+  // Force refresh notifications (bypass cache)
+  const forceRefreshNotifications = useCallback(async () => {
+    try {
+      console.log('🔄 Force refreshing notifications...');
+      setLoading(true);
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('🔄 No token found for force refresh');
+        return;
+      }
+      
+      // Direct API call bypassing apiService cache
+      const response = await fetch(`${baseUrl}notifications/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        },
+      });
+      
+      if (!response.ok) {
+        console.error('🔄 Force refresh failed:', response.status, response.statusText);
+        return;
+      }
+      
+      const data = await response.json();
+      console.log('🔄 Force refresh response:', data);
+      
+      // Process the data
+      const results = Array.isArray(data?.results) ? data.results : [];
+      const normalized = results.map((item) => ({
+        id: item.id,
+        type: item.type,
+        message: item.message,
+        isRead: !!item.is_read,
+        is_read: !!item.is_read,
+        url: item.url,
+        created_at: item.created_at,
+        timestamp: item.created_at,
+        image_representation: item.image_representation,
+        ranges: item.ranges || [],
+        user: item.user,
+        is_deleted: item.is_deleted || false,
+      }));
+      
+      console.log('🔄 Force refresh normalized:', normalized);
+      setNotifications(normalized);
+      setNextPage(data?.next);
+      // Replace cache on force refresh
+      writeCache(normalized, data?.next ?? null);
+      
+    } catch (error) {
+      console.error('🔄 Force refresh error:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Long polling setup
+  const { startPolling, stopPolling, isPolling, lastStatus, error: pollingError } = useLongPollingNotifications(async () => {
+    // When long-polling detects new data, refresh and update cache
+    await fetchNotifications(1, false);
+  });
+
+  // Initialize notification system when user is authenticated
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token && !isInitialized) {
+      console.log('🔔 Initializing notification system...');
+      
+      // Clear any old notification data from localStorage
+      const clearedCount = clearNotificationData();
+      if (clearedCount > 0) {
+        console.log(`🧹 Cleared ${clearedCount} old notification data entries`);
+      }
+      
+      // Debug localStorage in development
+      if (process.env.NODE_ENV === 'development') {
+        debugLocalStorage();
+      }
+      
+      setIsInitialized(true);
+      
+      // Fetch initial data
+      refreshNotifications().then(() => {
+        // Start long polling after initial data is loaded
+        startPolling();
+      });
+    } else if (!token && isInitialized) {
+      // User logged out, cleanup
+      console.log('🔔 Cleaning up notification system...');
+      stopPolling();
+      setIsInitialized(false);
+      setNotifications([]);
+      setUnreadCount(0);
+      setNextPage(null);
+    }
+  }, [isInitialized, refreshNotifications, startPolling, stopPolling]);
+
+  // Listen for storage changes (login/logout in other tabs)
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'token') {
+        if (e.newValue && !isInitialized) {
+          // User logged in
+          setIsInitialized(true);
+          refreshNotifications().then(() => {
+            startPolling();
+          });
+        } else if (!e.newValue && isInitialized) {
+          // User logged out
+          stopPolling();
+          setIsInitialized(false);
+          setNotifications([]);
+          setUnreadCount(0);
+          setNextPage(null);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [isInitialized, refreshNotifications, startPolling, stopPolling]);
 
   const requestNotificationPermission = async () => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -113,20 +402,79 @@ export const NotificationProvider = ({ children }) => {
     }
   }, []);
 
+  // Debug function to test API directly
+  const testNotificationAPI = useCallback(async () => {
+    try {
+      console.log('🧪 Testing notification API directly...');
+      const token = localStorage.getItem('token');
+      console.log('🧪 Token exists:', !!token);
+      console.log('🧪 Token preview:', token ? token.substring(0, 20) + '...' : 'null');
+      
+      const response = await fetch(`${baseUrl}notifications/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('🧪 Response status:', response.status);
+      console.log('🧪 Response statusText:', response.statusText);
+      console.log('🧪 Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      if (!response.ok) {
+        console.error('🧪 Response not OK:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('🧪 Error response body:', errorText);
+        return null;
+      }
+      
+      const data = await response.json();
+      console.log('🧪 Raw API response:', data);
+      console.log('🧪 Raw API response type:', typeof data);
+      console.log('🧪 Raw API response keys:', Object.keys(data || {}));
+      
+      if (data?.results) {
+        console.log('🧪 Results array:', data.results);
+        console.log('🧪 Results length:', data.results.length);
+        if (data.results.length > 0) {
+          console.log('🧪 First result item:', data.results[0]);
+          console.log('🧪 First result item keys:', Object.keys(data.results[0] || {}));
+        }
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('🧪 API test failed:', error);
+      console.error('🧪 Error details:', error.message, error.stack);
+      return null;
+    }
+  }, []);
+
   const value = {
     notifications,
     unreadCount,
     isPolling,
+    isInitialized,
+    lastStatus,
+    pollingError,
     markAsRead,
     markAllAsRead,
     clearNotifications,
     requestNotificationPermission,
     fetchNotifications,
     fetchUnreadCount,
+    refreshNotifications,
+    forceRefreshNotifications,
     sendContactRequest,
     loadMoreNotifications,
     hasMore: !!nextPage,
-    loading
+    loading,
+    // Debug utilities (development only)
+    ...(process.env.NODE_ENV === 'development' && {
+      debugLocalStorage,
+      clearNotificationData,
+      testNotificationAPI
+    })
   };
 
   return (

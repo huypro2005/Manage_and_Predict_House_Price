@@ -12,32 +12,30 @@ const HeaderActions = ({
 }) => {
   const { favoriteCount } = useFavoriteCount();
   return (
-    <div className={`flex items-center space-x-2 ${className}`}>
-                    {/* Desktop Actions */}
-              {showOnDesktop && (
-                <div className="hidden sm:flex items-center space-x-3">
-                  <FavoriteHeart
-                    favoriteCount={favoriteCount}
-                    onClick={onFavoriteClick}
-                    isFavoritePage={isFavoritePage}
-                  />
-                  <NotificationDropdown />
-                </div>
-              )}
+    <div className={`flex items-center space-x-1 ${className}`}>
+      {/* Desktop Actions */}
+      {showOnDesktop && (
+        <div className="hidden sm:flex items-center space-x-1">
+          <FavoriteHeart
+            favoriteCount={favoriteCount}
+            onClick={onFavoriteClick}
+            isFavoritePage={isFavoritePage}
+          />
+          <NotificationDropdown />
+        </div>
+      )}
 
-              {/* Mobile Actions */}
-              {showOnMobile && (
-                <div className="flex sm:hidden items-center space-x-2">
-                  <NotificationDropdown
-                    className="relative"
-                  />
-                  <FavoriteHeart
-                    favoriteCount={favoriteCount}
-                    onClick={onFavoriteClick}
-                    isFavoritePage={isFavoritePage}
-                  />
-                </div>
-              )}
+      {/* Mobile Actions */}
+      {showOnMobile && (
+        <div className="flex sm:hidden items-center space-x-1">
+          <NotificationDropdown />
+          <FavoriteHeart
+            favoriteCount={favoriteCount}
+            onClick={onFavoriteClick}
+            isFavoritePage={isFavoritePage}
+          />
+        </div>
+      )}
     </div>
   );
 };

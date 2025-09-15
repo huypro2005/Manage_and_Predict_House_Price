@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 import { getAnalytics } from 'firebase/analytics';
-import { suppressChromeExtensionErrors } from '../utils/chromeExtensionHandler';
+// import { suppressChromeExtensionErrors } from '../utils/chromeExtensionHandler';
 
 // Firebase Configuration
 export const firebaseConfig = {
@@ -26,7 +26,7 @@ try {
   auth = getAuth(app);
   
   // Suppress Chrome extension errors
-  suppressChromeExtensionErrors();
+  // suppressChromeExtensionErrors();
   
   // Initialize Analytics (only works on https or localhost)
   analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;

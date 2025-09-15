@@ -14,7 +14,9 @@ from .caches import (
     get_notifications_from_cache,
     seed_set_if_empty,
     remove_from_cache,
-    get_not_read_count_from_cache
+    get_not_read_count_from_cache,
+    set_total_notifications,
+    get_total_notifications
 )
 
 
@@ -27,8 +29,9 @@ class StandardResultsSetPagination(PageNumberPagination):
     def get_paginated_response(self, data):
         print('Paginated response data')
         return Response({
+            'count': data.get('total', 0),
             'not_readed': data.get('not_readed', 0),
-            'next': data['current_page'] + 1 if data['current_page'] else None,
+            'next': data['current_page'] + 1 if data['current_page'] * PAGE_SIZE < data['total'] else None,
             'results': data.get('data', []),
             'status_code': data['status'] if data['status'] else status.HTTP_200_OK,
         })
@@ -45,15 +48,19 @@ class NotificationListView(APIView):
         paginator = self.pagination_class()
         cached = get_notifications_from_cache(user.id, page_number=page)
         count_not_readed = get_not_read_count_from_cache(user.id)
-
+        print('Count not readed from cache:', count_not_readed)
         if cached and count_not_readed is not None:
+            tmp = []
+            for item in cached:
+                tmp.append(item['notification'])
             print('From cache')
             return paginator.get_paginated_response({
                 'not_readed': count_not_readed,
-                'data': cached,
+                'data': tmp,
                 'message': 'Success (from cache)',
                 'current_page': page,
-                'status': status.HTTP_204_NO_CONTENT
+                'status': status.HTTP_204_NO_CONTENT,
+                'total': get_total_notifications(user.id)
             })
 
         print('From DB')
@@ -62,9 +69,9 @@ class NotificationListView(APIView):
         result_page = paginator.paginate_queryset(notifications, request)
         serializer = NotificationV1Serializer(result_page, many=True)
         count_not_read = notifications.filter(is_read=False, is_deleted=False).count()
-        seed_set_if_empty(user.id, serializer.data, count_not_read, page_number=page)
+        seed_set_if_empty(user.id, serializer.data, count_not_read, page_number=page, count_notifications=notifications.count())
 
-        return paginator.get_paginated_response({'not_readed': count_not_read, 'data': serializer.data, 'message': 'Success (from DB)', 'status': status.HTTP_200_OK, 'current_page': page})
+        return paginator.get_paginated_response({'not_readed': count_not_read, 'data': serializer.data, 'message': 'Success (from DB)', 'status': status.HTTP_200_OK, 'current_page': page, 'total': get_total_notifications(user.id)})
 
 class NotificationDetailView(APIView):
     permission_classes = [IsAuthenticated]

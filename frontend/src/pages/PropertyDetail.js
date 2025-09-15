@@ -4,8 +4,6 @@ import { baseUrl, ConfigUrl } from '../base';
 import PropertyMap from '../components/PropertyMap';
 import AuthWrapper from '../components/auth/AuthWrapper';
 import { useAuth } from '../contexts/AuthContext';
-import webSocketService from '../services/WebSocketService';
-import WebSocketStatus from '../components/WebSocketStatus';
 import HeaderActions from '../components/HeaderActions';
 
 import { 
@@ -117,17 +115,6 @@ function PropertyDetail() {
     checkFavoriteStatus();
   }, [id]);
 
-  // Kiểm tra WebSocket connection khi component mount
-  useEffect(() => {
-    console.log('🔌 PropertyDetail - Kiểm tra WebSocket connection');
-    console.log('WebSocket status:', webSocketService.getConnectionStatus());
-    
-    // Thử kết nối WebSocket nếu chưa kết nối
-    if (webSocketService.getConnectionStatus() !== 'connected') {
-      console.log('🔄 Thử kết nối WebSocket...');
-      webSocketService.connect();
-    }
-  }, []);
 
   // Toggle favorite function
   const toggleFavorite = async () => {
@@ -286,7 +273,7 @@ function PropertyDetail() {
     }));
   };
 
-  // Gửi tin nhắn liên hệ chỉ qua WebSocket
+  // Gửi tin nhắn liên hệ qua HTTP API
   const handleSendContact = async () => {
     console.log('🚀 handleSendContact được gọi');
     
@@ -304,49 +291,42 @@ function PropertyDetail() {
       return;
     }
 
-    console.log('✅ Validation passed, bắt đầu gửi WebSocket');
+    console.log('✅ Validation passed, bắt đầu gửi HTTP request');
     setSendingMessage(true);
     
     try {
-      // Kiểm tra WebSocket connection
-      console.log('🔍 Kiểm tra WebSocket connection...');
-      console.log('webSocketService:', webSocketService);
-      console.log('Connection status:', webSocketService.getConnectionStatus());
-      
-      if (webSocketService.getConnectionStatus() !== 'connected') {
-        alert('Kết nối không ổn định. Vui lòng thử lại sau!');
-        return;
-      }
-
-      // Tạo message tổng hợp đầy đủ thông tin với format HTML
+      // Tạo message tổng hợp đầy đủ thông tin
       const fullMessage = `
         Thông tin liên hệ:
         - Tên: ${contactInfo.name}
         - Số điện thoại: ${contactInfo.phone}
-        - Email: ${contactInfo.email || 'Không có'}<br/>
+        - Email: ${contactInfo.email || 'Không có'}
         Nội dung tin nhắn:
         ${contactInfo.content}
       `.trim();
 
       console.log('📝 Message được tạo:', fullMessage);
 
-      // Gửi thông báo qua WebSocket với format đúng
-      const notificationData = {
-        type: 'contact_request',
-        data: {
-          property_id: parseInt(id),
-          message: fullMessage,
-        }
-      };
-      
-      const sent = webSocketService.send(notificationData);
-      if (sent) {
-        console.log('✅ Contact request sent via WebSocket:', notificationData);
+      // Gửi thông báo qua HTTP API
+      const response = await fetch(`${baseUrl}contact-requests/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          property: parseInt(id),
+          message: fullMessage
+        })
+      });
+
+      if (response.ok) {
+        console.log('✅ Contact request sent via HTTP API');
         alert('Tin nhắn đã được gửi thành công!');
         setContactInfo({ name: '', phone: '', email: '', content: '' });
         setShowContactForm(false);
       } else {
-        throw new Error('WebSocket send failed');
+        throw new Error('HTTP request failed');
       }
     } catch (error) {
       console.error('❌ Error sending contact request:', error);
@@ -773,8 +753,6 @@ function PropertyDetail() {
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center space-x-2">
                 <h3 className="text-lg font-semibold text-gray-900">Gửi tin nhắn liên hệ</h3>
-                {/* WebSocket Status Indicator */}
-                <WebSocketStatus showText={true} />
               </div>
               <button
                 onClick={handleCloseContactForm}

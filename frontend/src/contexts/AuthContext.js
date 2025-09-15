@@ -5,6 +5,10 @@ import { baseUrl } from '../base';
 // Utility function to handle token expiration
 const handleTokenExpiration = () => {
   localStorage.removeItem('token');
+  localStorage.removeItem('expectRedirect');
+  localStorage.removeItem('notifications:list');
+  localStorage.removeItem('unreadCount');
+  localStorage.removeItem('notifications:meta');
   // Redirect to homepage instead of login page
   window.location.href = '/';
 };
@@ -145,8 +149,6 @@ export const AuthProvider = ({ children }) => {
       // Clear cache when new token is set
       tokenValidationCache.isValid = null;
       tokenValidationCache.lastChecked = 0;
-      
-      // Long-polling is managed by NotificationContext
     }
   }, []);
 
@@ -233,10 +235,7 @@ export const AuthProvider = ({ children }) => {
 
   const googleLogin = useCallback(async (googleToken) => {
     try {
-      console.log('=== Google Login Process ===');
-      console.log('Token length:', googleToken.length);
-      console.log('Token preview:', googleToken.substring(0, 50) + '...');
-      console.log('Backend URL:', `${baseUrl}oauth/firebase/google/`);
+
       
       // Thêm timeout cho request để tránh chờ quá lâu
       const controller = new AbortController();
@@ -285,8 +284,11 @@ export const AuthProvider = ({ children }) => {
   }, [persistAuth, fetchUserData]);
 
   const logout = useCallback(() => {
-    // Long-polling will stop when token is cleared
     localStorage.removeItem('token');
+    localStorage.removeItem('expectRedirect');
+    localStorage.removeItem('notifications:list');
+    localStorage.removeItem('unreadCount');
+    localStorage.removeItem('notifications:meta');
     setToken(null);
     setUser(null);
     

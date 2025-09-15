@@ -1,49 +1,77 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useNotifications } from '../contexts/NotificationContext';
-import NotificationToast from './NotificationToast';
 
+/**
+ * NotificationManager - Component quản lý hệ thống thông báo global
+ * - Tự động khởi tạo khi user đăng nhập
+ * - Quản lý long-polling cho real-time updates
+ * - Hiển thị toast notifications khi có thông báo mới
+ * - Đồng bộ với tất cả các trang
+ */
 const NotificationManager = () => {
-  const { notifications, markAsRead } = useNotifications();
-  const [activeToasts, setActiveToasts] = useState([]);
-  const [processedNotifications, setProcessedNotifications] = useState(new Set());
+  const { 
+    notifications, 
+    unreadCount, 
+    isPolling, 
+    isInitialized,
+    lastStatus,
+    pollingError,
+    requestNotificationPermission 
+  } = useNotifications();
 
-  // Track new notifications and show toasts
+  // Request notification permission on mount
   useEffect(() => {
-    const newNotifications = notifications.filter(
-      notification => 
-        !notification.isRead && 
-        !processedNotifications.has(notification.id)
-    );
+    requestNotificationPermission();
+  }, [requestNotificationPermission]);
 
-    if (newNotifications.length > 0) {
-      // Show toast for the most recent notification
-      const latestNotification = newNotifications[0];
+  // Show browser notification for new notifications
+  useEffect(() => {
+    if (notifications.length > 0 && 'Notification' in window && Notification.permission === 'granted') {
+      const latestNotification = notifications[0];
       
-      setActiveToasts(prev => [...prev, latestNotification]);
-      setProcessedNotifications(prev => new Set([...prev, latestNotification.id]));
+      // Only show notification if it's very recent (within last 30 seconds)
+      const notificationTime = new Date(latestNotification.created_at);
+      const now = new Date();
+      const timeDiff = (now - notificationTime) / 1000;
+      
+      if (timeDiff < 30) {
+        const notification = new Notification('Thông báo mới', {
+          body: latestNotification.message,
+          icon: '/favicon.ico',
+          tag: `notification-${latestNotification.id}`,
+          requireInteraction: false
+        });
+
+        // Auto close after 5 seconds
+        setTimeout(() => {
+          notification.close();
+        }, 5000);
+
+        // Handle click to focus window
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
+      }
     }
-  }, [notifications, processedNotifications]);
+  }, [notifications]);
 
-  const handleToastClose = (notificationId) => {
-    setActiveToasts(prev => prev.filter(toast => toast.id !== notificationId));
-  };
+  // Debug logging (remove in production)
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔔 NotificationManager Status:', {
+        isInitialized,
+        isPolling,
+        lastStatus,
+        pollingError,
+        unreadCount,
+        notificationsCount: notifications.length
+      });
+    }
+  }, [isInitialized, isPolling, lastStatus, pollingError, unreadCount, notifications.length]);
 
-  const handleMarkAsRead = (notificationId) => {
-    markAsRead(notificationId);
-  };
-
-  return (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
-      {activeToasts.map((notification) => (
-        <NotificationToast
-          key={notification.id}
-          notification={notification}
-          onClose={() => handleToastClose(notification.id)}
-          onMarkAsRead={handleMarkAsRead}
-        />
-      ))}
-    </div>
-  );
+  // This component doesn't render anything visible
+  return null;
 };
 
 export default NotificationManager;

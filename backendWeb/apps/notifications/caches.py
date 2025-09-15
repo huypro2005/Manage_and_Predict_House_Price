@@ -5,6 +5,7 @@ from apps.utils import datetime_to_timestamp
 
 USER_NOTIF_KEY = "user:{user_id}:notif:{page_number}"
 USER_NOTIF_NOT_READED_KEY = "user:{user_id}:notif:not_readed"
+USER_NOTIF_AMOUNT_KEY = "user:{user_id}:notif:amount"
 NOTIF_TTL = 300  # 5 phút, tùy bạn
 
 cache = redis.StrictRedis(host='localhost', port=6379, db=1, decode_responses=True)
@@ -30,6 +31,11 @@ def add_to_cache(user_id: int, notification_id: int, notification: dict):
     cache.expire(notif_key(user_id), NOTIF_TTL)
     count = cache.get(notif_not_read_key(user_id))
     cache.set(notif_not_read_key(user_id), str(int(count) + 1), ex=NOTIF_TTL)
+    amount_old = cache.get(USER_NOTIF_AMOUNT_KEY.format(user_id=user_id))
+    if amount_old:
+        cache.set(USER_NOTIF_AMOUNT_KEY.format(user_id=user_id), str(int(amount_old) + 1), ex=NOTIF_TTL)
+    else:
+        cache.set(USER_NOTIF_AMOUNT_KEY.format(user_id=user_id), '1', ex=NOTIF_TTL)
 
 
 def update_cache(user_id: int, notification_id: int, new_data: dict):
@@ -63,20 +69,15 @@ def update_cache(user_id: int, notification_id: int, new_data: dict):
     count = get_not_read_count_from_cache(user_id)
     cache.set(notif_not_read_key(user_id), str(count - 1), ex=NOTIF_TTL)
 
-def seed_set_if_empty(user_id: int, notif_list, NOT_READ_COUNT=0, page_number=1):
+def seed_set_if_empty(user_id: int, notif_list, NOT_READ_COUNT=0, page_number=1, count_notifications=0):
     """
     Khi lần đầu gọi GET mà set chưa có (cache miss),
     có thể seed set từ DB để các lần sau toggle nhanh hơn.
     """
     page_size = 10
-    start_index = (page_number - 1) * page_size
-    end_index = start_index + page_size
-    notif_list = notif_list[start_index:end_index]
+    print(len(notif_list))
     key = notif_key(user_id, page_number)
-    # nếu set rỗng thì seed
-    # if not cache.exists(key):
     cache.delete(key)  # đảm bảo xoá sạch trước khi seed
-    # cache.delete(notif_not_read_key(user_id))
     if notif_list:
         for notif in notif_list:
             notif_json = json.dumps({
@@ -88,9 +89,16 @@ def seed_set_if_empty(user_id: int, notif_list, NOT_READ_COUNT=0, page_number=1)
 
     cache.expire(key, NOTIF_TTL)
     cache.set(notif_not_read_key(user_id), str(NOT_READ_COUNT), ex=NOTIF_TTL)
-    
-        
+    set_total_notifications(user_id, count_notifications)
 
+
+def set_total_notifications(user_id: int, amount: int):
+    key = USER_NOTIF_AMOUNT_KEY.format(user_id=user_id)
+    cache.set(key, str(amount), ex=NOTIF_TTL)        
+
+
+def get_total_notifications(user_id: int) -> int:
+    return int(cache.get(USER_NOTIF_AMOUNT_KEY.format(user_id=user_id)) or 0)
 
 # Lấy danh sách thông báo đã serialize từ cache (theo thứ tự mới nhất) và deserialize
 # (start, end) là chỉ số trong sorted set

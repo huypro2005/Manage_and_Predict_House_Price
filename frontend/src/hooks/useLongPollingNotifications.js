@@ -1,20 +1,24 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { baseUrl } from '../base';
 
-// Long-polling hook for notifications
-// - Calls notifications/long-polling/ to wait for changes
-// - On 200, triggers fetch of notifications via provided callback
-// - On 204, loops again immediately
-// - On network/error, backs off with exponential delay
+/**
+ * Hook để long-polling notifications
+ * - Gọi notifications/long-polling/ để chờ thay đổi
+ * - Trả về 200: có thông báo mới, cần refresh
+ * - Trả về 204: không có gì xảy ra, tiếp tục chờ
+ * - Lỗi: backoff với exponential delay
+ */
 export const useLongPollingNotifications = (onUpdate) => {
   const isActiveRef = useRef(false);
   const abortControllerRef = useRef(null);
   const [isPolling, setIsPolling] = useState(false);
   const [lastStatus, setLastStatus] = useState(null);
+  const [error, setError] = useState(null);
 
   const startPolling = useCallback(() => {
     if (isActiveRef.current) return;
     isActiveRef.current = true;
+    setError(null);
     loop();
   }, []);
 
@@ -53,31 +57,34 @@ export const useLongPollingNotifications = (onUpdate) => {
         });
 
         setLastStatus(response.status);
+        setError(null);
 
         if (response.status === 200) {
-          // There is an update, trigger refresh
+          // Có thông báo mới, trigger refresh
           if (typeof onUpdate === 'function') {
             await onUpdate();
           }
           attempt = 0; // reset backoff
-          continue; // immediately wait for next change
+          continue; // tiếp tục chờ thay đổi tiếp theo
         }
 
         if (response.status === 204) {
-          // No updates; immediately continue waiting
+          // Không có cập nhật, tiếp tục chờ
           attempt = 0;
           continue;
         }
 
-        // For other status codes, backoff
+        // Với các status code khác, backoff
         attempt += 1;
         const delayMs = Math.min(30000, 1000 * Math.pow(2, attempt));
         await new Promise((r) => setTimeout(r, delayMs));
       } catch (error) {
         if (error?.name === 'AbortError') {
-          // Stopped
+          // Đã dừng
           return;
         }
+        
+        setError(error.message);
         attempt += 1;
         const delayMs = Math.min(30000, 1000 * Math.pow(2, attempt));
         await new Promise((r) => setTimeout(r, delayMs));
@@ -93,9 +100,14 @@ export const useLongPollingNotifications = (onUpdate) => {
     };
   }, [stopPolling]);
 
-  return { startPolling, stopPolling, isPolling, lastStatus };
+  return { 
+    startPolling, 
+    stopPolling, 
+    isPolling, 
+    lastStatus, 
+    error,
+    isActive: isActiveRef.current
+  };
 };
 
 export default useLongPollingNotifications;
-
-

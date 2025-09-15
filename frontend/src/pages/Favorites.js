@@ -15,9 +15,10 @@ import {
   Search,
   Heart
 } from 'lucide-react';
-import AuthWrapper from '../components/auth/AuthWrapper';
+import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import HeaderActions from '../components/HeaderActions';
+import AuthWrapper from '../components/auth/AuthWrapper';
 
 function Favorites() {
   const navigate = useNavigate();

@@ -4,17 +4,31 @@ import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../contexts/NotificationContext';
 // Removed WebSocketIndicator; show polling status
 import { formatMessageWithRanges } from '../utils/notificationFormatter';
+import { baseUrlWeb } from '../base';
 
 const NotificationDropdown = ({
   className = "relative",
-  iconClassName = "h-5 w-5",
-  badgeClassName = "absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center"
+  iconClassName = "h-6 w-6",
+  badgeClassName = "absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center shadow-lg"
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
-  const { notifications: contextNotifications, unreadCount, markAsRead: contextMarkAsRead, fetchNotifications, loadMoreNotifications, hasMore, loading, isPolling } = useNotifications();
+  const { 
+    notifications: contextNotifications, 
+    unreadCount, 
+    isPolling,
+    isInitialized,
+    lastStatus,
+    pollingError,
+    markAsRead: contextMarkAsRead, 
+    fetchUnreadCount,
+    fetchNotifications, 
+    loadMoreNotifications, 
+    hasMore, 
+    loading 
+  } = useNotifications();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -32,28 +46,32 @@ const NotificationDropdown = ({
 
   // Fetch notifications when dropdown opens
   useEffect(() => {
+    console.log('🔔 NotificationDropdown - isOpen changed:', isOpen);
     if (isOpen) {
+      console.log('🔔 NotificationDropdown - Fetching notifications...');
       fetchNotifications();
     }
   }, [isOpen, fetchNotifications]);
 
   // Use notifications from context
   useEffect(() => {
+    console.log('🔔 NotificationDropdown - contextNotifications changed:', contextNotifications);
+    console.log('🔔 NotificationDropdown - contextNotifications length:', contextNotifications.length);
     setNotifications(contextNotifications);
   }, [contextNotifications]);
 
-  const markAsRead = (notificationId) => {
-    // Only update context - no API calls
-    contextMarkAsRead(notificationId);
-    
-    // Update local state to reflect the change immediately
+  const markAsRead = async (notificationId) => {
+    await contextMarkAsRead(notificationId);
     setNotifications(prev => 
       prev.map(notif => 
         notif.id === notificationId 
-          ? { ...notif, isRead: true }
+          ? { ...notif, isRead: true, is_read: true }
           : notif
       )
     );
+    try {
+      await fetchUnreadCount();
+    } catch (_) {}
   };
 
   const formatTimeAgo = (dateString) => {
@@ -89,7 +107,7 @@ const NotificationDropdown = ({
   return (
     <div className={className} ref={dropdownRef}>
       <button
-        className="relative p-2 text-gray-400 hover:text-gray-600 transition-colors"
+        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all duration-200"
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Thông báo"
       >
@@ -108,10 +126,19 @@ const NotificationDropdown = ({
           <div className="flex items-center justify-between p-4 border-b border-gray-100">
             <div className="flex items-center space-x-2">
               <h3 className="text-lg font-semibold text-gray-900">Thông báo</h3>
-              <span className={`text-xs ${isPolling ? 'text-green-600' : 'text-gray-400'}`}>
-                {isPolling ? 'Đang lắng nghe' : 'Tạm dừng'}
-              </span>
+              {isPolling && (
+                <span className="text-xs text-green-600 flex items-center">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-1"></div>
+                  Đang lắng nghe
+                </span>
+              )}
+              {!isPolling && isInitialized && (
+                <span className="text-xs text-gray-400">Tạm dừng</span>
+              )}
               {loading && <span className="text-xs text-blue-600">Đang tải...</span>}
+              {pollingError && (
+                <span className="text-xs text-red-600">Lỗi kết nối</span>
+              )}
             </div>
             <button
               onClick={() => setIsOpen(false)}
@@ -131,12 +158,20 @@ const NotificationDropdown = ({
               }
             }}
           >
-            {notifications.length === 0 ? (
+            {(() => {
+              console.log('🔔 NotificationDropdown - Rendering notifications. Count:', notifications.length);
+              console.log('🔔 NotificationDropdown - Notifications data:', notifications);
+              return notifications.length === 0;
+            })() ? (
               <div className="p-8 text-center text-gray-500">
                 <Bell className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                 <p className="text-sm">Chưa có thông báo nào</p>
                 <p className="text-xs text-gray-400 mt-1">
                   Bấm chuông để tải thông báo
+                </p>
+                <p className="text-xs text-red-400 mt-2">
+                  Debug: notifications.length = {notifications.length}
+                  Debug: notifications = {JSON.stringify(notifications)}
                 </p>
               </div>
             ) : (
@@ -145,17 +180,17 @@ const NotificationDropdown = ({
                   <div
                     key={notification.id}
                     className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
-                      !notification.isRead ? 'bg-blue-50' : ''
+                      !notification.is_read ? 'bg-blue-50' : ''
                     }`}
-                    onClick={() => {
-                      if (!notification.isRead) {
-                        markAsRead(notification.id);
-                      }
+                    onClick={async () => {
+                      if (!notification.is_read) {
+                        await markAsRead(notification.id);
+                      }   
                       // Navigate based on notification type
-                      if (notification.type === 'contact_request' && notification.property_id) {
-                        navigate(`/property/${notification.property_id}`);
-                      } else if (notification.property_id) {
-                        navigate(`/property/${notification.property_id}`);
+                      if (notification.type === 'contact_request' && notification.url) {
+                        navigate(`${baseUrlWeb}${notification.url}`);
+                      } else if (notification.url) {
+                        navigate(`${baseUrlWeb}${notification.url}`);  
                       }
                       setIsOpen(false);
                     }}
@@ -174,27 +209,20 @@ const NotificationDropdown = ({
                             }} 
                           />
                         </div>
-                        {notification.type === 'contact_request' && notification.from_username && (
-                          <p className="text-xs text-blue-600 mt-1">
-                            Từ: {notification.from_username}
-                          </p>
-                        )}
-                        {notification.type === 'contact_request' && notification.property && (
-                          <p className="text-xs text-gray-600 mt-1 line-clamp-1">
-                            BDS: {notification.property.title}
-                          </p>
-                        )}
+                       
                         <div className="flex items-center justify-between mt-1">
                           <p className="text-xs text-gray-500 flex items-center">
                             <Clock className="h-3 w-3 mr-1" />
-                            {formatTimeAgo(notification.timestamp || notification.created_at)}
+                              {formatTimeAgo(notification.timestamp || notification.created_at)}
                           </p>
-                          {!notification.isRead && (
-                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                            {!notification.is_read ? (
+                            <div className="w-2 h-2 bg-red-300 rounded-full"></div>
+                          ) : (
+                            <div className="w-2 h-2 bg-green-300 rounded-full"></div>
                           )}
                         </div>
                       </div>
-                      {!notification.isRead && (
+                      {!notification.is_read ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -204,6 +232,9 @@ const NotificationDropdown = ({
                         >
                           <Check className="h-4 w-4" />
                         </button>
+                      ) : (
+                        // Read notifications: no tick shown
+                        <></>
                       )}
                     </div>
                   </div>
@@ -224,6 +255,15 @@ const NotificationDropdown = ({
           {/* Footer */}
           {notifications.length > 0 && (
             <div className="p-4 border-t border-gray-100">
+              {/* Xem thêm thông báo (show while hasMore) */}
+              {hasMore && (
+                <button
+                  onClick={() => loadMoreNotifications()}
+                  className="w-full mb-3 text-center text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  Xem thêm thông báo
+                </button>
+              )}
               <button
                 onClick={() => {
                   setIsOpen(false);

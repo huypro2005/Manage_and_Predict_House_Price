@@ -22,11 +22,30 @@ class ContactRequestListView(APIView):
     permission_classes = [IsAuthenticated]
     pagination_class = CustomPagination
 
+    def get_params(self, request):
+        return {
+            'page': int(request.query_params.get('page', 1)),
+            'limit': int(request.query_params.get('limit', self.pagination_class.page_size)),
+            'property_id': request.query_params.get('property_id', None),
+        }
+
     def get(self, request):
         user = request.user
-        contact_requests = ContactRequest.objects.filter(user=user).order_by('-created_at')
-        serializer = ContactRequestV1Serializer(contact_requests, many=True)
-        return Response({'message': 'Contact requests retrieved successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
+        params = self.get_params(request)
+        if params['property_id']:
+            try:
+                property = Property.objects.get(id=params['property_id'])
+            except Property.DoesNotExist:
+                return Response({'message': 'Property not found'}, status=status.HTTP_404_NOT_FOUND)
+            if property.user != user:
+                return Response({'message': 'You do not have permission to view contact requests for this property'}, status=status.HTTP_403_FORBIDDEN)
+            contact_requests = property.contact_requests.all().order_by('-created_at')
+        else:
+            contact_requests = ContactRequest.objects.filter(user=user).order_by('-created_at')
+        paginator = self.pagination_class()
+        result_page = paginator.paginate_queryset(contact_requests, request)
+        serializer = ContactRequestV1Serializer(result_page, many=True)
+        return paginator.get_paginated_response({'message': 'Contact requests retrieved successfully', 'data': serializer.data})
 
     @transaction.atomic
     def post(self, request):
@@ -114,3 +133,23 @@ class ContactRequestDetailView(APIView):
         return Response({'message': 'Contact request deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
 
 
+class ContactRequestFromPropertyView(APIView):
+    permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
+
+    def get(self, request, property_id):
+        user = request.user
+        try:
+            property = Property.objects.get(id=property_id)
+        except Property.DoesNotExist:
+            return Response({'message': 'Property not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        if property.user != user:
+            return Response({'message': 'You do not have permission to view contact requests for this property'}, status=status.HTTP_403_FORBIDDEN)
+        
+        contact_requests = property.contact_requests.all().order_by('-created_at')
+        paginator = self.pagination_class()
+        page = request.query_params.get('page', 1)  
+        paginated_contact_requests = paginator.paginate_queryset(contact_requests, request)
+        serializer = ContactRequestV1Serializer(paginated_contact_requests, many=True)
+        return paginator.get_paginated_response({'message': 'Contact requests retrieved successfully', 'data': serializer.data})

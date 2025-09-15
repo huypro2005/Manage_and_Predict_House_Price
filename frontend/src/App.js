@@ -8,8 +8,9 @@ import PropertyList from './pages/PropertyList';
 import AuthWrapper from './components/auth/AuthWrapper';
 import UserDropdown from './components/auth/UserDropdown';
 import { useAuth } from './contexts/AuthContext';
-import HeaderActions from './components/HeaderActions';
-// Removed NotificationManager popups
+import Layout from './components/Layout';
+import NotificationManager from './components/NotificationManager';
+import NotificationDebug from './components/NotificationDebug';
 import { 
   Home, 
   User, 
@@ -342,111 +343,9 @@ function App() {
 
   // Render Search page
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Notification popups disabled; bell shows counts */}
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-3"
-              onClick={() => navigate('/')}
-              style={{ cursor: 'pointer' }}
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">🏢</span>
-              </div>
-              <h1 className="text-xl font-bold text-gray-900">RealEstate</h1>
-            </motion.div>
-
-            {/* Navigation */}
-            <nav className="hidden md:flex items-center space-x-8">
-              {navigationItems.map((item) => (
-                <button
-                  key={item.id}
-                  className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
-                  onClick={() => handleNavigateToPropertyList(item.id)}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </nav>
-
-            {/* Header Actions */}
-            <div className="flex items-center space-x-2">
-              {/* Desktop Actions */}
-              <div className="hidden sm:flex items-center space-x-3">
-                <HeaderActions
-                  favoriteCount={favoriteIds.length}
-                  onFavoriteClick={() => navigate('/favorites')}
-                />
-                <AuthWrapper />
-                <button className="hidden md:inline-flex bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors" onClick={handelNavigateToPostProperty}>
-                  Đăng tin
-                </button>
-                <button className="hidden lg:inline-flex bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors" onClick={() => navigate('/price-prediction')}>
-                  Dự đoán giá
-                </button>
-              </div>
-              
-              {/* Mobile Actions */}
-              <div className="flex sm:hidden items-center space-x-2">
-                <HeaderActions
-                  favoriteCount={favoriteIds.length}
-                  onFavoriteClick={() => navigate('/favorites')}
-                />
-                
-                {/* User Avatar - Always visible on mobile */}
-                <div className="flex items-center">
-                  <AuthWrapper />
-                </div>
-              </div>
-              
-              {/* Mobile menu button */}
-              <button
-                className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:bg-gray-100"
-                onClick={() => setMobileMenuOpen((v) => !v)}
-                aria-label="Mở menu"
-              >
-                <ChevronDown className={`h-5 w-5 transition-transform ${mobileMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile dropdown menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-100 bg-white">
-            <div className="max-w-7xl mx-auto px-4 py-3 space-y-3">
-              <div className="flex flex-wrap gap-2">
-                {navigationItems.map((item) => (
-                  <button
-                    key={item.id}
-                    className="px-3 py-2 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      handleNavigateToPropertyList(item.id);
-                    }}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <button className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium" onClick={handelNavigateToPostProperty}>
-                  Đăng tin
-                </button>
-                <button className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium" onClick={() => navigate('/price-prediction')}>
-                  Dự đoán giá
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </header>
+    <Layout>
+      <NotificationManager />
+      <NotificationDebug />
 
       {/* Search Section */}
       
@@ -902,7 +801,7 @@ function App() {
           </div>
         </div>
       </footer>
-    </div>
+    </Layout>
   );
 }
 

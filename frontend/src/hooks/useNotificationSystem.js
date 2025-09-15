@@ -8,7 +8,8 @@ export const useNotificationSystem = () => {
   const {
     notifications,
     unreadCount,
-    isConnected,
+    isPolling,
+    isInitialized,
     markAsRead,
     markAllAsRead,
     clearNotifications,
@@ -103,7 +104,8 @@ export const useNotificationSystem = () => {
     // State
     notifications,
     unreadCount,
-    isConnected,
+    isPolling,
+    isInitialized,
     
     // Actions
     markAsRead,

@@ -3,11 +3,11 @@ from .serializer import NewsV1Serializer, NewsDetailV1Serializer, CommentV1Seria
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 from django.db import transaction
 
 class NewsListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request):
         articles = NewsArticle.objects.filter(is_deleted=False).order_by('-created_at')
