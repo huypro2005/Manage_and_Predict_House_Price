@@ -237,13 +237,13 @@ function App() {
       })
     );
 
-    console.log('Search Parameters:', params);
-    console.log('URL Search Params:', new URLSearchParams(params).toString());
-    console.log(`Province ID: ${selectedCity}`);
-    console.log(`District IDs: ${selectedDistricts} -> Formatted: ${districtString}`);
-    console.log(`Property Type IDs: ${selectedPropertyTypes} -> Formatted: ${propertyTypeString}`);
-    console.log(`Price Range (raw): ${priceRange} -> Min: ${priceMin}, Max: ${priceMax}`);
-    console.log(`Area Range (raw): ${area} -> Min: ${areaMin}, Max: ${areaMax}`);
+    // console.log('Search Parameters:', params);
+    // console.log('URL Search Params:', new URLSearchParams(params).toString());
+    // console.log(`Province ID: ${selectedCity}`);
+    // console.log(`District IDs: ${selectedDistricts} -> Formatted: ${districtString}`);
+    // console.log(`Property Type IDs: ${selectedPropertyTypes} -> Formatted: ${propertyTypeString}`);
+    // console.log(`Price Range (raw): ${priceRange} -> Min: ${priceMin}, Max: ${priceMax}`);
+    // console.log(`Area Range (raw): ${area} -> Min: ${areaMin}, Max: ${areaMax}`);
 
     navigate(`/property-list?${new URLSearchParams(params).toString()}`);
     setSearchParams(params);
@@ -349,14 +349,14 @@ function App() {
 
       {/* Search Section */}
       
-      <div id="search-section" className="bg-white py-8">
+      <div id="search-section" className="bg-white py-4 sm:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
             {/* Tabs */}
-            <div className="flex space-x-1 mb-6">
+            <div className="flex space-x-1 mb-4 sm:mb-6">
               <button
                 onClick={() => setActiveTab('ban')}
-                className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all text-sm sm:text-base ${
                   activeTab === 'ban'
                     ? 'bg-amber-800 text-white'
                     : 'bg-amber-100 text-gray-700 hover:bg-amber-200'
@@ -366,7 +366,7 @@ function App() {
               </button>
               <button
                 onClick={() => setActiveTab('thue')}
-                className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all text-sm sm:text-base ${
                   activeTab === 'thue'
                     ? 'bg-amber-800 text-white'
                     : 'bg-amber-100 text-gray-700 hover:bg-amber-200'
@@ -379,17 +379,17 @@ function App() {
 
             {/* Main Search Bar */}
             <div className="space-y-4">
-            <div className="flex flex-col md:flex-row items-stretch border border-gray-300 rounded-lg overflow-visible w-full">
-                {/* Location Input - sẽ hiển thị DistrictSelect bên dưới khi cần */}
+              <div className="flex flex-col sm:flex-row items-stretch border border-gray-300 rounded-lg overflow-visible w-full">
+                {/* Location Input */}
                 <LocationSelect 
                   onProvinceSelect={handleProvinceSelect} 
                   onDistrictSelect={handleDistrictsChange}
                 />
                 
-                {/* Search Button */}
+                {/* Desktop Search Button */}
                 <button 
                   onClick={handleSearch}
-                  className="hidden md:inline-flex items-center justify-center bg-red-600 hover:bg-red-700 text-white px-6 py-3 font-medium transition-colors whitespace-nowrap flex-shrink-0 md:rounded-l-none md:rounded-r-lg" 
+                  className="hidden sm:inline-flex items-center justify-center bg-red-600 hover:bg-red-700 text-white px-4 sm:px-6 py-3 font-medium transition-colors whitespace-nowrap flex-shrink-0 sm:rounded-l-none sm:rounded-r-lg" 
                   id="search-RealEstate"
                 >
                   Tìm kiếm
@@ -397,7 +397,7 @@ function App() {
               </div>
 
               {/* Filter Dropdowns */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 <div>
                   <PropertyTypeSelect onPropertyTypeSelect={handlePropertyTypeSelect} />
                 </div>
@@ -409,7 +409,7 @@ function App() {
                   <select
                     value={priceRange || ''}
                     onChange={(e) => setPriceRange(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm sm:text-base"
                   >
                     <option value="">Mức giá</option>
                     <option value="0,1000">Dưới 1 tỷ</option>
@@ -427,7 +427,7 @@ function App() {
                   <select
                     value={area || ''}
                     onChange={(e) => setArea(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm sm:text-base"
                   >
                     <option value="">Diện tích</option>
                     <option value="0,30">Dưới 30 m²</option>
@@ -439,17 +439,15 @@ function App() {
                 </div>
               </div>
 
-              {/* Mobile search button at bottom */}
-              <div className="md:hidden">
+              {/* Mobile search button */}
+              <div className="sm:hidden">
                 <button 
                   onClick={handleSearch}
-                  className="w-full mt-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                  className="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
                 >
                   Tìm kiếm
                 </button>
-                  </div>
-
- 
+              </div>
             </div>
           </div>
         </div>
@@ -639,11 +637,11 @@ function App() {
           {/* Mobile view */}
           {loading ? (
             // Loading skeleton for mobile
-            <div className="sm:hidden space-y-4">
+            <div className="sm:hidden space-y-3">
               {[...Array(4)].map((_, index) => (
-                <div key={index} className="bg-white rounded-xl shadow-md overflow-hidden animate-pulse">
+                <div key={index} className="bg-white rounded-lg shadow-sm overflow-hidden animate-pulse">
                   <div className="flex">
-                    <div className="w-36 h-28 bg-gray-200 flex-shrink-0"></div>
+                    <div className="w-32 h-24 bg-gray-200 flex-shrink-0"></div>
                     <div className="flex-1 p-3">
                       <div className="h-4 bg-gray-200 rounded mb-1"></div>
                       <div className="h-3 bg-gray-200 rounded mb-2 w-3/4"></div>
@@ -659,39 +657,39 @@ function App() {
             </div>
           ) : (
             // Actual content for mobile
-            <div className="sm:hidden space-y-4">
+            <div className="sm:hidden space-y-3">
               {propertyListings.map((property, index) => (
               <motion.div
                 key={property.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300"
+                className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 active:scale-[0.98]"
                 onClick={() => navigate(`/property/${property.id}`)}
               >
                 <div className="flex">
-                  <div className="relative w-36 h-28 flex-shrink-0">
+                  <div className="relative w-32 h-24 flex-shrink-0">
                     <img src={ConfigUrl(property.thumbnail)} alt={property.title.slice(0, 10)} className="w-full h-full object-cover" />
                     
                     {/* Favorite Button */}
                     <button 
-                      className={`absolute top-2 right-2 transition-all duration-300 ${favoriteIds.includes(property.id) ? 'text-red-500 scale-110' : 'text-white hover:text-red-500'}`}
+                      className={`absolute top-1 right-1 transition-all duration-300 ${favoriteIds.includes(property.id) ? 'text-red-500 scale-110' : 'text-white hover:text-red-500'}`}
                       onClick={(e) => toggleFavorite(property.id, e)}
                     >
-                      <Heart className={`h-5 w-5 transition-all duration-300 ${favoriteIds.includes(property.id) ? 'fill-current scale-110' : ''}`} />
+                      <Heart className={`h-4 w-4 transition-all duration-300 ${favoriteIds.includes(property.id) ? 'fill-current scale-110' : ''}`} />
                     </button>
                   </div>
-                  <div className="flex-1 p-3">
-                    <h4 className="text-base font-bold text-gray-900 mb-1 line-clamp-2">{property.title}</h4>
-                    <p className="text-gray-600 text-xs mb-2 line-clamp-2">{property.description || 'Không có mô tả'}</p>
-                    <div className="flex items-center justify-between">
+                  <div className="flex-1 p-3 min-w-0">
+                    <h4 className="text-sm font-bold text-gray-900 mb-1 line-clamp-2 leading-tight">{property.title}</h4>
+                    <p className="text-gray-600 text-xs mb-2 line-clamp-1">{property.description || 'Không có mô tả'}</p>
+                    <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center space-x-2">
-                        <div className="text-base font-bold text-red-600">{property.price}</div>
+                        <div className="text-sm font-bold text-red-600">{property.price}</div>
                         <div className="text-gray-600 text-xs">{property.area_m2}m²</div>
                       </div>
                       <span className="text-xs text-gray-500">{property.time}</span>
                     </div>
-                    <div className="mt-1 text-xs text-gray-500 truncate">{property.address}</div>
+                    <div className="text-xs text-gray-500 truncate">{property.address}</div>
                   </div>
                 </div>
               </motion.div>

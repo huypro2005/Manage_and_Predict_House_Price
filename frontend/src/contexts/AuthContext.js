@@ -7,7 +7,7 @@ const handleTokenExpiration = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('expectRedirect');
   localStorage.removeItem('notifications:list');
-  localStorage.removeItem('unreadCount');
+  localStorage.removeItem('notifications:unreadCount');
   localStorage.removeItem('notifications:meta');
   // Redirect to homepage instead of login page
   window.location.href = '/';
@@ -287,7 +287,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('expectRedirect');
     localStorage.removeItem('notifications:list');
-    localStorage.removeItem('unreadCount');
+    localStorage.removeItem('notifications:unreadCount');
     localStorage.removeItem('notifications:meta');
     setToken(null);
     setUser(null);

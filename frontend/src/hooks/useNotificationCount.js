@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+// import { useState, useEffect } from 'react';
 import { useNotifications } from '../contexts/NotificationContext';
 
 /**
@@ -9,11 +9,7 @@ export const useNotificationCount = () => {
   const { unreadCount } = useNotifications();
 
   return {
-    notificationCount: unreadCount,
-    updateCount: () => {}, // Deprecated - use context methods
-    incrementCount: () => {}, // Deprecated - use context methods
-    decrementCount: () => {}, // Deprecated - use context methods
-    resetCount: () => {} // Deprecated - use context methods
+    notificationCount: unreadCount
   };
 };
 

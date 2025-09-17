@@ -17,12 +17,16 @@ const Notifications = () => {
   const {
     notifications,
     unreadCount,
+    totalCount,
+    currentPage,
+    pageSize,
     markAsRead,
     markAllAsRead,
     clearNotifications,
     getUnreadNotifications,
     getReadNotifications,
-    getContactRequests
+    getContactRequests,
+    goToPage
   } = useNotificationSystem();
 
   const [activeFilter, setActiveFilter] = useState('all');
@@ -50,24 +54,46 @@ const Notifications = () => {
     // Filter by type
     switch (activeFilter) {
       case 'contact_request':
-        filtered = getContactRequests();
+        filtered = notifications.filter(n => n.type === 'contact_request');
         break;
       case 'unread':
-        filtered = getUnreadNotifications();
+        filtered = notifications.filter(n => (n.isRead ?? n.is_read ?? false) === false);
         break;
       case 'read':
-        filtered = getReadNotifications();
+        filtered = notifications.filter(n => (n.isRead ?? n.is_read ?? false) === true);
         break;
       default:
         filtered = notifications;
     }
 
-    // Filter by read status
+    // Filter by read status toggle
     if (!showRead) {
-      filtered = filtered.filter(notification => !notification.isRead);
+      filtered = filtered.filter(n => (n.isRead ?? n.is_read ?? false) === false);
     }
 
     return filtered;
+  };
+
+  const renderMessageWithRanges = (message, ranges) => {
+    if (!message) return null;
+    const safeRanges = Array.isArray(ranges) ? [...ranges].sort((a, b) => (a.offset || 0) - (b.offset || 0)) : [];
+    const result = [];
+    let cursor = 0;
+    safeRanges.forEach((r, idx) => {
+      const start = Math.max(0, Number(r.offset || 0));
+      const end = Math.max(start, start + Number(r.length || 0));
+      if (start > cursor) {
+        result.push(message.slice(cursor, start));
+      }
+      if (end > start) {
+        result.push(<strong key={`b-${start}-${idx}`}>{message.slice(start, end)}</strong>);
+      }
+      cursor = Math.max(cursor, end);
+    });
+    if (cursor < message.length) {
+      result.push(message.slice(cursor));
+    }
+    return result;
   };
 
   const renderNotificationIcon = (type) => {
@@ -97,19 +123,11 @@ const Notifications = () => {
                 Yêu cầu liên hệ mới
               </p>
               <span className="text-xs text-gray-500">
-                {formatTimeAgo(notification.timestamp)}
+                {formatTimeAgo(notification.timestamp || notification.created_at)}
               </span>
             </div>
-            <div className="text-sm text-gray-600 mt-1">
-              {notification.type === 'contact_request' && notification.message ? (
-                <div 
-                  dangerouslySetInnerHTML={{ 
-                    __html: notification.message.replace(/\n/g, '<br>') 
-                  }} 
-                />
-              ) : (
-                notification.message
-              )}
+            <div className="text-sm text-gray-600 mt-1 whitespace-pre-line">
+              {renderMessageWithRanges(notification.message, notification.ranges)}
             </div>
             {notification.property && (
               <div className="mt-3 flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
@@ -143,11 +161,11 @@ const Notifications = () => {
         return (
           <div className="flex-1">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-900">
-                {notification.message || 'Thông báo mới'}
+              <p className="text-sm text-gray-900 whitespace-pre-line">
+                {renderMessageWithRanges(notification.message || 'Thông báo mới', notification.ranges)}
               </p>
               <span className="text-xs text-gray-500">
-                {formatTimeAgo(notification.timestamp)}
+                {formatTimeAgo(notification.timestamp || notification.created_at)}
               </span>
             </div>
           </div>
@@ -156,6 +174,7 @@ const Notifications = () => {
   };
 
   const filteredNotifications = getFilteredNotifications();
+  const totalPages = Math.max(1, Math.ceil((Number(totalCount) || notifications.length) / (pageSize || 10)));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -175,7 +194,7 @@ const Notifications = () => {
                   Thông báo
                 </h1>
                 <p className="text-sm text-gray-500">
-                  {unreadCount} thông báo chưa đọc
+                  {unreadCount} thông báo chưa đọc • Tổng: {totalCount || notifications.length}
                 </p>
               </div>
             </div>
@@ -289,7 +308,7 @@ const Notifications = () => {
               <div
                 key={notification.id}
                 className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 transition-colors ${
-                  !notification.isRead ? 'border-l-4 border-l-blue-500 bg-blue-50' : ''
+                  (notification.isRead ?? notification.is_read ?? false) ? '' : 'border-l-4 border-l-blue-500 bg-blue-50'
                 }`}
               >
                 <div className="flex items-start space-x-4">
@@ -300,7 +319,7 @@ const Notifications = () => {
                   </div>
                   
                   <div className="flex items-center space-x-2">
-                    {!notification.isRead && (
+                    {(notification.isRead ?? notification.is_read ?? false) === false && (
                       <button
                         onClick={() => markAsRead(notification.id)}
                         className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
@@ -313,6 +332,28 @@ const Notifications = () => {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-6 flex items-center justify-between border-t pt-4">
+            <button
+              onClick={() => currentPage > 1 && goToPage(currentPage - 1)}
+              disabled={currentPage <= 1}
+              className={`px-3 py-2 rounded-md border text-sm ${currentPage <= 1 ? 'text-gray-400 border-gray-200' : 'text-gray-700 hover:bg-gray-50 border-gray-300'}`}
+            >
+              Trang trước
+            </button>
+            <div className="text-sm text-gray-600">
+              Trang {currentPage} / {totalPages}
+            </div>
+            <button
+              onClick={() => currentPage < totalPages && goToPage(currentPage + 1)}
+              disabled={currentPage >= totalPages}
+              className={`px-3 py-2 rounded-md border text-sm ${currentPage >= totalPages ? 'text-gray-400 border-gray-200' : 'text-gray-700 hover:bg-gray-50 border-gray-300'}`}
+            >
+              Trang sau
+            </button>
           </div>
         )}
       </div>

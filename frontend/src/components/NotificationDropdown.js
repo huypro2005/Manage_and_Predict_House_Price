@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, X, Clock, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../contexts/NotificationContext';
-// Removed WebSocketIndicator; show polling status
 import { formatMessageWithRanges } from '../utils/notificationFormatter';
 import { baseUrlWeb } from '../base';
 
@@ -12,7 +11,6 @@ const NotificationDropdown = ({
   badgeClassName = "absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center shadow-lg"
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
   const { 
@@ -46,32 +44,20 @@ const NotificationDropdown = ({
 
   // Fetch notifications when dropdown opens
   useEffect(() => {
-    console.log('🔔 NotificationDropdown - isOpen changed:', isOpen);
     if (isOpen) {
-      console.log('🔔 NotificationDropdown - Fetching notifications...');
       fetchNotifications();
     }
   }, [isOpen, fetchNotifications]);
 
-  // Use notifications from context
-  useEffect(() => {
-    console.log('🔔 NotificationDropdown - contextNotifications changed:', contextNotifications);
-    console.log('🔔 NotificationDropdown - contextNotifications length:', contextNotifications.length);
-    setNotifications(contextNotifications);
-  }, [contextNotifications]);
-
+  // Use context notifications directly
+  const notifications = contextNotifications;
   const markAsRead = async (notificationId) => {
-    await contextMarkAsRead(notificationId);
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === notificationId 
-          ? { ...notif, isRead: true, is_read: true }
-          : notif
-      )
-    );
     try {
-      await fetchUnreadCount();
-    } catch (_) {}
+      await contextMarkAsRead(notificationId);
+      await fetchUnreadCount(); // nếu backend không tự trả count
+    } catch (e) {
+      console.error("Mark as read failed", e);
+    }
   };
 
   const formatTimeAgo = (dateString) => {
@@ -158,20 +144,12 @@ const NotificationDropdown = ({
               }
             }}
           >
-            {(() => {
-              console.log('🔔 NotificationDropdown - Rendering notifications. Count:', notifications.length);
-              console.log('🔔 NotificationDropdown - Notifications data:', notifications);
-              return notifications.length === 0;
-            })() ? (
+            {notifications.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
                 <Bell className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                 <p className="text-sm">Chưa có thông báo nào</p>
                 <p className="text-xs text-gray-400 mt-1">
                   Bấm chuông để tải thông báo
-                </p>
-                <p className="text-xs text-red-400 mt-2">
-                  Debug: notifications.length = {notifications.length}
-                  Debug: notifications = {JSON.stringify(notifications)}
                 </p>
               </div>
             ) : (

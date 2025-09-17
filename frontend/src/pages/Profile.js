@@ -17,7 +17,8 @@ import {
   Upload,
   AlertCircle,
   Shield,
-  ShieldCheck
+  ShieldCheck,
+  RefreshCw
 } from 'lucide-react';
 
 const Profile = () => {
@@ -28,6 +29,7 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [profileData, setProfileData] = useState({
     first_name: '',
     last_name: '',
@@ -40,21 +42,109 @@ const Profile = () => {
   const [avatar, setAvatar] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
 
+  // Fetch user profile data from API
+  const fetchUserProfile = async () => {
+    setProfileLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch(`${baseUrl}me/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const apiCheck = await handleApiResponse(response);
+      if (apiCheck.expired) {
+        return;
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        const userData = data.data || data;
+        
+        // Update profile data with API response
+        setProfileData({
+          first_name: userData.first_name || '',
+          last_name: userData.last_name || '',
+          email: userData.email || '',
+          phone: userData.phone || '',
+          address: userData.address || '',
+          date_of_birth: userData.birth_date || '',
+          bio: userData.description || '' // Map description to bio field
+        });
+        
+        // Set avatar preview
+        if (userData.avatar) {
+          setAvatarPreview(ConfigUrl(userData.avatar));
+        }
+        
+        // Update user context with fresh data
+        updateUser({
+          ...user,
+          ...userData,
+          avatar: userData.avatar,
+          is_verified: userData.is_verified,
+          is_active: userData.is_active
+        });
+        
+        console.log('Profile data loaded:', userData);
+        console.log('Mapped profile data:', {
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          email: userData.email,
+          phone: userData.phone,
+          birth_date: userData.birth_date,
+          description: userData.description,
+          avatar: userData.avatar,
+          is_verified: userData.is_verified
+        });
+      } else {
+        console.error('Failed to fetch profile data');
+        // Fallback to existing user data
+        if (user) {
+          setProfileData({
+            first_name: user.first_name || '',
+            last_name: user.last_name || '',
+            email: user.email || '',
+            phone: user.phone || '',
+            address: user.address || '',
+            date_of_birth: user.birth_date || user.date_of_birth || '',
+            bio: user.description || user.bio || ''
+          });
+          setAvatarPreview(user.avatar ? ConfigUrl(user.avatar) : null);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching profile data:', error);
+      // Fallback to existing user data
+      if (user) {
+        setProfileData({
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          address: user.address || '',
+          date_of_birth: user.birth_date || user.date_of_birth || '',
+          bio: user.description || user.bio || ''
+        });
+        setAvatarPreview(user.avatar ? ConfigUrl(user.avatar) : null);
+      }
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
   // Load user data on mount
   useEffect(() => {
-    if (user) {
-      setProfileData({
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        address: user.address || '',
-        date_of_birth: user.date_of_birth || '',
-        bio: user.bio || ''
-      });
-      setAvatarPreview(user.avatar ? ConfigUrl(user.avatar) : null);
-    }
-  }, [user]);
+    fetchUserProfile();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -90,6 +180,7 @@ const Profile = () => {
     }
   };
 
+  // Upload avatar separately using dedicated API
   const uploadAvatar = async () => {
     if (!avatar) return null;
 
@@ -98,59 +189,100 @@ const Profile = () => {
       const formData = new FormData();
       formData.append('avatar', avatar);
 
+      console.log('🔄 Uploading avatar to:', `${baseUrl}me/change_avatar/`);
+      console.log('📁 Avatar file:', avatar.name, avatar.size, avatar.type);
+
       const token = localStorage.getItem('token');
-      const response = await fetch(`${baseUrl}users/upload-avatar/`, {
-        method: 'POST',
+      const response = await fetch(`${baseUrl}me/change_avatar/`, {
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`
+          // Don't set Content-Type, let browser set it with boundary for FormData
         },
         body: formData
       });
 
-      const apiCheck = await handleApiResponse(response);
-      if (apiCheck.expired) {
-        return null;
-      }
+      console.log('📡 API Response status:', response.status);
 
-      if (response.ok) {
+      // Check if status code is 200
+      if (response.status === 200) {
         const data = await response.json();
-        return data.avatar_url;
+        console.log('✅ Avatar upload successful:', data);
+        return data.data?.avatar || data.avatar;
       } else {
-        throw new Error('Upload failed');
+        // Only show error if status is not 200
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Avatar upload failed:', errorData);
+        throw new Error(errorData.message || 'Upload avatar failed');
       }
     } catch (error) {
       console.error('Error uploading avatar:', error);
-      alert('Lỗi khi upload avatar');
-      return null;
+      throw error;
     } finally {
       setUploading(false);
+    }
+  };
+
+  // Handle avatar update only
+  const handleAvatarUpdate = async () => {
+    if (!avatar) {
+      console.log('❌ No avatar file selected');
+      return;
+    }
+
+    console.log('🚀 Starting avatar update process...');
+    try {
+      const avatarUrl = await uploadAvatar();
+      if (!avatarUrl) {
+        console.log('❌ Avatar upload returned no URL');
+        alert('Lỗi khi cập nhật ảnh đại diện');
+        return;
+      }
+
+      console.log('🔄 Updating user context with new avatar:', avatarUrl);
+
+      // Update user context with new avatar
+      updateUser({
+        ...user,
+        avatar: avatarUrl
+      });
+
+      // Update avatar preview
+      setAvatarPreview(ConfigUrl(avatarUrl));
+
+      // Clear the avatar file input
+      setAvatar(null);
+
+      alert('Cập nhật ảnh đại diện thành công!');
+      console.log('✅ Avatar updated successfully:', avatarUrl);
+    } catch (error) {
+      console.error('❌ Avatar update failed:', error);
+      alert(`Lỗi cập nhật ảnh đại diện: ${error.message}`);
     }
   };
 
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Upload avatar first if changed
-      let avatarUrl = null;
-      if (avatar) {
-        avatarUrl = await uploadAvatar();
-        if (!avatarUrl) {
-          setLoading(false);
-          return;
-        }
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
       }
 
-      // Update profile data
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${baseUrl}users/profile/`, {
+      // Update profile data (text fields only) using JSON
+      const response = await fetch(`${baseUrl}me/`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          ...profileData,
-          ...(avatarUrl && { avatar: avatarUrl })
+          first_name: profileData.first_name || '',
+          last_name: profileData.last_name || '',
+          phone: profileData.phone || '',
+          birth_date: profileData.date_of_birth || '',
+          description: profileData.bio || ''
         })
       });
 
@@ -161,17 +293,39 @@ const Profile = () => {
 
       if (response.ok) {
         const data = await response.json();
-        updateUser(data.user);
+        const userData = data.data || data;
+        
+        // Update user context with fresh data
+        updateUser({
+          ...user,
+          ...userData,
+          is_verified: userData.is_verified,
+          is_active: userData.is_active
+        });
+
+        // Update local profile data
+        setProfileData({
+          first_name: userData.first_name || '',
+          last_name: userData.last_name || '',
+          email: userData.email || '',
+          phone: userData.phone || '',
+          address: userData.address || '',
+          date_of_birth: userData.birth_date || '',
+          bio: userData.description || ''
+        });
+
         setIsEditing(false);
-        setAvatar(null);
-        alert('Cập nhật hồ sơ thành công!');
+        setAvatar(null); // Clear the avatar file input
+        alert('Cập nhật thông tin thành công!');
+        console.log('Profile updated successfully:', userData);
       } else {
         const errorData = await response.json();
-        alert(errorData.message || 'Có lỗi xảy ra khi cập nhật hồ sơ');
+        console.error('Profile update failed:', errorData);
+        alert(`Lỗi: ${errorData.message || 'Cập nhật thất bại'}`);
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      alert('Có lỗi xảy ra khi cập nhật hồ sơ');
+      alert('Lỗi khi cập nhật thông tin');
     } finally {
       setLoading(false);
     }
@@ -185,8 +339,8 @@ const Profile = () => {
         email: user.email || '',
         phone: user.phone || '',
         address: user.address || '',
-        date_of_birth: user.date_of_birth || '',
-        bio: user.bio || ''
+        date_of_birth: user.birth_date || user.date_of_birth || '',
+        bio: user.description || user.bio || ''
       });
       setAvatarPreview(user.avatar ? ConfigUrl(user.avatar) : null);
       setAvatar(null);
@@ -255,6 +409,16 @@ const Profile = () => {
             </div>
             
             <div className="flex items-center space-x-2">
+              {/* Refresh Button */}
+              <button
+                onClick={fetchUserProfile}
+                disabled={profileLoading}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${profileLoading ? 'animate-spin' : ''}`} />
+                Làm mới
+              </button>
+              
               {!isEditing ? (
                 <button
                   onClick={() => setIsEditing(true)}
@@ -273,15 +437,15 @@ const Profile = () => {
                   </button>
                   <button
                     onClick={handleSave}
-                    disabled={loading || uploading}
+                    disabled={loading}
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    {loading || uploading ? (
+                    {loading ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     ) : (
                       <Save className="h-4 w-4 mr-2" />
                     )}
-                    {uploading ? 'Đang upload...' : 'Lưu thay đổi'}
+                    {loading ? 'Đang lưu...' : 'Lưu thay đổi'}
                   </button>
                 </div>
               )}
@@ -292,16 +456,24 @@ const Profile = () => {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Test Component - Only show in development */}
-        {process.env.NODE_ENV === 'development' && (
+        {/* {process.env.NODE_ENV === 'development' && (
           <div className="mb-6">
             <ProfileTest />
           </div>
-        )}
+        )} */}
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Profile Card */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        {profileLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto mb-4"></div>
+              <p className="text-gray-600">Đang tải thông tin hồ sơ...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Profile Card */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               {/* Avatar Section */}
               <div className="text-center">
                 <div className="relative inline-block">
@@ -342,6 +514,29 @@ const Profile = () => {
                 </h2>
                 <p className="text-gray-600">@{user.username}</p>
                 
+                {/* Update Avatar Button - Only show when editing and avatar is selected */}
+                {isEditing && avatar && (
+                  <div className="mt-4">
+                    <button
+                      onClick={handleAvatarUpdate}
+                      disabled={uploading}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-lg transition-colors disabled:cursor-not-allowed"
+                    >
+                      {uploading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Đang cập nhật...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Cập nhật ảnh đại diện
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+                
                 {/* Verification Status */}
                 <div className={`mt-4 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${verificationStatus.bgColor} ${verificationStatus.borderColor} ${verificationStatus.color}`}>
                   {verificationStatus.icon}
@@ -350,14 +545,10 @@ const Profile = () => {
               </div>
 
               {/* Stats */}
-              <div className="mt-6 grid grid-cols-2 gap-4">
+              <div className="mt-6 grid grid-cols-1 gap-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-gray-900">0</div>
-                  <div className="text-sm text-gray-600">Bất động sản</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">0</div>
-                  <div className="text-sm text-gray-600">Yêu thích</div>
+                  <div className="text-sm text-gray-600">Bất động sản đã đăng</div>
                 </div>
               </div>
             </div>
@@ -374,7 +565,7 @@ const Profile = () => {
                 {/* First Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Họ *
+                    Tên *
                   </label>
                   <input
                     type="text"
@@ -383,14 +574,14 @@ const Profile = () => {
                     onChange={handleInputChange}
                     disabled={!isEditing}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500 disabled:bg-gray-50 disabled:text-gray-500"
-                    placeholder="Nhập họ của bạn"
+                    placeholder="Nhập tên của bạn"
                   />
                 </div>
 
                 {/* Last Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tên *
+                    Họ *
                   </label>
                   <input
                     type="text"
@@ -399,7 +590,7 @@ const Profile = () => {
                     onChange={handleInputChange}
                     disabled={!isEditing}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500 disabled:bg-gray-50 disabled:text-gray-500"
-                    placeholder="Nhập tên của bạn"
+                    placeholder="Nhập họ của bạn"
                   />
                 </div>
 
@@ -414,12 +605,12 @@ const Profile = () => {
                       type="email"
                       name="email"
                       value={profileData.email}
-                      onChange={handleInputChange}
-                      disabled={!isEditing}
-                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500 disabled:bg-gray-50 disabled:text-gray-500"
-                      placeholder="Nhập email của bạn"
+                      disabled={true}
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed"
+                      placeholder="Email không thể chỉnh sửa"
                     />
                   </div>
+                  <p className="mt-1 text-xs text-gray-500">Email không thể thay đổi</p>
                 </div>
 
                 {/* Phone */}
@@ -459,24 +650,6 @@ const Profile = () => {
                   </div>
                 </div>
 
-                {/* Address */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Địa chỉ
-                  </label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                    <input
-                      type="text"
-                      name="address"
-                      value={profileData.address}
-                      onChange={handleInputChange}
-                      disabled={!isEditing}
-                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500 disabled:bg-gray-50 disabled:text-gray-500"
-                      placeholder="Nhập địa chỉ của bạn"
-                    />
-                  </div>
-                </div>
               </div>
 
               {/* Bio */}
@@ -517,6 +690,7 @@ const Profile = () => {
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

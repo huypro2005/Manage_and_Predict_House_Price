@@ -19,10 +19,16 @@ export const NotificationProvider = ({ children }) => {
   const [nextPage, setNextPage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
   const [isInitialized, setIsInitialized] = useState(false);
   const pendingMarkIdsRef = React.useRef(new Set());
   const flushTimerRef = React.useRef(null);
   const isFlushingMarksRef = React.useRef(false);
+
+  // LocalStorage key for unread count cache
+  const LS_UNREAD_KEY = 'notifications:unreadCount';
 
   // ---- LocalStorage short-term cache (3 minutes) ----
   const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes
@@ -83,10 +89,12 @@ export const NotificationProvider = ({ children }) => {
       const data = await apiService.authenticatedGet('notifications/not-read-count/', {}, false);
       const count = Number(data?.not_readed) || 0;
       setUnreadCount(count);
+      try { localStorage.setItem(LS_UNREAD_KEY, String(count)); } catch (_) {}
       return count;
     } catch (error) {
       console.error('Failed to fetch unread count:', error);
       setUnreadCount(0);
+      try { localStorage.setItem(LS_UNREAD_KEY, '0'); } catch (_) {}
       return 0;
     }
   }, []);
@@ -96,6 +104,7 @@ export const NotificationProvider = ({ children }) => {
     try {
       console.log('🔔 fetchNotifications called with page:', page, 'append:', append);
       setLoading(true);
+      setCurrentPage(page);
       
       // When fetching the first page (not append), try local cache first
       if (!append && page === 1) {
@@ -109,25 +118,11 @@ export const NotificationProvider = ({ children }) => {
         }
       }
 
-      const data = await apiService.authenticatedGet(`notifications/?page=${page}`, {}, false);
-      console.log('🔔 API Response:', data);
-      console.log('🔔 API Response type:', typeof data);
-      console.log('🔔 API Response keys:', Object.keys(data || {}));
-      console.log('🔔 API Response results:', data?.results);
-      console.log('🔔 API Response results type:', typeof data?.results);
-      console.log('🔔 API Response results length:', data?.results?.length);
-      
+      const data = await apiService.authenticatedGet(`notifications/?page=${page}&page_size=${pageSize}`, {}, false);
+
       // Handle API response structure
       const results = Array.isArray(data?.results) ? data.results : [];
-      console.log('🔔 Results array:', results);
-      console.log('🔔 Results length:', results.length);
-      
-      // Log first few items in detail
-      if (results.length > 0) {
-        console.log('🔔 First item:', results[0]);
-        console.log('🔔 First item keys:', Object.keys(results[0] || {}));
-        console.log('🔔 First item values:', Object.values(results[0] || {}));
-      }
+
       
       console.log('data:', data);
       console.log('results:', results);
@@ -149,6 +144,7 @@ export const NotificationProvider = ({ children }) => {
       }
 
       setNextPage(data?.next ?? null);
+      setTotalCount(Number(data?.count) || 0);
       console.log('🔔 Next page:', data?.next);
     } catch (e) {
       console.error('❌ Failed to fetch notifications:', e);
@@ -232,6 +228,13 @@ export const NotificationProvider = ({ children }) => {
         writeCache(updated, cached.next ?? null);
       }
     } catch (_) {}
+
+    // Optimistically decrement unreadCount (floor at 0) and persist to LS
+    setUnreadCount(prev => {
+      const next = Math.max(0, Number(prev || 0) - 1);
+      try { localStorage.setItem(LS_UNREAD_KEY, String(next)); } catch (_) {}
+      return next;
+    });
 
     // Enqueue id for debounced PUT
     pendingMarkIdsRef.current.add(notificationId);
@@ -321,8 +324,13 @@ export const NotificationProvider = ({ children }) => {
 
   // Long polling setup
   const { startPolling, stopPolling, isPolling, lastStatus, error: pollingError } = useLongPollingNotifications(async () => {
-    // When long-polling detects new data, refresh and update cache
-    await fetchNotifications(1, false);
+    // When long-polling detects new data, refresh list and unread count
+    localStorage.removeItem(CACHE_KEY_LIST);
+    localStorage.removeItem(CACHE_KEY_META);
+    await Promise.all([
+      fetchNotifications(1, false),
+      fetchUnreadCount()
+    ]);
   });
 
   // Initialize notification system when user is authenticated
@@ -332,6 +340,8 @@ export const NotificationProvider = ({ children }) => {
       console.log('🔔 Initializing notification system...');
       
       // Clear any old notification data from localStorage
+      localStorage.removeItem(CACHE_KEY_LIST);
+      localStorage.removeItem(CACHE_KEY_META);
       const clearedCount = clearNotificationData();
       if (clearedCount > 0) {
         console.log(`🧹 Cleared ${clearedCount} old notification data entries`);
@@ -342,12 +352,35 @@ export const NotificationProvider = ({ children }) => {
         debugLocalStorage();
       }
       
-      setIsInitialized(true);
-      
-      // Fetch initial data
-      refreshNotifications().then(() => {
-        // Start long polling after initial data is loaded
-        startPolling();
+      // Check localStorage for unreadCount first - display immediately if found
+      const checkAndInitializeUnreadCount = async () => {
+        try {
+          const stored = localStorage.getItem(LS_UNREAD_KEY);
+          if (stored !== null) {
+            // Found cached unreadCount, display immediately
+            const parsed = Number(stored);
+            const count = Number.isFinite(parsed) ? parsed : 0;
+            setUnreadCount(count);
+            console.log('🔔 Using cached unreadCount:', count);
+          } else {
+            // No cached unreadCount, fetch from API
+            console.log('🔔 No cached unreadCount, fetching from API...');
+            await fetchUnreadCount();
+          }
+        } catch (error) {
+          console.error('🔔 Error initializing unreadCount:', error);
+          setUnreadCount(0);
+        }
+      };
+
+      // Initialize unreadCount first, then proceed with other initialization
+      checkAndInitializeUnreadCount().then(() => {
+        setIsInitialized(true);
+        
+        // Fetch initial data (list), then start long polling
+        refreshNotifications().then(() => {
+          startPolling();
+        });
       });
     } else if (!token && isInitialized) {
       // User logged out, cleanup
@@ -357,6 +390,7 @@ export const NotificationProvider = ({ children }) => {
       setNotifications([]);
       setUnreadCount(0);
       setNextPage(null);
+      try { localStorage.removeItem(LS_UNREAD_KEY); } catch (_) {}
     }
   }, [isInitialized, refreshNotifications, startPolling, stopPolling]);
 
@@ -453,6 +487,9 @@ export const NotificationProvider = ({ children }) => {
   const value = {
     notifications,
     unreadCount,
+    totalCount,
+    currentPage,
+    pageSize,
     isPolling,
     isInitialized,
     lastStatus,
@@ -469,6 +506,7 @@ export const NotificationProvider = ({ children }) => {
     loadMoreNotifications,
     hasMore: !!nextPage,
     loading,
+    goToPage: (page) => fetchNotifications(page, false),
     // Debug utilities (development only)
     ...(process.env.NODE_ENV === 'development' && {
       debugLocalStorage,

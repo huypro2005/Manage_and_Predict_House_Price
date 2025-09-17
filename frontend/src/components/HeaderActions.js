@@ -28,12 +28,12 @@ const HeaderActions = ({
       {/* Mobile Actions */}
       {showOnMobile && (
         <div className="flex sm:hidden items-center space-x-1">
-          <NotificationDropdown />
           <FavoriteHeart
             favoriteCount={favoriteCount}
             onClick={onFavoriteClick}
             isFavoritePage={isFavoritePage}
           />
+          <NotificationDropdown />
         </div>
       )}
     </div>

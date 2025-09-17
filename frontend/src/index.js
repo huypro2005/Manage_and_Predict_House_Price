@@ -16,6 +16,9 @@ import PostProperty from './pages/PostProperty';
 import PricePrediction from './pages/PricePrediction';
 import Notifications from './pages/Notifications';
 import Profile from './pages/Profile';
+import News from './pages/News';
+import NewsDetail from './pages/NewsDetail';
+import Messages from './pages/Messages';
 
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -62,7 +65,7 @@ root.render(
           path='/messages' 
           element={
             <ProtectedRoute>
-              <div style={{cursor: 'pointer'}}>Trang tin nhắn</div>
+              <Messages />
             </ProtectedRoute>
           } 
         />
@@ -101,6 +104,14 @@ root.render(
                 <Notifications />
               </ProtectedRoute>
             } 
+          />
+          <Route 
+            path='/news' 
+            element={<News />} 
+          />
+          <Route 
+            path='/news/:id' 
+            element={<NewsDetail />} 
           />
         </Routes>
     </Router>

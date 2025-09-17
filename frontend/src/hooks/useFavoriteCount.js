@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import apiService from '../utils/api';
 
-/**
+/*
  * Hook để lấy số lượng favorite properties
  * Sử dụng HTTP API để lấy dữ liệu
- */
+*/
 export const useFavoriteCount = () => {
   const [favoriteCount, setFavoriteCount] = useState(0);
 

@@ -8,12 +8,16 @@ export const useNotificationSystem = () => {
   const {
     notifications,
     unreadCount,
+    totalCount,
+    currentPage,
+    pageSize,
     isPolling,
     isInitialized,
     markAsRead,
     markAllAsRead,
     clearNotifications,
-    requestNotificationPermission
+    requestNotificationPermission,
+    goToPage
   } = useNotifications();
 
   /**
@@ -104,6 +108,9 @@ export const useNotificationSystem = () => {
     // State
     notifications,
     unreadCount,
+    totalCount,
+    currentPage,
+    pageSize,
     isPolling,
     isInitialized,
     
@@ -112,6 +119,7 @@ export const useNotificationSystem = () => {
     markAllAsRead,
     clearNotifications,
     requestNotificationPermission,
+    goToPage,
     
     // Utility functions
     getNotificationsByType,

@@ -4,6 +4,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { baseUrl, ConfigUrl } from '../base';
 import AuthWrapper from '../components/auth/AuthWrapper';
 import HeaderActions from '../components/HeaderActions';
+import Layout from '../components/Layout';
+import { Facebook, Instagram, Twitter, Youtube, Phone, Mail } from 'lucide-react';
 import { 
   ArrowLeft, 
   Search, 
@@ -35,6 +37,18 @@ function PropertyList() {
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const itemsPerPage = 12;
+
+  // Update a single query param (preserving others) and reset to page 1
+  const updateQueryParam = (key, value) => {
+    const params = new URLSearchParams(location.search);
+    if (value === undefined || value === null || value === '') {
+      params.delete(key);
+    } else {
+      params.set(key, value);
+    }
+    params.set('page', '1');
+    navigate(`/property-list?${params.toString()}`);
+  };
 
   // Fetch favorite IDs
   useEffect(() => {
@@ -369,7 +383,7 @@ function PropertyList() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer h-full flex flex-col"
-      onClick={() => navigate(`/property/${property.id}?page=1`)}
+      onClick={() => navigate(`/property/${property.id}?page=1${searchParams.tab ? `&tab=${searchParams.tab}` : ''}`)}
     >
       {/* Property Image */}
       <div className="relative h-48 flex-shrink-0">
@@ -432,7 +446,7 @@ function PropertyList() {
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer"
-      onClick={() => navigate(`/property/${property.id}?page=1`)}
+      onClick={() => navigate(`/property/${property.id}?page=1${searchParams.tab ? `&tab=${searchParams.tab}` : ''}`)}
     >
       <div className="flex">
         {/* Property Image */}
@@ -491,91 +505,25 @@ function PropertyList() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <header className="bg-white shadow-sm border-b border-gray-100">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={handleBack}
-                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <ArrowLeft className="h-6 w-6" />
-                </button>
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900">Kết quả tìm kiếm</h1>
-                  <p className="text-sm text-gray-500">Đang tải...</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Loading Content */}
+      <Layout>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">Kết quả tìm kiếm</h1>
           <div className="text-center py-16">
             <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-600">Đang tải danh sách bất động sản...</p>
           </div>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-             {/* Header */}
-       <header className="bg-white shadow-sm border-b border-gray-100">
-         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-           <div className="flex items-center justify-between h-16">
-             <div className="flex items-center space-x-4">
-               <button
-                 onClick={handleBack}
-                 className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-               >
-                 <ArrowLeft className="h-6 w-6" />
-               </button>
-                               <div>
-                  <h1 className="text-xl font-bold text-gray-900">Kết quả tìm kiếm</h1>
-                  <p className="text-sm text-gray-500">
-                    {loading ? 'Đang tải...' : 
-                     totalCount > 0 ? `${totalCount} bất động sản được tìm thấy` : 
-                     'Không tìm thấy bất động sản nào'}
-                  </p>
-                </div>
-             </div>
-
-             {/* Header Actions */}
-             <div className="flex items-center space-x-2">
-               {/* Search Summary */}
-               <div className="hidden md:flex items-center space-x-4 text-sm text-gray-600">
-                 {searchParams?.province && (
-                   <span className="flex items-center">
-                     <MapPin className="h-4 w-4 mr-1" />
-                     {searchParams.province}
-                   </span>
-                 )}
-                 {searchParams?.districts?.length > 0 && (
-                   <span>{searchParams.districts.length} quận/huyện</span>
-                 )}
-                 {searchParams?.propertyTypes?.length > 0 && (
-                   <span>{searchParams.propertyTypes.length} loại nhà đất</span>
-                 )}
-               </div>
-
-               <HeaderActions
-                 favoriteCount={favoriteIds.length}
-                 onFavoriteClick={() => navigate('/favorites?page=1')}
-               />
-               <AuthWrapper />
-             </div>
-           </div>
-         </div>
-       </header>
-
-      {/* Main Content */}
+    <Layout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Title */}
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">Kết quả tìm kiếm</h1>
+        <p className="text-sm text-gray-500 mb-6">{totalCount > 0 ? `${totalCount} bất động sản được tìm thấy` : 'Không tìm thấy bất động sản nào'}</p>
+
         {/* Current Search Info */}
         {Object.keys(searchParams).length > 0 && (
           <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -630,6 +578,21 @@ function PropertyList() {
         {/* Filters and Controls */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
           <div className="flex items-center space-x-4">
+            {/* Tab selector: Bán / Thuê */}
+            <div className="flex items-center bg-white border border-gray-300 rounded-lg overflow-hidden">
+              <button
+                onClick={() => updateQueryParam('tab', 'ban')}
+                className={`px-4 py-2 text-sm ${searchParams.tab === 'ban' || !searchParams.tab ? 'bg-red-100 text-red-600' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Bán
+              </button>
+              <button
+                onClick={() => updateQueryParam('tab', 'thue')}
+                className={`px-4 py-2 text-sm ${searchParams.tab === 'thue' ? 'bg-red-100 text-red-600' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Thuê
+              </button>
+            </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -851,7 +814,61 @@ function PropertyList() {
           </div>
         )}
       </div>
-    </div>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-8 h-8 bg-yellow-400 rounded-lg flex items-center justify-center">
+                  <span className="text-gray-900 font-bold text-sm">🏢</span>
+                </div>
+                <h3 className="text-xl font-bold">RealEstate</h3>
+              </div>
+              <p className="text-gray-400 mb-4">
+                Nền tảng bất động sản hàng đầu Việt Nam, kết nối người mua và người bán một cách hiệu quả.
+              </p>
+              <div className="flex space-x-4">
+                <button className="text-gray-400 hover:text-white transition-colors"><Facebook className="h-5 w-5" /></button>
+                <button className="text-gray-400 hover:text-white transition-colors"><Instagram className="h-5 w-5" /></button>
+                <button className="text-gray-400 hover:text-white transition-colors"><Twitter className="h-5 w-5" /></button>
+                <button className="text-gray-400 hover:text-white transition-colors"><Youtube className="h-5 w-5" /></button>
+              </div>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Dịch vụ</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#" className="hover:text-white transition-colors">Mua bán nhà đất</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Cho thuê nhà đất</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Dự án bất động sản</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Tư vấn đầu tư</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Hỗ trợ</h4>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#" className="hover:text-white transition-colors">Trung tâm trợ giúp</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Liên hệ</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Điều khoản sử dụng</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Chính sách bảo mật</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Liên hệ</h4>
+              <div className="space-y-2 text-gray-400">
+                <div className="flex items-center space-x-2"><Phone className="h-4 w-4" /><span>1900 1234</span></div>
+                <div className="flex items-center space-x-2"><Mail className="h-4 w-4" /><span>info@realestate.vn</span></div>
+                <div className="flex items-center space-x-2"><MapPin className="h-4 w-4" /><span>123 Đường ABC, Quận 1, TP.HCM</span></div>
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+            <p>&copy; 2024 RealEstate. Tất cả quyền được bảo lưu.</p>
+          </div>
+        </div>
+      </footer>
+    </Layout>
   );
 }
 
