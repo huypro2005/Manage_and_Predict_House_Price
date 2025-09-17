@@ -1,3 +1,4 @@
+import json
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -47,8 +48,9 @@ class NotificationListView(APIView):
         user = request.user 
         paginator = self.pagination_class()
         cached = get_notifications_from_cache(user.id, page_number=page)
+        # print('Cached notifications:', json.dumps(cached, indent=2))
         count_not_readed = get_not_read_count_from_cache(user.id)
-        print('Count not readed from cache:', count_not_readed)
+        # print('Count not readed from cache:', count_not_readed)
         if cached and count_not_readed is not None:
             tmp = []
             for item in cached:
@@ -94,6 +96,8 @@ class NotificationDetailView(APIView):
     def mark_notification_as_read(self, notification_id):
         try:
             notification = Notification.objects.get(id=notification_id)
+            if notification.is_read:
+                return notification
             notification.is_read = True
             notification.save()
             serializer = NotificationV1Serializer(notification)

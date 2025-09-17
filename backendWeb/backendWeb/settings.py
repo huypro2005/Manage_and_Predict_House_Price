@@ -202,8 +202,11 @@ MAPBOX_TOKEN = os.environ.get('MAPBOX_TOKEN', 'PUT_YOUR_MAPBOX_TOKEN_HERE')
 # Cors setting
 CORS_ORIGIN_WHITELIST = [
     'http://localhost:3000',
-    'http://localhost:5500'
+    'http://localhost:5500',
+    'http://127.0.0.1:3000'
 ]
+
+
 
 # JWT Configs
 from datetime import timedelta

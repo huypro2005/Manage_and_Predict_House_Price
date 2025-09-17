@@ -1,5 +1,6 @@
 from rest_framework.serializers import ModelSerializer
 from .models import NewsArticle, Source, Comment, CustomUser
+from rest_framework import serializers
 
 class SourceV1Serializer(ModelSerializer):
     class Meta:
@@ -11,6 +12,23 @@ class CommentV1Serializer(ModelSerializer):
         model = Comment
         fields = '__all__'
 
+
+class ListNewsV1Serializer(ModelSerializer):
+    author_name = serializers.SerializerMethodField()
+    province_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = NewsArticle
+        fields = ['id', 'title', 'author_name', 'created_at', 'thumbnail', 'province_name', 'province', 'introduction']
+        read_only_fields = ('id', 'created_at', 'updated_at')
+    
+    def get_author_name(self, obj):
+        return obj.author.get_full_name()
+    
+    def get_province_name(self, obj):
+        return obj.province.name if obj.province else None
+    
+
 class NewsV1Serializer(ModelSerializer):
     class Meta:
         model = NewsArticle
@@ -20,10 +38,11 @@ class NewsV1Serializer(ModelSerializer):
 class NewsDetailV1Serializer(ModelSerializer):
     sources = SourceV1Serializer(many=True, required=True)
     comments = CommentV1Serializer(many=True, read_only=True)
+    author_name = serializers.SerializerMethodField()
 
     class Meta:
         model = NewsArticle
-        fields = ['id', 'title', 'content', 'author_name', 'created_at', 'updated_at', 'is_checked', 'is_approved', 'sources', 'comments']
+        fields = ['id', 'title', 'content', 'author_name', 'created_at', 'updated_at', 'is_checked', 'is_approved', 'sources', 'comments', 'province']
         read_only_fields = ('id', 'created_at', 'updated_at', 'comments')
         depth = 1
 

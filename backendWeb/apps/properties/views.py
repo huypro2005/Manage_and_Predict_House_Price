@@ -120,6 +120,7 @@ class PropertyListView(APIView):
             return Response({'message': 'Property creation failed', 'errors': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+
 class PropertyDetailView(APIView): 
     permission_classes = [IsAuthenticatedOrReadOnly]
     # retrieve a property with all its images
@@ -159,7 +160,19 @@ class PropertyDetailView(APIView):
         property.deleted_at = datetime.datetime.now()
         property.save()
         return Response({'message': 'Property deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+    
 
+class MyPropertyListView(APIView):
+    permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
+
+    def get(self, request):
+        user = request.user
+        properties = Property.objects.filter(user=user, is_active=True).order_by('-created_at')
+        paginator = self.pagination_class()
+        result_page = paginator.paginate_queryset(properties, request)
+        serializer = PropertyV1Serializer(result_page, many=True)
+        return Response({'message': 'Your properties retrieved successfully', 'data': serializer.data, 'count': properties.count()}, status=status.HTTP_200_OK)
 
 
 

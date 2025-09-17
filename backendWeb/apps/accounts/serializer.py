@@ -6,9 +6,14 @@ from apps.utils import upload_to_app_model
 class CustomUserV1Serializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ['id', 'username', 'password', 'email', 'first_name', 'last_name', 'phone', 'avatar', 'birth_date', 'is_active', 'is_verified', 'created', 'updated']
+        fields = ['id', 'username', 'password', 'email', 'first_name', 'last_name', 'phone', 'avatar', 'birth_date', 'is_active', 'is_verified', 'created', 'updated', 'description']
         read_only_fields = ['id', 'is_active', 'is_verified', 'created', 'updated']
-        extra_kwargs = {'password': {'write_only': True}}
+        extra_kwargs = {'password': {'write_only': True, 'required': False},
+                        'email': {'required': False},
+                        'avatar': {'required': False, 'allow_null': True, 'use_url': True},
+                        'username': {'required': False},
+                        'description': {'required': False, 'allow_blank': True, 'default': ''}
+                       }
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)

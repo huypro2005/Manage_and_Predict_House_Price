@@ -82,3 +82,12 @@ class MeView(APIView):
         user = request.user
         serializer = CustomUserV1Serializer(user)
         return Response({'message': 'User profile retrieved successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
+
+
+    def put(self, request):
+        user = request.user
+        serializer = CustomUserV1Serializer(user, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'message': 'User updated successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
+        return Response({'message': 'User update failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)

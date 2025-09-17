@@ -41,7 +41,10 @@ class ContactRequestListView(APIView):
                 return Response({'message': 'You do not have permission to view contact requests for this property'}, status=status.HTTP_403_FORBIDDEN)
             contact_requests = property.contact_requests.all().order_by('-created_at')
         else:
-            contact_requests = ContactRequest.objects.filter(user=user).order_by('-created_at')
+            contact_requests = (
+                ContactRequest.objects.filter(property__user=user).order_by('-created_at')
+            )
+            # print(contact_requests)
         paginator = self.pagination_class()
         result_page = paginator.paginate_queryset(contact_requests, request)
         serializer = ContactRequestV1Serializer(result_page, many=True)

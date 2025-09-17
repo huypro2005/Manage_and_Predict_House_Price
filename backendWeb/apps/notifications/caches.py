@@ -25,7 +25,8 @@ def add_to_cache(user_id: int, notification_id: int, notification: dict):
         return
     timestamp = notification.get('created_at', time.time())
     notification_json = json.dumps({
-        notification_id: notification
+        'id': notification_id,
+        'notification': notification
     })
     cache.zadd(notif_key(user_id), {notification_json: datetime_to_timestamp(timestamp)})
     cache.expire(notif_key(user_id), NOTIF_TTL)
