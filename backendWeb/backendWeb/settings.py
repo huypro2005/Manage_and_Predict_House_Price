@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'apps.authenticationJWT.apps.AuthenticationjwtConfig',
     'apps.oauth.apps.OAuthConfig',
     'apps.love_cart.apps.LoveCartConfig',
+    'apps.comments.apps.CommentsConfig',
     'channels',
     'apps.news.apps.NewsConfig',
     'apps.notifications.apps.NotificationsConfig',
@@ -152,7 +153,7 @@ PASSWORD_HASHERS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Ho_Chi_Minh'
 
 USE_I18N = True
 
@@ -245,7 +246,7 @@ PATH_ACCOUNT_FIREBASE_SERVICE = os.getenv('PATH_FIREBASE_ACCOUNT')
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379/1',
+        'LOCATION': f'{os.getenv("URL_REDIS")}/1',
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
             'SENTINEL_KWARGS': {
@@ -266,8 +267,8 @@ CHANNEL_LAYERS = {
     },
 }
 
-CELERY_BROKER_URL = 'redis://localhost:6379/0' # Adjust host/port/DB as needed
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0' # Optional, for storing task results
+CELERY_BROKER_URL = f'{os.environ.get("URL_REDIS")}/0' # Adjust host/port/DB as needed
+CELERY_RESULT_BACKEND = f'{os.environ.get("URL_REDIS")}/0' # Optional, for storing task results
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 

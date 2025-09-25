@@ -51,6 +51,7 @@ urlpatterns = [
     path('api/v1/oauth/', include('apps.oauth.urls')),
     path('api/', include('apps.love_cart.urls')),
     path('api/v1/', include('apps.news.urls')),
+    path('api/v1/', include('apps.comments.urls')),
 ]
 
 if settings.DEBUG:

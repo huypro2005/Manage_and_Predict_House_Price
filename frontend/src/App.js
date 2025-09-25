@@ -269,15 +269,8 @@ function App() {
 
 
 
-  const featuredNews = [
-    {
-      id: 1,
-      title: 'Chủ Đầu Tư Mipec Ra Mắt Siêu Phẩm Căn Hộ Đẳng Cấp Tại Thành Vinh',
-      time: '2 giờ trước',
-      image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-      category: 'Tin nổi bật'
-    }
-  ];
+  const [featuredNews, setFeaturedNews] = useState([]);
+  const [newsLoading, setNewsLoading] = useState(true); 
 
 
 
@@ -323,12 +316,66 @@ function App() {
     fetchFeaturedProperties();
   }, []);
 
+  // Fetch featured news from API
+  useEffect(() => {
+    const fetchFeaturedNews = async () => {
+      try {
+        setNewsLoading(true);
+        const response = await fetch(`${baseUrl}news/?limit=3`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          setFeaturedNews(data.results || []);
+        } else {
+          console.error('Failed to fetch news');
+          setFeaturedNews([]);
+        }
+      } catch (error) {
+        console.error('Error fetching news:', error);
+        setFeaturedNews([]);
+      } finally {
+        setNewsLoading(false);
+      }
+    };
+
+    fetchFeaturedNews();
+  }, []);
+
   const handelNavigateToPostProperty = () => {
     if (!isAuthenticated) {
       alert('Vui lòng đăng nhập để đăng tin!');
       return;
     }
     navigate('/post-property');
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
+      
+      if (diffInHours < 1) return 'Vừa xong';
+      if (diffInHours < 24) return `${diffInHours} giờ trước`;
+      
+      const diffInDays = Math.floor(diffInHours / 24);
+      if (diffInDays < 7) return `${diffInDays} ngày trước`;
+      
+      return date.toLocaleDateString('vi-VN');
+    } catch {
+      return dateString;
+    }
+  };
+
+  const getThumbnailUrl = (path) => {
+    if (!path) return '';
+    try {
+      const api = new URL(baseUrl);
+      return `${api.origin}${path}`;
+    } catch {
+      return path;
+    }
   };
 
   // Render PropertyList page if currentPage is 'propertyList'
@@ -399,7 +446,7 @@ function App() {
               {/* Filter Dropdowns */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 <div>
-                  <PropertyTypeSelect onPropertyTypeSelect={handlePropertyTypeSelect} />
+                  <PropertyTypeSelect onPropertyTypeSelect={handlePropertyTypeSelect} tab={activeTab} />
                 </div>
 
                 <div>
@@ -526,41 +573,78 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-8">
             <h3 className="text-2xl font-bold text-gray-900">Tin nổi bật</h3>
-            <button className="text-blue-600 hover:text-blue-700 font-medium" >
+            <button 
+              className="text-blue-600 hover:text-blue-700 font-medium"
+              onClick={() => navigate('/news')}
+            >
               Xem thêm
             </button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {featuredNews.map((news) => (
-              <motion.div
-                key={news.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
-              >
-                <div className="relative">
-                  <img
-                    src={news.image}
-                    alt={news.title}
-                    className="w-full h-64 object-cover"
-                  />
-                  <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                    {news.category}
+          {newsLoading ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {[...Array(3)].map((_, index) => (
+                <div key={index} className="bg-white rounded-xl shadow-lg overflow-hidden animate-pulse">
+                  <div className="h-64 bg-gray-200"></div>
+                  <div className="p-6">
+                    <div className="h-6 bg-gray-200 rounded mb-3"></div>
+                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                   </div>
                 </div>
-                <div className="p-6">
-                  <h4 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2">
-                    {news.title}
-                  </h4>
-                  <div className="flex items-center text-gray-500 text-sm">
-                    <Clock className="h-4 w-4 mr-2" />
-                    {news.time}
+              ))}
+            </div>
+          ) : featuredNews.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {featuredNews.map((news, index) => (
+                <motion.div
+                  key={news.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow cursor-pointer"
+                  onClick={() => navigate(`/news/${news.id}`)}
+                >
+                  <div className="relative">
+                    <img
+                      src={getThumbnailUrl(news.thumbnail)}
+                      alt={news.title}
+                      className="w-full h-64 object-cover"
+                    />
+                    <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+                      Tin nổi bật
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                  <div className="p-6">
+                    <h4 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2">
+                      {news.title}
+                    </h4>
+                    {news.introduction && (
+                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                        {news.introduction}
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between text-sm text-gray-500">
+                      <div className="flex items-center">
+                        <Clock className="h-4 w-4 mr-2" />
+                        {formatDate(news.created_at)}
+                      </div>
+                      {news.author_name && (
+                        <span>{news.author_name}</span>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
+                <span className="text-gray-400 text-2xl">📰</span>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có tin tức</h3>
+              <p className="text-gray-500">Hiện tại chưa có tin tức nào được đăng</p>
+            </div>
+          )}
         </div>
       </div>
 

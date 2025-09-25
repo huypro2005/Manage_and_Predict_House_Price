@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { baseUrl, ConfigUrl } from '../base';
 import Layout from '../components/Layout';
 import { ArrowLeft, Calendar, User, MapPin, Facebook, Instagram, Twitter, Youtube, Phone, Mail } from 'lucide-react';
+import Comments from '../components/Comments';
 
 function NewsDetail() {
   const { id } = useParams();
@@ -12,8 +13,7 @@ function NewsDetail() {
   const [error, setError] = useState(null);
   const [recommendedArticles, setRecommendedArticles] = useState([]);
   const [recommendedLoading, setRecommendedLoading] = useState(false);
-  const [otherArticles, setOtherArticles] = useState([]);
-  const [otherArticlesLoading, setOtherArticlesLoading] = useState(false);
+  const [provinceID, setProvinceID] = useState(null);
 
   useEffect(() => {
     const fetchArticle = async () => {
@@ -26,15 +26,19 @@ function NewsDetail() {
         }
         
         const data = await response.json();
+        console.log('Article data:', data.data);
         setArticle(data.data);
         
+    
+        
         // Fetch recommended articles if article has province
-        if (data.data && data.data.province && data.data.province.id) {
+        if (data.data && data.data.province) {
+          console.log('Article has province, fetching recommended articles...');
           fetchRecommendedArticles(data.data.province.id, data.data.id);
+        } else {
+          fetchOtherArticles(data.data.id);
         }
         
-        // Fetch other articles
-        fetchOtherArticles(data.data.id);
       } catch (error) {
         console.error('Error fetching article:', error);
         setError(error.message);
@@ -46,11 +50,16 @@ function NewsDetail() {
     const fetchRecommendedArticles = async (provinceId, current_article_id) => {
       try {
         setRecommendedLoading(true);
+        console.log('Fetching recommended articles for province:', provinceId, 'current article:', current_article_id);
         const response = await fetch(`${baseUrl}news/recommended/?province=${provinceId}&limit=5&current_article_id=${current_article_id}`);
         
+        console.log('Recommended articles response status:', response.status);
         if (response.ok) {
           const data = await response.json();
+          console.log('Recommended articles data:', data);
           setRecommendedArticles(data.data || []);
+        } else {
+          console.error('Failed to fetch recommended articles:', response.status, response.statusText);
         }
       } catch (error) {
         console.error('Error fetching recommended articles:', error);
@@ -61,17 +70,17 @@ function NewsDetail() {
 
     const fetchOtherArticles = async (currentArticleId) => {
       try {
-        setOtherArticlesLoading(true);
+        setRecommendedLoading(true);
         const response = await fetch(`${baseUrl}news/recommended/?current_article_id=${currentArticleId}`);
         
         if (response.ok) {
           const data = await response.json();
-          setOtherArticles(data.data || []);
+          setRecommendedArticles(data.data || []);
         }
       } catch (error) {
-        console.error('Error fetching other articles:', error);
+        console.error('Error fetching recommended articles:', error);
       } finally {
-        setOtherArticlesLoading(false);
+        setRecommendedLoading(false);
       }
     };
 
@@ -190,6 +199,9 @@ function NewsDetail() {
               />
             </div>
 
+            {/* Comments */}
+            <Comments articleId={id} />
+
             {/* Sources Section */}
             {article.sources && article.sources.length > 0 && (
               <div className="mt-8 pt-6 border-t border-gray-200">
@@ -245,12 +257,21 @@ function NewsDetail() {
                   Bài viết được xem nhiều nhất
                 </h3>
                 
+    
+                {(() => {
+                  console.log('Rendering recommended articles section:', { 
+                    recommendedLoading, 
+                    recommendedArticlesLength: recommendedArticles.length, 
+                    recommendedArticles 
+                  });
+                  return null;
+                })()}
                 {recommendedLoading ? (
                   <div className="text-center py-8">
                     <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                     <p className="text-gray-600">Đang tải bài viết gợi ý...</p>
                   </div>
-                ) : recommendedArticles.length > 0 ? (
+                ) : recommendedArticles && recommendedArticles.length > 0 ? (
                   <div className="bg-white border border-gray-200 rounded-lg">
                     {recommendedArticles.map((recArticle, index) => (
                       <div key={recArticle.id}>
@@ -298,14 +319,14 @@ function NewsDetail() {
           Bài viết khác
         </h3>
         
-        {otherArticlesLoading ? (
+        {recommendedLoading ? (
           <div className="text-center py-8">
             <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-600">Đang tải bài viết khác...</p>
           </div>
-        ) : otherArticles.length > 0 ? (
+        ) : recommendedArticles.length > 0 ? (
           <div className="space-y-4">
-            {otherArticles.map((article) => (
+            {recommendedArticles.map((article) => (
               <article
                 key={article.id}
                 className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"

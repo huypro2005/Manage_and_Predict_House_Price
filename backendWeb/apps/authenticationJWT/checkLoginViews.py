@@ -15,14 +15,7 @@ class CheckLoginView(APIView):
             return Response(cached_user, status=status.HTTP_200_OK)
 
         user_data ={
-            "username": user.username,
-            "email": user.email,
-            'full_name': user.get_full_name(),
-            'id': user.id,
-            'is_authenticated': user.is_authenticated,
-            'is_active': user.is_active,
-            'avatar': user.avatar.url if user.avatar else None,
-            'is_verified': user.is_verified,
+            'is_authenticated': user.is_authenticated
         }
         cache.set(cache_key, user_data, timeout=300)  # Cache for 5 minutes
         return Response(user_data, status=status.HTTP_200_OK)

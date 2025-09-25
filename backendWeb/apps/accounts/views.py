@@ -9,7 +9,7 @@ from apps.predicts.models import Dashboard
 from django.http import Http404
 from .serializer import CustomUserV1Serializer, CustomUserUpdateAvatarSerializer
 from rest_framework.parsers import MultiPartParser, FormParser
-
+from django.core.cache import cache
 # Create your views here.
 
 
@@ -48,9 +48,11 @@ class CustomUserDetailView(APIView):
     
     def put(self, request, pk):
         user = self.get_object(pk)
+        cache_key = f'User_{user.id}'
         serializer = CustomUserV1Serializer(user, data=request.data)
         if serializer.is_valid():
             serializer.save()
+            cache.delete(cache_key)  # Invalidate cache
             return Response({'message': 'User updated successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
         return Response({'message': 'User update failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -71,6 +73,8 @@ class CustomUserChangeAvatarView(APIView):
         serializer = CustomUserUpdateAvatarSerializer(user, data=request.data)
         if serializer.is_valid():
             serializer.save()
+            cache_key = f'User_{user.id}'
+            cache.delete(cache_key)  # Invalidate cache
             return Response({'message': 'User avatar updated successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
         return Response({'message': 'User avatar update failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
@@ -89,5 +93,7 @@ class MeView(APIView):
         serializer = CustomUserV1Serializer(user, data=request.data)
         if serializer.is_valid():
             serializer.save()
+            cache_key = f'User_{user.id}'
+            cache.delete(cache_key)  # Invalidate cache
             return Response({'message': 'User updated successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
         return Response({'message': 'User update failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)

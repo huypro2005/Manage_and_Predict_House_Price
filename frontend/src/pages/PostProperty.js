@@ -348,6 +348,7 @@ function PostProperty() {
                   setSelectedPropertyTypeIds(ids || []);
                   setSelectedPropertyTypeNames(names || []);
                 }}
+                tab={listingType}
               />
               {selectedPropertyTypeIds.length !== 1 && (
                 <p className="mt-1 text-xs text-orange-600">Vui lòng chọn đúng 1 loại nhà đất.</p>

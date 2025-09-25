@@ -4,7 +4,7 @@ import { baseUrl } from "../base";
 
 const propertyTypeUrl = baseUrl + 'property-types/';
 
-function PropertyTypeSelect({ onPropertyTypeSelect }) {
+function PropertyTypeSelect({ onPropertyTypeSelect, tab }) {
     // State lưu danh sách loại nhà đất
     const [propertyTypes, setPropertyTypes] = useState([]);
     // State lưu các loại đã được chọn
@@ -15,16 +15,28 @@ function PropertyTypeSelect({ onPropertyTypeSelect }) {
     const [loading, setLoading] = useState(true);
     const dropdownRef = useRef(null);
 
-    // Gọi API khi component được render đầu tiên
+    // Gọi API khi component được render đầu tiên hoặc khi tab thay đổi
     useEffect(() => {
         const fetchPropertyTypes = async () => {
             try {
                 setLoading(true);
-                const res = await fetch(propertyTypeUrl);
+                const params = new URLSearchParams();
+                // Khi tab là 'thue' thì gọi danh sách dành cho thuê, còn lại (ban hoặc rỗng) là để bán
+                if (tab === 'thue') {
+                    params.set('tab', 'thue');
+                } else {
+                    params.set('tab', 'ban');
+                }
+                const res = await fetch(`${propertyTypeUrl}?${params.toString()}`);
                 if(!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         
                 const data = await res.json();
-                setPropertyTypes(data.data || []);
+                setPropertyTypes(data.results || data.data || []);
+                // Reset lựa chọn khi thay đổi tab để tránh giữ lựa chọn sai ngữ cảnh
+                setSelectedTypes([]);
+                if (onPropertyTypeSelect) {
+                    onPropertyTypeSelect([], []);
+                }
             }catch(error){
                 console.error('Error fetching property types:', error);
                 setPropertyTypes([]);
@@ -33,7 +45,7 @@ function PropertyTypeSelect({ onPropertyTypeSelect }) {
             }
         };
         fetchPropertyTypes();
-    }, []);
+    }, [tab]);
 
     // Handle click outside to close dropdown
     useEffect(() => {

@@ -41,6 +41,7 @@ class PropertyType(models.Model):
     code = models.IntegerField(unique=True)
     is_active = models.BooleanField(default=True)
     deleted_at = models.DateTimeField(blank=True, null=True, default=None)
+    tab = models.CharField(max_length=10, default='', blank=True, null=True)
 
     class Meta:
         db_table = 'PropertyType'

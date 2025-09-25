@@ -23,5 +23,5 @@ class DistrictAdmin(admin.ModelAdmin):
 
 @admin.register(PropertyType)
 class PropertyTypeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'code', 'is_active')
+    list_display = ('name', 'code', 'is_active', 'tab')
     search_fields = ('name', 'code')

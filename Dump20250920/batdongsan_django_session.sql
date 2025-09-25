@@ -1,0 +1,53 @@
+-- MySQL dump 10.13  Distrib 8.0.42, for Win64 (x86_64)
+--
+-- Host: 127.0.0.1    Database: batdongsan
+-- ------------------------------------------------------
+-- Server version	9.3.0
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `django_session`
+--
+
+DROP TABLE IF EXISTS `django_session`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `django_session` (
+  `session_key` varchar(40) NOT NULL,
+  `session_data` longtext NOT NULL,
+  `expire_date` datetime(6) NOT NULL,
+  PRIMARY KEY (`session_key`),
+  KEY `django_session_expire_date_a5c62663` (`expire_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `django_session`
+--
+
+LOCK TABLES `django_session` WRITE;
+/*!40000 ALTER TABLE `django_session` DISABLE KEYS */;
+INSERT INTO `django_session` VALUES ('20qxkyp5v05sg2prvqgj9hwi85q5b7vg','.eJxVjDsOwjAQRO_iGlne-BdT0ucM1q4_OIBsKU4qxN1JpBTQTDHvzbyZx20tfutp8XNkVzZIdvktCcMz1YPEB9Z746HVdZmJHwo_aedTi-l1O92_g4K97GuhMQSjCQw5YxEGsMKFkQCkcWRzxDgqiMZJK4zNgixoF1SSSe2RM_t8AfMTN6w:1uygtu:Z8WUzTIBWVhuW66HCexJgQ1XwL_cY1wsxKHrtqBiJcY','2025-10-01 01:24:02.606405'),('4ibvh1xrg7rawt0w9oy5qzx0w0kapn9u','.eJxVjDsOwjAUBO_iGlnEiX-U9Jwh8vNb4wCypTipEHcnkVJAOzO7bzGGdcnj2jCPE4uLMOL0yyjEJ8ou-BHKvcpYyzJPJPdEHrbJW2W8rkf7d5BDy9u6B0UMsHZIZGOXDJTqWUe3Mc3DOZL1Aa53nGB0R46889DcKVhvAfH5AgtMOME:1umsQX:4EvivBBLIdMB2h-OPsoZpLqaTsQPQaD3XtGMxWY1p2I','2025-08-29 11:16:53.217666'),('7ylpftmf7b8whz0vnhb37fvgtcnpj67o','.eJxVjDsOwjAUBO_iGlnEiX-U9Jwh8vNb4wCypTipEHcnkVJAOzO7bzGGdcnj2jCPE4uLMOL0yyjEJ8ou-BHKvcpYyzJPJPdEHrbJW2W8rkf7d5BDy9u6B0UMsHZIZGOXDJTqWUe3Mc3DOZL1Aa53nGB0R46889DcKVhvAfH5AgtMOME:1upk98:u480Z26ieWDGFcqFYiwIWhQf8_2SxIGPz6f1VQwsCA8','2025-09-06 09:02:46.355447'),('hp1sfgh8anl0vodzqholotixfzyewaur','.eJxVjDsOwjAUBO_iGlnEiX-U9Jwh8vNb4wCypTipEHcnkVJAOzO7bzGGdcnj2jCPE4uLMOL0yyjEJ8ou-BHKvcpYyzJPJPdEHrbJW2W8rkf7d5BDy9u6B0UMsHZIZGOXDJTqWUe3Mc3DOZL1Aa53nGB0R46889DcKVhvAfH5AgtMOME:1urgQC:iX2Un3n0D8w5wTjDD1MpdoWMh8TwGfKfC0g7ZbJmzrc','2025-09-11 17:28:24.673425');
+/*!40000 ALTER TABLE `django_session` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2025-09-20  7:56:07

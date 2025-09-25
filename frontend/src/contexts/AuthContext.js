@@ -96,38 +96,21 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkToken = async () => {
       const storedToken = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          setUser(parsed);
+          setUser_fullname(parsed.full_name || parsed.first_name || null);
+        } catch (e) {
+          console.warn('Failed to parse stored user:', e);
+        }
+      }
       if (storedToken) {
         setToken(storedToken);
         
         const isValid = await validateToken(storedToken);
-        
-        if (isValid) {
-          try {
-            const response = await fetch(`${baseUrl}auth/check/`, {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${storedToken}`
-              }
-            });
-
-            if (response.ok) {
-              const userData = await response.json().catch(() => ({}));
-              console.log('User data from check token:', userData);
-              if (userData && (userData.id || userData.username)) {
-                // Ensure is_verified is included in user data
-                const userWithVerification = {
-                  ...userData,
-                  is_verified: userData.is_verified || false
-                };
-                setUser(userWithVerification);
-                setUser_fullname(userData.full_name);
-              }
-            }
-          } catch (error) {
-            console.warn('Failed to fetch user data:', error);
-          }
-        } else {
+        if (!isValid) {
           // Token is invalid - logout and redirect
           handleTokenExpiration();
           return;
@@ -140,45 +123,41 @@ export const AuthProvider = ({ children }) => {
   }, [validateToken]);
 
   const persistAuth = useCallback((authResponse) => {
-    const receivedToken = authResponse?.access || authResponse?.token || authResponse?.jwt;
+    const accessToken = authResponse?.access || authResponse?.token || authResponse?.jwt;
+    const refreshToken = authResponse?.refresh;
+    const userPayload = authResponse?.user;
 
-    if (receivedToken) {
-      localStorage.setItem('token', receivedToken);
-      setToken(receivedToken);
-      
-      // Clear cache when new token is set
-      tokenValidationCache.isValid = null;
-      tokenValidationCache.lastChecked = 0;
+    if (accessToken) {
+      localStorage.setItem('token', accessToken);
+      setToken(accessToken);
     }
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+    }
+    if (userPayload) {
+      try {
+        localStorage.setItem('user', JSON.stringify(userPayload));
+        setUser(userPayload);
+        setUser_fullname(userPayload.full_name || userPayload.first_name || null);
+      } catch (e) {
+        console.warn('Failed to persist user to localStorage:', e);
+      }
+    }
+    
+    // Clear cache when new token is set
+    tokenValidationCache.isValid = null;
+    tokenValidationCache.lastChecked = 0;
   }, []);
 
-  // Optimized user data fetching
+  // Optimized user data fetching (fallback only)
   const fetchUserData = useCallback(async () => {
-    const currentToken = localStorage.getItem('token');
-    if (!currentToken) return;
-
-    try {
-      const response = await fetch(`${baseUrl}auth/check/`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${currentToken}`
-        }
-      });
-
-      if (response.ok) {
-        const userData = await response.json().catch(() => ({}));
-        if (userData && (userData.id || userData.username)) {
-          // Ensure is_verified is included in user data
-          const userWithVerification = {
-            ...userData,
-            is_verified: userData.is_verified || false
-          };
-          setUser(userWithVerification);
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to fetch user data:', error);
+    // Prefer localStorage; this function can be used as a fallback if needed
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+        return;
+      } catch {}
     }
   }, []);
 
@@ -285,6 +264,8 @@ export const AuthProvider = ({ children }) => {
 
   const logout = useCallback(() => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
     localStorage.removeItem('expectRedirect');
     localStorage.removeItem('notifications:list');
     localStorage.removeItem('notifications:unreadCount');
@@ -312,6 +293,9 @@ export const AuthProvider = ({ children }) => {
 
   const updateUser = useCallback((userData) => {
     setUser(userData);
+    try {
+      localStorage.setItem('user', JSON.stringify(userData));
+    } catch {}
   }, []);
 
   // Memoized context value to prevent unnecessary re-renders

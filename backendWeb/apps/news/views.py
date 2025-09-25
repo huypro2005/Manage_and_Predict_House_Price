@@ -1,5 +1,5 @@
-from .models import NewsArticle, Comment, Source, CustomUser
-from .serializer import NewsV1Serializer, NewsDetailV1Serializer, CommentV1Serializer, SourceV1Serializer, ListNewsV1Serializer
+from .models import NewsArticle, Source, CustomUser
+from .serializer import NewsV1Serializer, NewsDetailV1Serializer, SourceV1Serializer, ListNewsV1Serializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -7,7 +7,14 @@ from rest_framework.permissions import AllowAny
 from django.db import transaction
 from apps.utils import datetime_to_timestamp
 from django.db.models import Case, When, IntegerField, Value, F
+from apps.comments.models import Comment
+from rest_framework.pagination import PageNumberPagination
 
+
+class NewsPagination(PageNumberPagination):
+    page_size = 15
+    page_size_query_param = 'limit'
+    max_page_size = 1000
 class NewsListView(APIView):
     permission_classes = [AllowAny]
 
@@ -20,9 +27,12 @@ class NewsListView(APIView):
             articles = NewsArticle.objects.filter(is_deleted=False, is_approved=True).order_by('-created_at')[:limit]
         else:
             articles = NewsArticle.objects.filter(is_deleted=False, is_approved=True).order_by('-created_at')
-        serializer = ListNewsV1Serializer(articles, many=True)
-        return Response({'data': serializer.data, 'message': 'Success'}, status=status.HTTP_200_OK)
-    
+        
+        paginator = NewsPagination()
+        paginated_articles = paginator.paginate_queryset(articles, request)
+        serializer = ListNewsV1Serializer(paginated_articles, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
     @transaction.atomic
     def post(self, request):
         data = request.data

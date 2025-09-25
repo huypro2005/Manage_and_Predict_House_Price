@@ -94,5 +94,14 @@ class FirebaseAuthView(APIView):
         refresh = RefreshToken.for_user(current_user)
         return Response({
             "access": str(refresh.access_token),
-            "refresh": str(refresh)
+            "refresh": str(refresh),
+            "user": {
+                "username": current_user.username,
+                "email": current_user.email,
+                "full_name": current_user.get_full_name(),
+                "id": current_user.id,
+                "is_active": current_user.is_active,
+                "avatar": current_user.avatar.url if current_user.avatar else None,
+                "is_verified": current_user.is_verified,
+            }   
         })

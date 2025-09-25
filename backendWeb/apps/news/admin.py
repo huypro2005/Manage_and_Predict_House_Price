@@ -1,8 +1,8 @@
 from django.contrib import admin
-from .models import NewsArticle, Comment, Source
+from .models import NewsArticle,  Source
+from apps.comments.models import Comment
 
 
-admin.site.register(Comment)
 admin.site.register(Source)
 
 class CommentInline(admin.TabularInline):

@@ -1,32 +1,42 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Clock } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { baseUrl } from '../base';
 import Layout from '../components/Layout';
 import { Facebook, Instagram, Twitter, Youtube, Phone, Mail, MapPin } from 'lucide-react';
 
 const News = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [items, setItems] = useState([]);
+  const [data, setData] = useState(null);
   const [provinces, setProvinces] = useState([]);
   const [provLoading, setProvLoading] = useState(false);
   const [provError, setProvError] = useState('');
   const [selectedProvince, setSelectedProvince] = useState(null);
+  
+  // Get current page from URL params, default to 1
+  const currentPage = parseInt(searchParams.get('page')) || 1;
+  const pageSize = 15;
 
   useEffect(() => {
     const fetchNews = async () => {
       try {
         setLoading(true);
         setError('');
-        const res = await fetch(`${baseUrl}news/`);
+        const params = new URLSearchParams({
+          page: currentPage.toString(),
+          page_size: pageSize.toString()
+        });
+        
+        const res = await fetch(`${baseUrl}news/?${params}`);
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
         }
-        const data = await res.json();
-        const list = Array.isArray(data?.data) ? data.data : [];
-        setItems(list);
+        const responseData = await res.json();
+        console.log(responseData);
+        setData(responseData);
       } catch (e) {
         setError(e?.message || 'Fetch failed');
       } finally {
@@ -34,7 +44,7 @@ const News = () => {
       }
     };
     fetchNews();
-  }, []);
+  }, [currentPage, pageSize]);
 
   const formatDate = (s) => {
     if (!s) return '';
@@ -60,7 +70,7 @@ const News = () => {
         const res = await fetch(`${baseUrl}provinces/`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        setProvinces(Array.isArray(data?.data) ? data.data : []);
+        setProvinces(Array.isArray(data?.results) ? data.results : []);
       } catch (e) {
         setProvError(e?.message || 'Fetch failed');
       } finally {
@@ -70,10 +80,20 @@ const News = () => {
     fetchProvinces();
   }, []);
 
+  const items = data?.results || [];
+  const totalCount = data?.count || 0;
+  const totalPages = Math.ceil(totalCount / pageSize);
+
   const filteredItems = useMemo(() => {
     if (!selectedProvince) return items;
     return items.filter((n) => Number(n?.province) === Number(selectedProvince));
   }, [items, selectedProvince]);
+
+  const handlePageChange = (newPage) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('page', newPage.toString());
+    setSearchParams(params);
+  };
 
   return (
     <Layout>
@@ -142,6 +162,66 @@ const News = () => {
                     </div>
                   </article>
                 ))}
+              </div>
+            )}
+
+            {/* Pagination */}
+            {!loading && !error && (
+              <div className="mt-8 flex items-center justify-between">
+                <div className="text-sm text-gray-700">
+                  Hiển thị {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalCount)} trong tổng số {totalCount} bài viết
+                </div>
+                {totalPages > 1 && (
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Trước
+                    </button>
+                    
+                    <div className="flex items-center space-x-1">
+                      {(() => {
+                        const pages = [];
+                        const maxVisiblePages = 5;
+                        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                        
+                        if (endPage - startPage + 1 < maxVisiblePages) {
+                          startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                        }
+                        
+                        for (let i = startPage; i <= endPage; i++) {
+                          pages.push(
+                            <button
+                              key={i}
+                              onClick={() => handlePageChange(i)}
+                              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                                i === currentPage
+                                  ? 'bg-red-600 text-white'
+                                  : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                              }`}
+                            >
+                              {i}
+                            </button>
+                          );
+                        }
+                        return pages;
+                      })()}
+                    </div>
+                    
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Sau
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

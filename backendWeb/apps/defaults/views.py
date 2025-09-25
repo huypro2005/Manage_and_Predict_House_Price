@@ -9,15 +9,24 @@ from .serializer import PropertyTypeSerializer, ProvinceSerializer, DistrictSeri
 from .models import PropertyType, Province, District
 from django.http import Http404
 from apps.permission import IsAdminOrReadOnly
+from django.db.models import Q
 # Create your views here.
 
 
 class PropertyTypeListView(APIView):
     permission_classes = [IsAdminOrReadOnly]
 
-    @method_decorator(cache_page(60 * 40))  # Cache for 40 minutes
+    @method_decorator(cache_page(60 * 5))  # Cache for 5 minutes
     def get(self, request):
-        property_types = PropertyType.objects.all()
+        tab = request.query_params.get('tab', None)  # Default to empty string
+        if tab is None:
+            tab = 'ban' 
+        
+
+        property_types = PropertyType.objects.filter(
+            Q(tab=tab) | Q(tab='')
+        ).order_by('code')  
+        
         serializer = PropertyTypeSerializer(property_types, many=True)
         return Response({'message': 'Property types retrieved successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
 
@@ -65,7 +74,7 @@ class ProvinceListView(APIView):
     permission_classes = [IsAdminOrReadOnly]
 
 
-    @method_decorator(cache_page(60 * 40))  # Cache for 40 minutes
+    @method_decorator(cache_page(60 * 5))  # Cache for 5 minutes
     def get(self, request):
         provinces = Province.objects.all()
         serializer = ProvinceSerializer(provinces, many=True)
@@ -119,7 +128,7 @@ class DistrictListView(APIView):
         except Province.DoesNotExist:
             raise Http404
 
-    @method_decorator(cache_page(60 * 40))  # Cache for 40 minutes
+    @method_decorator(cache_page(60 * 5))  # Cache for 5 minutes
     def get(self, request, province_pk):
         province = self.get_province(province_pk)
         districts = District.objects.filter(province=province, is_active=True)
