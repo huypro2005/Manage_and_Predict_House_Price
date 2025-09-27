@@ -35,7 +35,8 @@ export const useLongPollingNotifications = (onUpdate) => {
     if (!isActiveRef.current) return;
 
     const token = localStorage.getItem('token');
-    if (!token) {
+      const username = JSON.parse(localStorage.getItem('user')).username;
+      if (!token) {
       setLastStatus('no_token');
       setIsPolling(false);
       return;
@@ -43,11 +44,11 @@ export const useLongPollingNotifications = (onUpdate) => {
 
     setIsPolling(true);
     let attempt = 0;
-
+    
     while (isActiveRef.current) {
       try {
         abortControllerRef.current = new AbortController();
-        const response = await fetch(`${baseUrl}notifications/long-polling/`, {
+        const response = await fetch(`${baseUrl}notifications/long-polling/?from=${username}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,

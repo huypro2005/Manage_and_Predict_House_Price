@@ -14,6 +14,8 @@ from rest_framework.pagination import PageNumberPagination
 from django.core.cache import cache 
 import hashlib
 import datetime
+from django.db import transaction
+from apps.love_cart.models import FavouriteProperty
 # Create your views here.
 
 
@@ -90,6 +92,9 @@ class PropertyListView(APIView):
             #     print(params['district'])
         if params['is_active'] and request.user.is_authenticated:
             filters['is_active'] = params['is_active']
+            print(params['is_active'])
+        else:
+            filters['is_active'] = 1
 
         properties = Property.objects.filter(**filters).order_by('-created_at') # trả về danh sách bất động sản sắp xếp theo thời gian tạo gần nhất
         paginator = self.pagination_class()
@@ -100,7 +105,7 @@ class PropertyListView(APIView):
             'data': serializer.data,
             'count': properties.count()
         }
-        cache.set(cache_key, result, 300)  # Cache for 5 minutes
+        cache.set(cache_key, result, 60)  # Cache for 1 minutes
 
         return Response(result, status=status.HTTP_200_OK)
 
@@ -150,6 +155,7 @@ class PropertyDetailView(APIView):
             return Response({'message': 'Property updated successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
         return Response({'message': 'Property update failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
+    @transaction.atomic
     def delete(self, request, pk):
         property = self.get_object(pk)
         if request.user and request.user.is_staff and request.user.is_active:
@@ -159,6 +165,7 @@ class PropertyDetailView(APIView):
         property.is_active = False
         property.deleted_at = datetime.datetime.now()
         property.save()
+        FavouriteProperty.objects.filter(property=property).update(is_active=True)
         return Response({'message': 'Property deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
     
 

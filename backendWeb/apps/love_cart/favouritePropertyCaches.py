@@ -3,7 +3,7 @@ from django.core.cache import cache
 
 SET_KEY = "user:{user_id}:fav:set"
 LIST_KEY = "user:{user_id}:fav:list"
-LIST_TTL = 300  # 5 phút, tùy bạn
+LIST_TTL = 60  # 1 phút, tùy bạn
 
 def fav_set_key(user_id: int) -> str:
     return SET_KEY.format(user_id=user_id)

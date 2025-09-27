@@ -12,5 +12,6 @@ class ContactRequestV1Serializer(serializers.ModelSerializer):
 
     class Meta:
         model = ContactRequest
-        fields = ['type', 'property_data', 'message', 'created_at', 'from_username', 'timestamp']
-        read_only_fields = ['created_at', 'from_username', 'timestamp']
+        fields = ['type', 'property_data', 'message', 'created_at', 'from_username', 'timestamp', 'property']
+        read_only_fields = ['created_at', 'from_username', 'timestamp', 'property_data']
+        

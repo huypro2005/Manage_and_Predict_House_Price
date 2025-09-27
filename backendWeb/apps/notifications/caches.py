@@ -2,13 +2,14 @@ import redis
 import json
 import time
 from apps.utils import datetime_to_timestamp
+from django_redis import get_redis_connection
 
 USER_NOTIF_KEY = "user:{user_id}:notif:{page_number}"
 USER_NOTIF_NOT_READED_KEY = "user:{user_id}:notif:not_readed"
 USER_NOTIF_AMOUNT_KEY = "user:{user_id}:notif:amount"
 NOTIF_TTL = 300  # 5 phút, tùy bạn
 
-cache = redis.StrictRedis(host='localhost', port=6379, db=1, decode_responses=True)
+cache = get_redis_connection("default") 
 
 def notif_key(user_id: int, page_number=1) -> str:
     return USER_NOTIF_KEY.format(user_id=user_id, page_number=page_number)

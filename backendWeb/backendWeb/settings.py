@@ -243,15 +243,15 @@ SIMPLE_JWT = {
 PATH_ACCOUNT_FIREBASE_SERVICE = os.getenv('PATH_FIREBASE_ACCOUNT')
 
 
+REDIS_URL = f'redis://{os.environ.get('USERNAME_REDIS')}:{os.environ.get('PASSWORD_REDIS')}@{os.environ.get('HOST_REDIS')}:{os.environ.get('PORT_REDIS')}/0'
+
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': f'{os.getenv("URL_REDIS")}/1',
+        'LOCATION': REDIS_URL,
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'SENTINEL_KWARGS': {
-                'socket_timeout': 0.1,
-            },
+            "IGNORE_EXCEPTIONS": True,
         }
     }
 }
@@ -262,21 +262,19 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [('127.0.0.1', 6379)],
+            "hosts": [REDIS_URL],
+            "ssl": True
         },
     },
 }
 
-CELERY_BROKER_URL = f'{os.environ.get("URL_REDIS")}/0' # Adjust host/port/DB as needed
-CELERY_RESULT_BACKEND = f'{os.environ.get("URL_REDIS")}/0' # Optional, for storing task results
-CELERY_ACCEPT_CONTENT = ['json']
+CELERY_BROKER_URL =  REDIS_URL# Adjust host/port/DB as needed
+CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TASK_SERIALIZER = 'json'
 
 RQ_QUEUES = {
     'default': {
-        'HOST': 'localhost',
-        'PORT': 6379,
-        'DB': 0,
+        'URL' : REDIS_URL,
         'DEFAULT_TIMEOUT': 360, # Optional: default timeout for jobs
     }
 }

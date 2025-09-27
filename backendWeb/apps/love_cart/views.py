@@ -25,13 +25,22 @@ from django.db import transaction
 class FavouritePropertyListView(APIView):
     permission_classes = [IsAuthenticated]
 
+
+
+    '''
+        gọi list danh sách các property yêu thích, khi gọi lên, xét xem property đó có active không 
+
+        select *
+        from property p join favorite_property fp on p.id = fp.property_id
+        where p.
+    '''
     def get(self, request):
         user = request.user
         # Kiểm tra cache list đã serialize
-        cached = get_serialized_list_cache(user.id)
-        if cached is not None:
-            print('ids:', get_ids_from_cache(user.id))
-            return Response({'data': cached, 'message': 'Success (from cache)'}, status=status.HTTP_200_OK)
+        # cached = get_serialized_list_cache(user.id)
+        # if cached is not None:
+        #     print('ids:', get_ids_from_cache(user.id))
+        #     return Response({'data': cached, 'message': 'Success (from cache)'}, status=status.HTTP_200_OK)
 
         ids = get_ids_from_cache(user.id)
       
@@ -41,14 +50,14 @@ class FavouritePropertyListView(APIView):
             qs = (
                 FavouriteProperty.objects
                 .select_related('property')
-                .filter(property_id__in=list(ids), user=user, is_active=True)
+                .filter(property_id__in=list(ids), user=user, is_active=True, property__is_active=True)
                 .order_by('-created_at')
             )
         else:
             qs = (
                 FavouriteProperty.objects
                 .select_related('property')
-                .filter(user=user, is_active=True)
+                .filter(user=user, is_active=True, property__is_active=True)
                 .order_by('-created_at')
             )
             ids_list = [fav.property.id for fav in qs]
@@ -121,7 +130,7 @@ class FavouritePropertyV2View(APIView):
         qs = (
             FavouriteProperty.objects
             .select_related('property')
-            .filter(user=user, is_active=True)
+            .filter(user=user, is_active=True, property__is_active=True)
             .order_by('-created_at')
         )
         ids_list = [fav.property.id for fav in qs]
