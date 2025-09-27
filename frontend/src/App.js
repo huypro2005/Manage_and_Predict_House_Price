@@ -391,8 +391,7 @@ function App() {
   // Render Search page
   return (
     <Layout>
-      <NotificationManager />
-      <NotificationDebug />
+      <NotificationManager /> 
 
       {/* Search Section */}
       

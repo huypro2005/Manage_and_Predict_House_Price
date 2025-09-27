@@ -124,6 +124,7 @@ class FavouritePropertyV2View(APIView):
     def get(self, request):
         user = request.user
         cached = get_ids_from_cache(user.id)
+        print(cached)
         if cached is not None:
             return Response({'data': cached, 'message': 'Success (from cache)'}, status=status.HTTP_200_OK)
 
@@ -133,8 +134,10 @@ class FavouritePropertyV2View(APIView):
             .filter(user=user, is_active=True, property__is_active=True)
             .order_by('-created_at')
         )
+        # cache.delete(fav_set_key(user.id))
         ids_list = [fav.property.id for fav in qs]
         seed_set_if_empty(user.id, ids_list)
+
         return Response({'data': ids_list, 'message': 'Success (from DB)'}, status=status.HTTP_200_OK)
 
     

@@ -37,6 +37,9 @@ def seed_set_if_empty(user_id: int, id_list):
     """
     key = fav_set_key(user_id)
     # nếu set rỗng thì seed
-    if not cache.client.get_client().exists(key):  # django-redis hỗ trợ .exists
-        if id_list:
-            cache.sadd(key, *id_list)
+    client = cache.client.get_client()
+    if not client.exists(key) and id_list:
+        pipe = client.pipeline()
+        pipe.sadd(key, *id_list)
+        pipe.expire(key, LIST_TTL)
+        pipe.execute()
