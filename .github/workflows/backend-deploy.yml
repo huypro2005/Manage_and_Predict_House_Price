@@ -7,6 +7,7 @@ on:
   pull_request:
     branches: [ "main" ]
     paths: ['backendWeb/**']
+  workflow_dispatch: {}
 
 jobs:
   build:
@@ -22,14 +23,17 @@ jobs:
 
     # Rsynce toàn bộ backend to EC2
     - name: Upload backend to EC2
-      uses: burnett01/rsync-deployments@v7.1.0
-      with: 
-        switches: -avzr --delete
-        path: backendWeb/
-        remote_path: /var/www/myapp/backendWeb
-        remote_host: ${{ secrets.EC2_HOST }}
-        remote_user: ${{ secrets.EC2_SSH_USER }}
-        remote_key: ${{ secrets.EC2_SSH_KEY }}
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_SSH_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        source: "backendWeb/*"
+        target: "/var/www/myapp/backendWeb"
+        overwrite: true
+        strip_components: 1o StrictHostKeyChecking=no -i github-ec2.pem ${USER}@${HOST} 
+
+
 
 
     # ghi / cập nhật file env cho systemd service + migrate + restart
@@ -43,7 +47,7 @@ jobs:
           set -e
           # 1) Ghi /etc/myapp.env từ secrets (không echo ra log)
           sudo bash -c 'cat > /etc/myapp.env' << "EOF"
-          DJANGO_SETTINGS_MODULE=myproject.settings
+          DJANGO_SETTINGS_MODULE=backendWeb.settings
           DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}
           DEBUG=0
           ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}
