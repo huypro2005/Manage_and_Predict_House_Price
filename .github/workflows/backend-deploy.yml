@@ -28,9 +28,10 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_SSH_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
+        port: 22
         source: "backendWeb/*"
         target: "/var/www/myapp/backendWeb"
-        strip_components: 1o StrictHostKeyChecking=no -i github-ec2.pem ${USER}@${HOST} 
+
 
 
 
