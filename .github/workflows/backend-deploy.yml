@@ -3,103 +3,87 @@ name: Deploy Backend
 on:
   push:
     branches: [ "main" ]
-    paths: ['backendWeb/**'] # Only run backend 
-  pull_request:
-    branches: [ "main" ]
-    paths: ['backendWeb/**']
+    paths: [ "backendWeb/**" ]   # chỉ chạy khi backend thay đổi
   workflow_dispatch: {}
 
 jobs:
-  build:
-
+  deploy:
     runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 4
-      matrix:
-        python-version: [3.13]
-
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Test SSH connection
-      uses: appleboy/ssh-action@v1.2.0
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_SSH_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          echo "Connected successfully!"
-          uname -a
+      # 1) Đồng bộ code lên EC2 (incremental, có xóa file thừa)
+      - name: Upload backend to EC2 (rsync)
+        uses: appleboy/rsync-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_SSH_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "backendWeb/"
+          target: "/var/www/myapp/backendWeb/"
+          port: 22
+          args: "-avz --delete"     # nhanh + sạch; bỏ --delete nếu không muốn xóa file thừa
 
-    # Rsynce toàn bộ backend to EC2
-    - name: Upload backend to EC2
-      uses: appleboy/scp-action@v0.1.4
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_SSH_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        port: 22
-        source: "backendWeb/**"
-        target: "/var/www/myapp/backendWeb"
-        debug: true
-        rm: true
-        script: |
-          set -x
-          whoami
-          which scp || echo "scp not found"
-          which tar || echo "tar not found"
-          which gzip || echo "gzip not found"
-          df -h
-          ls -ld /var/www/myapp /var/www/myapp/backendWeb || true
-          touch /var/www/myapp/backendWeb/.write_test && rm /var/www/myapp/backendWeb/.write_test || echo "Cannot write to target"
+      # 2) Ghi env, cài deps, migrate, restart service
+      - name: Configure & restart on server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_SSH_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -euo pipefail
 
+            # Tạo thư mục & quyền (an toàn cho lần deploy đầu)
+            sudo mkdir -p /var/www/myapp/backendWeb /var/www/myapp
+            sudo chown -R $USER:$USER /var/www/myapp
 
+            # 2.1) Ghi file env (không expand ở remote shell)
+            sudo tee /etc/myapp.env >/dev/null <<'EOF'
+            DJANGO_SETTINGS_MODULE=backendWeb.settings
+            DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}
+            DEBUG=0
+            ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}
 
+            DB_NAME=${{ secrets.DB_NAME }}
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_PORT=${{ secrets.DB_PORT }}
 
+            HOST_REDIS=${{ secrets.HOST_REDIS }}
+            PORT_REDIS=${{ secrets.PORT_REDIS }}
+            USERNAME_REDIS=${{ secrets.USERNAME_REDIS }}
+            PASSWORD_REDIS=${{ secrets.PASSWORD_REDIS }}
 
-    # ghi / cập nhật file env cho systemd service + migrate + restart
-    - name: Configure env & restart
-      uses: appleboy/ssh-action@v1.2.0
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_SSH_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          set -e
-          # 1) Ghi /etc/myapp.env từ secrets (không echo ra log)
-          sudo bash -c 'cat > /etc/myapp.env' << "EOF"
-          DJANGO_SETTINGS_MODULE=backendWeb.settings
-          DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}
-          DEBUG=0
-          ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}
+            MAPBOX_TOKEN=${{ secrets.MAPBOX_TOKEN }}
+            # Nếu lưu NỘI DUNG JSON service account:
+            FIREBASE_CREDENTIALS_JSON=${{ secrets.FIREBASE_CREDENTIALS_JSON }}
+            EOF
+            sudo chmod 600 /etc/myapp.env
 
-          DB_NAME=${{ secrets.DB_NAME }}
-          DB_USER=${{ secrets.DB_USER }}
-          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          DB_HOST=${{ secrets.DB_HOST }}
-          DB_PORT=${{ secrets.DB_PORT }}
+            # 2.2) Nạp env cho phiên làm việc + viết file Firebase (nếu có)
+            set -a
+            source /etc/myapp.env
+            set +a
+            if [ -n "${FIREBASE_CREDENTIALS_JSON:-}" ]; then
+              echo "$FIREBASE_CREDENTIALS_JSON" > /var/www/myapp/firebase.json
+              export GOOGLE_APPLICATION_CREDENTIALS=/var/www/myapp/firebase.json
+            fi
 
-          HOST_REDIS=${{ secrets.HOST_REDIS }}
-          PORT_REDIS=${{ secrets.PORT_REDIS }}
-          USERNAME_REDIS=${{ secrets.USERNAME_REDIS }}
-          PASSWORD_REDIS=${{ secrets.PASSWORD_REDIS }}
+            # 2.3) Python/venv & deps (dùng python3 có sẵn)
+            command -v python3 >/dev/null 2>&1 || (sudo apt-get update -y && sudo apt-get install -y python3 python3-venv python3-pip)
+            test -d /var/www/myapp/venv || python3 -m venv /var/www/myapp/venv
+            source /var/www/myapp/venv/bin/activate
+            python -m pip install -U pip wheel
+            pip install -r /var/www/myapp/backendWeb/requirements.txt
 
-          MAPBOX_TOKEN=${{ secrets.MAPBOX_TOKEN }}
-          # Nếu bạn lưu NỘI DUNG JSON của Firebase vào secret:
-          FIREBASE_CREDENTIALS=${{ secrets.PATH_FIREBASE_ACCOUNT }}
-          EOF
-          sudo chmod 600 /etc/myapp.env
+            # 2.4) migrate + collectstatic
+            cd /var/www/myapp/backendWeb
+            export DJANGO_SETTINGS_MODULE="${DJANGO_SETTINGS_MODULE:-backendWeb.settings}"
+            python manage.py migrate --noinput
+            python manage.py collectstatic --noinput || true
 
-          # 2) tạo venv 3.13 nếu chưa có, cài deps
-          test -d /var/www/myapp/venv || python3.13 -m venv /var/www/myapp/venv
-          source /var/www/myapp/venv/bin/activate
-          python -m pip install -U pip wheel
-          pip install -r /var/www/myapp/backendWeb/requirements.txt
-
-          # 3) migrate + collectstatic
-          cd /var/www/myapp/backendWeb
-          python manage.py migrate --noinput
-          python manage.py collectstatic --noinput || true
-
-          # 4) restart backend
-          sudo systemctl restart myapp-backend
+            # 2.5) restart service
+            sudo systemctl restart myapp-backend
+            sudo systemctl status myapp-backend --no-pager -l || true
