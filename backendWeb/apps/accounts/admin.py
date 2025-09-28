@@ -9,6 +9,7 @@ from .models import CustomUser
 class CustomUserAdmin(UserAdmin):
     list_display = ('avatar_preview', 'username', 'email')
 
+
     fieldsets = (
         (None, {'fields': ('username', 'email', 'phone', 'avatar')}),
         ('Personal info', {'fields': ('first_name', 'last_name', 'birth_date', 'description')}),
