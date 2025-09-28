@@ -31,6 +31,16 @@ jobs:
         port: 22
         source: "backendWeb/**"
         target: "/var/www/myapp/backendWeb"
+        debug: true
+        script: |
+          set -x
+          whoami
+          which scp || echo "scp not found"
+          which tar || echo "tar not found"
+          which gzip || echo "gzip not found"
+          df -h
+          ls -ld /var/www/myapp /var/www/myapp/backendWeb || true
+          touch /var/www/myapp/backendWeb/.write_test && rm /var/www/myapp/backendWeb/.write_test || echo "Cannot write to target"
 
 
 
