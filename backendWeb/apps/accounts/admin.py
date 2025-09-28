@@ -8,7 +8,7 @@ from .models import CustomUser
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
     list_display = ('avatar_preview', 'username', 'email')
-
+    # Hello
 
     fieldsets = (
         (None, {'fields': ('username', 'email', 'phone', 'avatar')}),
