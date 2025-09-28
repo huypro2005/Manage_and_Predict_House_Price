@@ -42,6 +42,7 @@ jobs:
         source: "backendWeb/**"
         target: "/var/www/myapp/backendWeb"
         debug: true
+        rm: true
         script: |
           set -x
           whoami
