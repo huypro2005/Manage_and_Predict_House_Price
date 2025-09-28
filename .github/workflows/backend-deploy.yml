@@ -29,7 +29,6 @@ jobs:
       working-directory: backendWeb
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
       
         touch .env
         echo "${{ secrets.ENV_VARIABLE }}" > .env
