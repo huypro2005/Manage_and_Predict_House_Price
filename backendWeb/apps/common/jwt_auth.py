@@ -11,7 +11,6 @@ def get_user(user_id):
     except CustomUser.DoesNotExist:
         return AnonymousUser()
     
-
 class JWTAuthMiddleware:
 
     def __init__(self, inner):
