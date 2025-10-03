@@ -29,6 +29,7 @@ const LoginModal = ({ isOpen, onClose, onSwitchToRegister }) => {
       const resp = await googleLogin(idToken);
       if (resp.success) {
         onClose();
+        window.location.reload();
       } else {
         setError(resp.error || 'Đăng nhập Google thất bại');
         setGoogleLoading(false);
@@ -51,6 +52,7 @@ const LoginModal = ({ isOpen, onClose, onSwitchToRegister }) => {
     
     if (result.success) {
       onClose();
+      window.location.reload();
     } else {
       setError(result.error);
     }

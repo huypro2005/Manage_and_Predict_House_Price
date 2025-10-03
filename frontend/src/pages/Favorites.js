@@ -90,9 +90,42 @@ function Favorites() {
         return; // handleApiResponse already redirected
       }
       
-      const data = await res.json();
-      console.log(data);
-      setItems((prev) => prev.filter((x) => x.id !== id));
+      // Only proceed if API indicates success
+      if (res.status === 200 || res.status === 204) {
+        // Safely read body if present
+        try {
+          if (res.status !== 204) {
+            const data = await res.json();
+            console.log(data);
+          }
+        } catch (_) {
+          // Ignore JSON parse errors for empty/no content
+        }
+
+        // Remove the item locally and update counts
+        const nextItems = items.filter((x) => x?.property_detail?.id !== id);
+
+        // If this page becomes empty and there are previous pages, go back a page to refetch
+        if (nextItems.length === 0 && currentPage > 1) {
+          const newCount = Math.max(0, (totalCount || 0) - 1);
+          setTotalCount(newCount);
+          setTotalPages(Math.ceil(newCount / itemsPerPage));
+          setCurrentPage(currentPage - 1);
+        } else {
+          setItems(nextItems);
+          const newCount = Math.max(0, (totalCount || 0) - 1);
+          setTotalCount(newCount);
+          setTotalPages(Math.ceil(newCount / itemsPerPage));
+        }
+      } else {
+        // Non-200 status: try to log the response body for debugging
+        try {
+          const errData = await res.json();
+          console.warn('Failed to remove favorite:', errData);
+        } catch (_) {
+          console.warn('Failed to remove favorite with status:', res.status);
+        }
+      }
     } catch (e) {
       console.error('Error removing favorite:', e);
     }

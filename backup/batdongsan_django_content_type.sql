@@ -1,8 +1,8 @@
 -- MySQL dump 10.13  Distrib 8.0.42, for Win64 (x86_64)
 --
--- Host: 127.0.0.1    Database: batdongsan
+-- Host: realestate.clieg46wkhrm.ap-southeast-1.rds.amazonaws.com    Database: batdongsan
 -- ------------------------------------------------------
--- Server version	9.3.0
+-- Server version	8.0.42
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -14,6 +14,14 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+SET @MYSQLDUMP_TEMP_LOG_BIN = @@SESSION.SQL_LOG_BIN;
+SET @@SESSION.SQL_LOG_BIN= 0;
+
+--
+-- GTID state at the beginning of the backup 
+--
+
+SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ '';
 
 --
 -- Table structure for table `django_content_type`
@@ -40,6 +48,7 @@ LOCK TABLES `django_content_type` WRITE;
 INSERT INTO `django_content_type` VALUES (23,'account','emailaddress'),(24,'account','emailconfirmation'),(6,'accounts','customuser'),(1,'admin','logentry'),(3,'auth','group'),(2,'auth','permission'),(13,'authtoken','token'),(14,'authtoken','tokenproxy'),(35,'comments','comment'),(7,'contacts','contactrequest'),(4,'contenttypes','contenttype'),(10,'defaults','district'),(8,'defaults','propertytype'),(9,'defaults','province'),(32,'django_rq','queue'),(28,'love_cart','favouriteproperty'),(31,'news','comment'),(29,'news','newsarticle'),(30,'news','source'),(33,'notifications','notification'),(34,'notifications','range'),(18,'oauth2_provider','accesstoken'),(17,'oauth2_provider','application'),(19,'oauth2_provider','grant'),(21,'oauth2_provider','idtoken'),(20,'oauth2_provider','refreshtoken'),(16,'predicts','dashboard'),(15,'predicts','predictrequest'),(11,'properties','property'),(12,'properties','propertyimage'),(5,'sessions','session'),(22,'sites','site'),(25,'socialaccount','socialaccount'),(26,'socialaccount','socialapp'),(27,'socialaccount','socialtoken');
 /*!40000 ALTER TABLE `django_content_type` ENABLE KEYS */;
 UNLOCK TABLES;
+SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -50,4 +59,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-09-26 21:26:04
+-- Dump completed on 2025-10-03 15:15:23

@@ -106,8 +106,8 @@ class FavouritePropertyListView(APIView):
         property_id = request.data.get('property_id')
         if not property_id:
             return Response({'message': 'Property ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
-        fav = FavouriteProperty.objects.filter(user=user, property_id=property_id, is_active=True)
-        if fav.exists():
+        fav = FavouriteProperty.objects.filter(user=user, property_id=property_id, is_active=True).first()
+        if fav:
             fav.is_active = False
             fav.save()
             try: remove_from_cache(user.id, property_id)
@@ -124,7 +124,6 @@ class FavouritePropertyV2View(APIView):
     def get(self, request):
         user = request.user
         cached = get_ids_from_cache(user.id)
-        print(cached)
         if cached is not None:
             return Response({'data': cached, 'message': 'Success (from cache)'}, status=status.HTTP_200_OK)
 

@@ -177,26 +177,36 @@ MAPBOX_TOKEN=your_mapbox_token
 
 # Firebase
 PATH_FIREBASE_ACCOUNT=path/to/firebase-service-account.json
+<!-- Thông tin có khi tạo project firebase -->
+
+# Secret key
+DJANGO_SECRET_KEY='django-insecure-1uv@@ml1x1_6&yzuh!l@&%so)h5noqgz)mtry==n(aj-jmc)74'
+
 ```
 
-### 5. Chạy migrations
+### 5. Backup data
+Vào mysql 
 ```bash
-python manage.py makemigrations
-python manage.py migrate
+Create database batdongsan
 ```
 
-### 6. Tạo superuser
-```bash
-python manage.py createsuperuser
+### 6. Import data backup
+
+```sh
+https://dev.mysql.com/doc/workbench/en/wb-admin-export-import-management.html
 ```
 
-### 7. Chạy server
+### 7. Chạy docker redis
+
+```sh
+docker run --name my-redis -d -p 6379:6379 redis
+```
+
+### 8. Chạy server
 ```bash
 # Development
 python manage.py runserver
 
-# Production với Gunicorn
-gunicorn backendWeb.wsgi:application
 ```
 
 ## 📚 API Documentation

@@ -59,6 +59,8 @@ const UserDropdown = React.memo(() => {
   const handleLogout = useCallback(() => {
     logout();
     setIsOpen(false);
+    // Refresh page after logout to ensure global state/UI resets
+    window.location.reload();
   }, [logout]);
 
   const handleToggleDropdown = useCallback(() => {

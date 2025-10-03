@@ -82,7 +82,7 @@ class ContactRequestListView(APIView):
 
 
     def handle_create_notification(self, to_user, from_user, property: Property, contact_request):
-        notification_message = f'{from_user.username} đã yêu cầu liên lạc từ bài biết {property.title if len(property.title) < 20 else property.title[:17] + "..."}'
+        notification_message = f'{from_user.username} đã yêu cầu liên lạc từ bài viết {property.title if len(property.title) < 20 else property.title[:17] + "..."}'
         ranges = [
             {
                 'offset': 0,

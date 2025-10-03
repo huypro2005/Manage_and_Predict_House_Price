@@ -63,6 +63,33 @@ public/
 └── postcss.config.js   # Cấu hình PostCSS
 ```
 
+## ⚙️ Cấu Hình Môi Trường (.env.local)
+
+Ứng dụng frontend (Create React App) hỗ trợ cấu hình qua file `.env.local`. Các biến môi trường phải bắt đầu bằng tiền tố `REACT_APP_`.
+
+### Tạo `.env.local`
+1. Tại thư mục gốc của frontend (cùng cấp với `package.json`), tạo file tên `.env.local`.
+2. Thêm các biến sau (điều chỉnh theo môi trường của bạn):
+
+```sh
+REACT_APP_MAPBOX_TOKEN={API MAPBOX}
+REACT_APP_FIREBASE_API_KEY=AI{API KEY FIREBASE}
+REACT_APP_FIREBASE_AUTH_DOMAIN={FIREBASE AUTH DOMAIN}
+REACT_APP_FIREBASE_PROJECT_ID={FIREBASE PROJECT ID}
+REACT_APP_FIREBASE_STORAGE_BUCKET={FIREBASE STORAGE BUCKET}
+REACT_APP_FIREBASE_MESSAGING_SENDING_ID={FIREBASE MESSAGING SENDING ID}
+REACT_APP_FIREBASE_APP_ID={FIREBASE APP ID}
+REACT_APP_FIREBASE_MEASUREMENT_ID={FIREBASE MEASUREMENT ID}
+<!-- thông tin có khi tạo project trên firebase -->
+```
+
+3. Lưu file và khởi động lại server phát triển:
+```bash
+npm start
+```
+
+Lưu ý: Hiện tại các URL trong `src/base.js` đang được gán cứng. Để sử dụng `.env.local`, có thể thay bằng `process.env.REACT_APP_*` (ví dụ `process.env.REACT_APP_BASE_URL`). Nếu bạn muốn, mình có thể cập nhật mã nguồn để đọc các biến này và giữ giá trị mặc định khi biến không tồn tại.
+
 ## 🎯 Các Thành Phần Chính
 
 ### Header & Navigation
