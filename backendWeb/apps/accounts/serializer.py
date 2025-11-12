@@ -12,7 +12,10 @@ class CustomUserV1Serializer(serializers.ModelSerializer):
                         'email': {'required': False},
                         'avatar': {'required': False, 'allow_null': True, 'use_url': True},
                         'username': {'required': False},
-                        'description': {'required': False, 'allow_blank': True, 'default': ''}
+                        'description': {'required': False, 'allow_blank': True, 'default': ''},
+                        'first_name': {'required': False},
+                        'last_name': {'required': False},
+                        'phone': {'required': False}
                        }
 
     def create(self, validated_data):

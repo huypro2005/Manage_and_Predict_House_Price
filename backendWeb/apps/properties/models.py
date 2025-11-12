@@ -43,7 +43,7 @@ class Property(models.Model):
     tab = models.CharField(max_length=10, choices=STATUS_SELL, default='ban')
 
     class Meta:
-        db_table = 'Property'
+        db_table = 'property'
 
     def thumbnail_tag(self):
         if self.thumbnail:
@@ -65,5 +65,5 @@ class PropertyImage(models.Model):
 
 
     class Meta:
-        db_table = 'PropertyImage'
+        db_table = 'propertyimage'
 

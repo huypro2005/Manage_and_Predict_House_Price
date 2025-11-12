@@ -8,6 +8,8 @@ class Dashboard(models.Model):
     countRemain = models.IntegerField(default=10)
     Is_premium = models.BooleanField(default=False)
     expired = models.DateTimeField(null=True, blank=True)
+    class Meta:
+        db_table='dashboard'
 
 
 class PredictRequest(models.Model):
@@ -17,4 +19,7 @@ class PredictRequest(models.Model):
     predict_result = models.FloatField(null=True, blank=True)
     predict_price_per_m2 = models.FloatField(null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table='predictrequest'
 

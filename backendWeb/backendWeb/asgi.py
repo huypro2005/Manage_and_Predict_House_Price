@@ -18,11 +18,12 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from apps.common.jwt_auth import JWTAuthMiddlewareStack
 from apps.accounts.routings import websocket_urlpatterns as account_ws
 from apps.contacts.routings import websocket_urlpatterns as contact_ws
+from apps.conversations.routings import websocket_urlpatterns as chat_ws
 application = ProtocolTypeRouter({
     'http': get_asgi_application(),
     'websocket': JWTAuthMiddlewareStack(
         URLRouter(
-            account_ws + contact_ws
+            account_ws + contact_ws + chat_ws
         )
     ),
 })

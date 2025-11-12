@@ -52,6 +52,8 @@ urlpatterns = [
     path('api/', include('apps.love_cart.urls')),
     path('api/v1/', include('apps.news.urls')),
     path('api/v1/', include('apps.comments.urls')),
+    path('api/v1/', include('apps.conversations.urls')),
+    path('api/v1/', include('apps.chat_message.urls')),
 ]
 
 if settings.DEBUG:

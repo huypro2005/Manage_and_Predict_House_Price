@@ -10,7 +10,7 @@ class ContactRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'ContactRequest'
+        db_table = 'contactrequest'
 
     def __str__(self):
         return f'Contact Request from {self.user.username} for {self.property.id} at {self.created_at}'

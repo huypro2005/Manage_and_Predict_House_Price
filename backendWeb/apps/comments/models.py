@@ -13,5 +13,8 @@ class Comment(models.Model):
     is_deleted = models.BooleanField(default=False)
 
 
+    class Meta:
+        db_table='comment'
+
     def __str__(self):
         return f"Comment by {self.author} on {self.article}"

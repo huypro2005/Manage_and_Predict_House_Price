@@ -17,6 +17,8 @@ class NewsArticle(models.Model):
     introduction = models.TextField(null=True, blank=True)
     views = models.PositiveIntegerField(default=0)
 
+    class Meta:
+        db_table='newsarticle'
     def __str__(self):
         return self.title
 

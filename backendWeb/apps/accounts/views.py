@@ -97,3 +97,14 @@ class MeView(APIView):
             cache.delete(cache_key)  # Invalidate cache
             return Response({'message': 'User updated successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
         return Response({'message': 'User update failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class CustomerListFriendsView(APIView):
+    permission_classes=[IsAuthenticated]
+    def get(self, request):
+        try:
+            users = CustomUser.objects.filter(is_active=True).exclude(id=request.user.id)
+            datas = CustomUserV1Serializer(users, many=True).data
+            return Response({'message':'retrieve success', 'data':datas}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'message': 'retrieve fail', 'error': e}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

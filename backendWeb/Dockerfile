@@ -18,6 +18,14 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        pkg-config \
+        default-libmysqlclient-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Create a non-privileged user that the app will run under.
 # See https://docs.docker.com/go/dockerfile-user-best-practices/
 ARG UID=10001
@@ -48,4 +56,6 @@ COPY . .
 EXPOSE 8000
 
 # Run the application.
-CMD gunicorn 'backendWeb.wsgi' --bind=0.0.0.0:8000
+# CMD gunicorn 'backendWeb.wsgi' --bind=0.0.0.0:8000
+
+CMD python manage.py runserver

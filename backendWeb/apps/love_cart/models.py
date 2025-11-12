@@ -13,6 +13,6 @@ class FavouriteProperty(models.Model):
     class Meta:
         unique_together = ('user', 'property')
         ordering = ['-created_at']
-        db_table = 'FavouriteProperties'
+        db_table = 'favouriteproperties'
 
     

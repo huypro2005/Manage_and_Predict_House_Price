@@ -45,7 +45,7 @@ INSTALLED_APPS = [
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_views
 
-schema_view = get_schema_view(
+schema_view = get_schema_views(
     openapi.Info(
         title='INCOME EXPENSES API',
         default_version='v1',

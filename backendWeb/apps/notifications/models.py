@@ -20,7 +20,7 @@ class Notification(models.Model):
     image_representation = models.ImageField(upload_to=upload_to_app_model, blank=True, null=True, default=None)
 
     class Meta:
-        db_table = 'Notification'
+        db_table = 'notification'
     def __str__(self):
         return self.message[:50] + '...' if len(self.message) > 50 else self.message
     

@@ -12,7 +12,7 @@ class Province(models.Model):
     deleted_at = models.DateTimeField(blank=True, null=True, default=None)
 
     class Meta:
-        db_table = 'Province'
+        db_table = 'province'
 
     def __str__(self):
         return f'{self.name}'
@@ -28,7 +28,7 @@ class District(models.Model):
     deleted_at = models.DateTimeField(blank=True, null=True, default=None)
 
     class Meta:
-        db_table = 'District'
+        db_table = 'district'
 
     def __str__(self):
         return f'{self.name} ({self.province.name})'
@@ -44,7 +44,7 @@ class PropertyType(models.Model):
     tab = models.CharField(max_length=10, default='', blank=True, null=True)
 
     class Meta:
-        db_table = 'PropertyType'
+        db_table = 'propertytype'
 
     def __str__(self):
         return f'{self.name}'

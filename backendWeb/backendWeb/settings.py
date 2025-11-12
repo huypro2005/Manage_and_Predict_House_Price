@@ -70,6 +70,9 @@ INSTALLED_APPS = [
     'apps.notifications.apps.NotificationsConfig',
     'ckeditor',
     'django_rq',
+    'apps.chat_message.apps.ChatMessagesConfig',
+    'apps.participantConversation.apps.ParticipantconversationConfig',
+    'apps.conversations.apps.ConversationsConfig',
 ]
 
 MIDDLEWARE = [
@@ -108,6 +111,7 @@ WSGI_APPLICATION = 'backendWeb.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# print(os.getenv('DB_HOST'))
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
@@ -117,7 +121,9 @@ DATABASES = {
         'HOST': os.getenv('DB_HOST'),
         'PORT': os.getenv('DB_PORT'),
         "CONN_MAX_AGE": 6,
-        
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+        }
     }
 }
 
@@ -190,7 +196,6 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -206,7 +211,8 @@ MAPBOX_TOKEN = os.environ.get('MAPBOX_TOKEN', 'PUT_YOUR_MAPBOX_TOKEN_HERE')
 CORS_ORIGIN_WHITELIST = [
     'http://localhost:3000',
     'http://localhost:5500',
-    'http://127.0.0.1:3000'
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5500',
 ]
 
 
@@ -265,7 +271,6 @@ CHANNEL_LAYERS = {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
             "hosts": [REDIS_URL],
-            "ssl": True
         },
     },
 }
