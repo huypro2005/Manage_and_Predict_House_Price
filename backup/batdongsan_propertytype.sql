@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 8.0.42, for Win64 (x86_64)
+-- MySQL dump 10.13  Distrib 8.0.43, for Win64 (x86_64)
 --
--- Host: realestate.clieg46wkhrm.ap-southeast-1.rds.amazonaws.com    Database: batdongsan
+-- Host: 127.0.0.1    Database: batdongsan
 -- ------------------------------------------------------
--- Server version	8.0.42
+-- Server version	8.0.43
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -14,23 +14,15 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-SET @MYSQLDUMP_TEMP_LOG_BIN = @@SESSION.SQL_LOG_BIN;
-SET @@SESSION.SQL_LOG_BIN= 0;
 
 --
--- GTID state at the beginning of the backup 
+-- Table structure for table `propertytype`
 --
 
-SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ '';
-
---
--- Table structure for table `PropertyType`
---
-
-DROP TABLE IF EXISTS `PropertyType`;
+DROP TABLE IF EXISTS `propertytype`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `PropertyType` (
+CREATE TABLE `propertytype` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `created_at` datetime(6) NOT NULL,
@@ -45,15 +37,14 @@ CREATE TABLE `PropertyType` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `PropertyType`
+-- Dumping data for table `propertytype`
 --
 
-LOCK TABLES `PropertyType` WRITE;
-/*!40000 ALTER TABLE `PropertyType` DISABLE KEYS */;
-INSERT INTO `PropertyType` VALUES (1,'căn hộ chung cư','2025-08-10 10:07:59.367149','2025-08-10 10:07:59.367169',0,1,NULL,''),(2,'chung cư mini, căn hộ dịch vụ','2025-08-10 10:08:13.097585','2025-08-10 10:08:13.097601',1,1,NULL,''),(3,'nhà riêng','2025-08-10 10:08:20.466678','2025-08-10 10:08:20.466694',2,1,NULL,''),(4,'nhà biệt thự, liền kề','2025-08-10 10:08:31.363513','2025-08-10 10:08:31.363531',3,1,NULL,''),(5,'nhà mặt phố','2025-08-10 10:08:38.291219','2025-08-10 10:08:38.291243',4,1,NULL,''),(6,'shophouse, nhà phố thương mại','2025-08-10 10:08:44.879853','2025-08-10 10:08:44.879868',5,1,NULL,''),(7,'đất nền dự án','2025-08-10 10:08:54.278650','2025-09-23 05:41:01.189582',6,1,NULL,'ban'),(8,'bán đất','2025-08-10 10:09:01.641137','2025-09-23 05:40:53.365867',7,1,NULL,'ban'),(9,'condotel','2025-08-10 10:09:10.012344','2025-08-10 10:09:10.012364',8,1,NULL,''),(10,'kho nhà xưởng','2025-08-10 10:09:19.828308','2025-08-10 10:09:19.828325',9,1,NULL,''),(14,'Nhà trọ/ Phòng trọ','2025-09-23 05:34:05.775437','2025-09-23 05:40:43.840983',10,1,NULL,'thue'),(15,'Cửa hàng, ki ốt','2025-09-23 05:35:29.005772','2025-09-23 05:40:29.551780',11,1,NULL,'thue');
-/*!40000 ALTER TABLE `PropertyType` ENABLE KEYS */;
+LOCK TABLES `propertytype` WRITE;
+/*!40000 ALTER TABLE `propertytype` DISABLE KEYS */;
+INSERT INTO `propertytype` VALUES (1,'căn hộ chung cư','2025-08-10 10:07:59.367149','2025-08-10 10:07:59.367169',0,1,NULL,''),(2,'chung cư mini, căn hộ dịch vụ','2025-08-10 10:08:13.097585','2025-08-10 10:08:13.097601',1,1,NULL,''),(3,'nhà riêng','2025-08-10 10:08:20.466678','2025-08-10 10:08:20.466694',2,1,NULL,''),(4,'nhà biệt thự, liền kề','2025-08-10 10:08:31.363513','2025-08-10 10:08:31.363531',3,1,NULL,''),(5,'nhà mặt phố','2025-08-10 10:08:38.291219','2025-08-10 10:08:38.291243',4,1,NULL,''),(6,'shophouse, nhà phố thương mại','2025-08-10 10:08:44.879853','2025-08-10 10:08:44.879868',5,1,NULL,''),(7,'đất nền dự án','2025-08-10 10:08:54.278650','2025-09-23 05:41:01.189582',6,1,NULL,'ban'),(8,'bán đất','2025-08-10 10:09:01.641137','2025-09-23 05:40:53.365867',7,1,NULL,'ban'),(9,'condotel','2025-08-10 10:09:10.012344','2025-08-10 10:09:10.012364',8,1,NULL,''),(10,'kho nhà xưởng','2025-08-10 10:09:19.828308','2025-08-10 10:09:19.828325',9,1,NULL,''),(14,'Nhà trọ/ Phòng trọ','2025-09-23 05:34:05.775437','2025-09-23 05:40:43.840983',10,1,NULL,'thue'),(15,'Cửa hàng, ki ốt','2025-09-23 05:35:29.005772','2025-09-23 05:40:29.551780',11,1,NULL,'thue');
+/*!40000 ALTER TABLE `propertytype` ENABLE KEYS */;
 UNLOCK TABLES;
-SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -64,4 +55,4 @@ SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-10-03 15:15:50
+-- Dump completed on 2025-11-11 22:50:58

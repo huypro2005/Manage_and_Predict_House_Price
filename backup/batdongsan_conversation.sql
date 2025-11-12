@@ -16,29 +16,31 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `authtoken_token`
+-- Table structure for table `conversation`
 --
 
-DROP TABLE IF EXISTS `authtoken_token`;
+DROP TABLE IF EXISTS `conversation`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `authtoken_token` (
-  `key` varchar(40) NOT NULL,
-  `created` datetime(6) NOT NULL,
-  `user_id` bigint NOT NULL,
-  PRIMARY KEY (`key`),
-  UNIQUE KEY `user_id` (`user_id`),
-  CONSTRAINT `authtoken_token_user_id_35299eff_fk_CustomUser_id` FOREIGN KEY (`user_id`) REFERENCES `customuser` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE `conversation` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  `unique_1_to_1_index` varchar(40) DEFAULT NULL,
+  `type` varchar(30) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_1_to_1_index` (`unique_1_to_1_index`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `authtoken_token`
+-- Dumping data for table `conversation`
 --
 
-LOCK TABLES `authtoken_token` WRITE;
-/*!40000 ALTER TABLE `authtoken_token` DISABLE KEYS */;
-/*!40000 ALTER TABLE `authtoken_token` ENABLE KEYS */;
+LOCK TABLES `conversation` WRITE;
+/*!40000 ALTER TABLE `conversation` DISABLE KEYS */;
+INSERT INTO `conversation` VALUES (1,'2025-11-09 10:30:43.562711','2025-11-09 16:02:34.334632','18:20','private'),(2,'2025-11-09 14:41:24.008453','2025-11-09 15:55:33.900536','15:18','private');
+/*!40000 ALTER TABLE `conversation` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -50,4 +52,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-11 22:51:00
+-- Dump completed on 2025-11-11 22:50:56
