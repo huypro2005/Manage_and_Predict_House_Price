@@ -33,7 +33,7 @@ CREATE TABLE `favouriteproperties` (
   KEY `FavouriteProperties_property_id_5832cf8b_fk_Property_id` (`property_id`),
   CONSTRAINT `FavouriteProperties_property_id_5832cf8b_fk_Property_id` FOREIGN KEY (`property_id`) REFERENCES `property` (`id`),
   CONSTRAINT `FavouriteProperties_user_id_989c066c_fk_CustomUser_id` FOREIGN KEY (`user_id`) REFERENCES `customuser` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -42,7 +42,7 @@ CREATE TABLE `favouriteproperties` (
 
 LOCK TABLES `favouriteproperties` WRITE;
 /*!40000 ALTER TABLE `favouriteproperties` DISABLE KEYS */;
-INSERT INTO `favouriteproperties` VALUES (8,'2025-08-23 16:27:07.713284',1,14,15),(9,'2025-08-23 16:27:10.472689',1,18,15),(13,'2025-08-24 03:19:48.868900',1,17,18),(14,'2025-08-24 06:52:10.870371',1,16,15),(15,'2025-08-24 06:52:12.241282',1,15,15),(16,'2025-08-24 06:52:17.376676',1,13,15),(17,'2025-08-24 06:52:19.516714',1,11,15),(18,'2025-08-24 06:52:26.357689',1,17,15),(19,'2025-08-24 06:52:30.026268',1,12,15),(20,'2025-08-24 06:52:34.507251',1,10,15),(21,'2025-08-24 06:52:35.881079',1,9,15),(22,'2025-08-24 06:52:38.737176',1,7,15),(23,'2025-08-24 21:08:32.807100',1,18,19),(25,'2025-08-30 01:57:00.146020',1,16,18),(30,'2025-09-20 01:27:36.339551',1,15,18);
+INSERT INTO `favouriteproperties` VALUES (9,'2025-08-23 16:27:10.472689',1,18,15),(23,'2025-08-24 21:08:32.807100',1,18,19),(31,'2025-11-15 09:40:16.888343',1,19,20);
 /*!40000 ALTER TABLE `favouriteproperties` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -55,4 +55,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-11 22:51:02
+-- Dump completed on 2025-11-18  0:28:50

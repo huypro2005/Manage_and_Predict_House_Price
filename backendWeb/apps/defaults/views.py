@@ -5,8 +5,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAdminUser
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
-from .serializer import PropertyTypeSerializer, ProvinceSerializer, DistrictSerializer
-from .models import PropertyType, Province, District
+from .serializer import PropertyTypeSerializer, ProvinceSerializer, DistrictSerializer, AttributeSerializer
+from .models import PropertyType, Province, District, Attribute
 from django.http import Http404
 from apps.permission import IsAdminOrReadOnly
 from django.db.models import Q
@@ -24,7 +24,7 @@ class PropertyTypeListView(APIView):
         
 
         property_types = PropertyType.objects.filter(
-            Q(tab=tab) | Q(tab='')
+            Q(tab=tab) | Q(tab='') | Q(tab__isnull=True), is_active=True
         ).order_by('code')  
         
         serializer = PropertyTypeSerializer(property_types, many=True)
@@ -172,3 +172,40 @@ class DistrictDetailView(APIView):
         district.deleted_at = timezone.now()
         district.save()
         return Response({'message': 'District deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
+
+class AttributeListView(APIView):
+    permission_classes = [IsAdminOrReadOnly]
+    
+    def get_params(self, request):
+        params = {
+            'property_type': request.query_params.get('property_type', None),
+            'property_type_id': request.query_params.get('property_type_id', None)
+        }
+        return params
+    @method_decorator(cache_page(60 * 5))  # Cache for 5 minutes
+    def get(self, request):
+        params = self.get_params(request)
+        # Build safe filter: only add Q parts when corresponding param is provided
+        if params.get('peproperty_ty') or params.get('property_type_id'):
+            q = Q(is_active=True)
+            if params.get('property_type_id') is not None:
+                q &= Q(id=params.get('property_type_id'))
+            if params.get('property_type'):
+                q &= Q(name__icontains=params.get('property_type'))
+            property_type = PropertyType.objects.filter(q).first()
+            if property_type:
+                attributes = Attribute.objects.filter(types__property_type=property_type, is_active=True)
+            else:
+                attributes = Attribute.objects.none()
+        else:
+            attributes = Attribute.objects.filter(is_active=True)
+        serializer = AttributeSerializer(attributes, many=True)
+        return Response({'message': 'Attributes retrieved successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = AttributeSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'message': 'Attribute created successfully', 'data': serializer.data}, status=status.HTTP_201_CREATED)
+        return Response({'message': 'Attribute creation failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)

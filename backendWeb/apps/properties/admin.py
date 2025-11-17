@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Property, PropertyImage
+from .models import Property, PropertyImage, PropertyAttributeValue
 from django.utils.html import format_html
 from django import forms
 # Register your models here.
@@ -11,13 +11,22 @@ class PropertyImagesInline(admin.TabularInline):
     extra = 1
 
 
+class PropertyAttributeValueInline(admin.TabularInline):
+    model = PropertyAttributeValue
+    extra = 1
+    fields = ('attribute', 'value', 'is_active')
+
 
 @admin.register(Property)
 class PropertyAdmin(admin.ModelAdmin):
-    inlines = [PropertyImagesInline]
+    inlines = [PropertyImagesInline, PropertyAttributeValueInline]
     list_display = ('thumbnail_tag', 'title', 'price', 'area_m2', 'is_active')
 
     def thumbnail_tag(self, obj):
         return format_html(obj.thumbnail_tag())
 
     thumbnail_tag.short_description = 'Thumbnail'  
+
+
+
+

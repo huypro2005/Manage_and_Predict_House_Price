@@ -4,6 +4,7 @@ import './index.css';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { ChatProvider } from './contexts/ChatContext';
 import App from './App';
 import SearchPage from './pages/SearchPage';
 import PropertyList from './pages/PropertyList';
@@ -18,14 +19,15 @@ import Notifications from './pages/Notifications';
 import Profile from './pages/Profile';
 import News from './pages/News';
 import NewsDetail from './pages/NewsDetail';
-import Messages from './pages/Messages';
+import ChatMessage from './pages/ChatMessage';
 
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <AuthProvider>
     <NotificationProvider>
-      <Router>
+      <ChatProvider>
+        <Router>
       <Routes>
         {/* Trang chủ */}
         <Route path='/' element={<App />} />
@@ -65,7 +67,7 @@ root.render(
           path='/messages' 
           element={
             <ProtectedRoute>
-              <Messages />
+              <ChatMessage />
             </ProtectedRoute>
           } 
         />
@@ -115,6 +117,7 @@ root.render(
           />
         </Routes>
     </Router>
+      </ChatProvider>
     </NotificationProvider>
   </AuthProvider>
 );

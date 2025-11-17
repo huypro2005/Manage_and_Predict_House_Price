@@ -77,7 +77,7 @@ class PropertyDetailV1Serializer(serializers.ModelSerializer):
 class PropertyCreateFullV1Serializer(serializers.ModelSerializer):
     # Nếu bạn muốn thêm hình ảnh, sử dụng PropertyImageSerializer
     images = PropertyImageSerializer(many=True, required=False)  # Tùy chọn thêm hình ảnh
-
+    
     class Meta:
         model = Property
         fields = [

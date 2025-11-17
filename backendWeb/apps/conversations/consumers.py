@@ -87,6 +87,9 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         if action == 'read_up_to':
             conv_id = content.get('conversation_id')
             message_id = content.get('message_id')
+            await self._mark_read(conv_id, message_id)
+            return
+            
         
 
 
@@ -213,7 +216,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
     async def _mark_read(self, conv_id, message_id):
         if not await self._user_in_conversation(conv_id, self.user.id):
-            return PermissionDenied('Not a participant of this conversation')
+            raise PermissionDenied('Not a participant of this conversation')
         
         await self._set_last_read(conv_id, self.user.id, message_id)
 

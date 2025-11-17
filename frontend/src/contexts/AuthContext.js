@@ -30,7 +30,15 @@ window.fetch = async (...args) => {
   const headers = options.headers || {};
   const isAuthenticatedRequest = headers.Authorization && headers.Authorization.includes('Bearer');
   
-  if (isAuthenticatedRequest && (response.status === 401 || response.status === 403)) {
+  const shouldSkipAuthRefresh = options.skipAuthRefresh;
+  const hasRefreshToken = !!localStorage.getItem('refreshToken');
+
+  if (
+    isAuthenticatedRequest &&
+    (response.status === 401 || response.status === 403) &&
+    !shouldSkipAuthRefresh &&
+    !hasRefreshToken
+  ) {
     // Clear cache when token is invalid
     tokenValidationCache.isValid = false;
     tokenValidationCache.lastChecked = Date.now();
@@ -126,7 +134,7 @@ export const AuthProvider = ({ children }) => {
     const accessToken = authResponse?.access || authResponse?.token || authResponse?.jwt;
     const refreshToken = authResponse?.refresh;
     const userPayload = authResponse?.user;
-
+    
     if (accessToken) {
       localStorage.setItem('token', accessToken);
       setToken(accessToken);
@@ -277,6 +285,30 @@ export const AuthProvider = ({ children }) => {
     tokenValidationCache.isValid = null;
     tokenValidationCache.lastChecked = 0;
   }, []);
+
+  useEffect(() => {
+    const handleTokenRefreshed = (event) => {
+      const newToken = event.detail?.token;
+      if (newToken) {
+        setToken(newToken);
+        tokenValidationCache.isValid = true;
+        tokenValidationCache.lastChecked = Date.now();
+      }
+    };
+
+    const handleForceLogoutEvent = () => {
+      logout();
+      handleTokenExpiration();
+    };
+
+    window.addEventListener('auth:tokenRefreshed', handleTokenRefreshed);
+    window.addEventListener('auth:forceLogout', handleForceLogoutEvent);
+
+    return () => {
+      window.removeEventListener('auth:tokenRefreshed', handleTokenRefreshed);
+      window.removeEventListener('auth:forceLogout', handleForceLogoutEvent);
+    };
+  }, [logout]);
 
   // Optimized API response handler
   const handleApiResponse = useCallback(async (response) => {

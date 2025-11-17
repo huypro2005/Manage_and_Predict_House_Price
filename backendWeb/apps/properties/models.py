@@ -1,7 +1,8 @@
 from django.db import models
 from apps.accounts.models import CustomUser
-from apps.defaults.models import Province, District, PropertyType
+from apps.defaults.models import Province, District, PropertyType, Attribute, PropertyType_Attribute
 from apps.utils import upload_to_app_model
+
 # Create your models here.
 
 
@@ -14,8 +15,8 @@ class Property(models.Model):
         (2, 'hợp đồng')
     ]
     STATUS_SELL = [
-        ('thue', 'Cho thuê'),
-        ('ban', 'Bán')
+        ('thue', 'thue'),
+        ('ban', 'ban')
     ]
 
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='properties', blank=True, null=True)
@@ -30,9 +31,9 @@ class Property(models.Model):
     address = models.CharField(max_length=255)
     coord_x = models.DecimalField(max_digits=20, decimal_places=15)
     coord_y = models.DecimalField(max_digits=20, decimal_places=15)
-    bedrooms = models.IntegerField(blank=True, null=True)
-    floors = models.IntegerField(blank=True, null=True)
-    frontage = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    bedrooms = models.IntegerField(blank=True, null=True) #
+    floors = models.IntegerField(blank=True, null=True) #
+    frontage = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True) #
     legal_status = models.IntegerField(choices=INTERIOR, default=1)
     thumbnail = models.ImageField(upload_to=upload_to_app_model, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -67,3 +68,21 @@ class PropertyImage(models.Model):
     class Meta:
         db_table = 'propertyimage'
 
+
+
+# Tạo mới property sử dụng attributes
+
+class PropertyAttributeValue(models.Model):
+    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='attribute_values')
+    attribute = models.ForeignKey(Attribute, on_delete=models.CASCADE, related_name='property_values')
+    value = models.CharField(max_length=255)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'property_attribute_value'
+        unique_together = ('property', 'attribute')
+
+    def __str__(self):
+        return f'{self.property.title} - {self.attribute.name}: {self.value}'

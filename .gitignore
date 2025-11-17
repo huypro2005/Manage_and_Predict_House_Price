@@ -2,3 +2,4 @@
 frontend/node_modules
 backendWeb/.env
 *.pem
+test

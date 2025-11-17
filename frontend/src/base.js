@@ -1,7 +1,7 @@
-export const baseUrl = 'http://127.0.0.1:8000/api/v1/';
-export const baseUrlImage = 'http://127.0.0.1:8000/';
-export const baseUrlWebsocket = 'ws://127.0.0.1:8000/ws/';
-export const baseUrlWeb = 'http://127.0.0.1:8000/api/v1';
+export const baseUrl = 'http://localhost:8000/api/v1/';
+export const baseUrlImage = 'http://localhost:8000/';
+export const baseUrlWebsocket = 'ws://localhost:8000/ws/';
+export const baseUrlWeb = 'http://localhost:8000/api/v1';
 function ConfigUrl(url){
     // Guard against undefined/null or non-string values
     if (!url || typeof url !== 'string') {

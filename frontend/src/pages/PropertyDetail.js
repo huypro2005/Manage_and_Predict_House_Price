@@ -273,6 +273,17 @@ function PropertyDetail() {
     }));
   };
 
+  function formatLegalStatus(status) {
+    switch (status) {
+      case 1:
+        return 'Sổ đỏ';
+      case 2:
+        return 'Hợp đồng';
+      default:
+        return 'Khác';
+    }
+  }
+
   // Gửi tin nhắn liên hệ qua HTTP API
   const handleSendContact = async () => {
     console.log('🚀 handleSendContact được gọi');
@@ -594,16 +605,16 @@ function PropertyDetail() {
                 {property.legal_status && (
                     <div className="flex justify-between">
                     <span className="text-gray-600">Pháp lý:</span>
-                    <span className="font-medium">{property.legal_status === 1 ? 'Sổ đỏ' : 'Khác'}</span>
+                    <span className="font-medium">{formatLegalStatus(property.legal_status)}</span>
                     </div>
                 )}
-                {property.floors && (
+                { (parseInt(property.floors) > 0) && (                   
                     <div className="flex justify-between">
                     <span className="text-gray-600">Số tầng:</span>
                     <span className="font-medium">{property.floors}</span>
                     </div>
                 )}
-                {property.frontage && (
+                { (parseInt(property.frontage) > 0) && (
                     <div className="flex justify-between">
                     <span className="text-gray-600">Mặt tiền:</span>
                     <span className="font-medium">{property.frontage}m</span>

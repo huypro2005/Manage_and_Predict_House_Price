@@ -69,7 +69,7 @@ function ClickToMoveMarker({ onChange }) {
 function PostProperty() {
   const navigate = useNavigate();
   const mapboxToken = process.env.REACT_APP_MAPBOX_TOKEN;
-  console.log("mapboxToken", mapboxToken);
+  // console.log("mapboxToken", mapboxToken);
 
   // Steps: 1 -> basic info, 2 -> map + details + submit
   const [step, setStep] = useState(1);
@@ -153,19 +153,20 @@ function PostProperty() {
 
   const geocodeWithMapbox = async (query) => {
     if (!mapboxToken) return null;
-    console.log("mapboxToken", mapboxToken);
     const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
       query
     )}.json?access_token=${mapboxToken}&limit=1&language=vi`;
     const res = await fetch(url);
-    if (!res.ok) throw new Error(`Mapbox geocoding error: ${res.status}`);
+    if (!res.ok) {
+      if (res.status === 401) {
+        console.warn('Mapbox token không hợp lệ hoặc đã hết hạn. Sẽ sử dụng OpenStreetMap thay thế.');
+      }
+      throw new Error(`Mapbox geocoding error: ${res.status}`);
+    }
     const data = await res.json();
     const feature = data.features && data.features[0];
     if (feature && feature.center && feature.center.length === 2) {
       const [lng, lat] = feature.center;
-      console.log("feature", feature);
-      console.log("lat", lat);
-      console.log("lng", lng);
       return { lat, lng };
     }
     return null;
@@ -196,19 +197,31 @@ function PostProperty() {
     setGeoError('');
     try {
       let pos = null;
+      let usedFallback = false;
       try {
         pos = await geocodeWithMapbox(fullAddress);
       } catch (e) {
-        // swallow and try fallback
+        console.warn('Mapbox geocoding failed, trying OpenStreetMap:', e.message);
+        usedFallback = true;
       }
       if (!pos) {
-        pos = await geocodeWithNominatim(fullAddress);
+        try {
+          pos = await geocodeWithNominatim(fullAddress);
+          if (pos && usedFallback) {
+            console.log('Đã sử dụng OpenStreetMap để tìm vị trí');
+          }
+        } catch (nominatimError) {
+          console.error('OpenStreetMap geocoding also failed:', nominatimError);
+        }
       }
       setPosition(pos || DEFAULT_CENTER);
+      if (!pos) {
+        setGeoError('Không tìm thấy vị trí từ địa chỉ. Bạn có thể kéo pin để chỉnh vị trí trên bản đồ.');
+      }
       setStep(2);
     } catch (e) {
-      console.error(e);
-      setGeoError('Không tìm thấy vị trí từ địa chỉ. Bạn có thể kéo pin để chỉnh.');
+      console.error('Geocoding error:', e);
+      setGeoError('Không tìm thấy vị trí từ địa chỉ. Bạn có thể kéo pin để chỉnh vị trí trên bản đồ.');
       setPosition(DEFAULT_CENTER);
       setStep(2);
     } finally {
@@ -240,7 +253,7 @@ function PostProperty() {
       formData.append('address', fullAddress);
       formData.append('price', Number(price));
       formData.append('area_m2', Number(area));
-      formData.append('price_per_m2', Number(price) / Number(area));
+      formData.append('price_per_m2', parseFloat((Number(price) / Number(area)).toFixed(2)));
       formData.append('coord_x', position?.lng ?? '');
       formData.append('coord_y', position?.lat ?? '');
       formData.append('property_type', selectedPropertyTypeIds[0] || '');
@@ -276,7 +289,7 @@ function PostProperty() {
   };
 
   const mapTileUrl = mapboxToken
-    ? `https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`
+    ? `https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/256/{z}/{x}/{y}@2x?access_token=${mapboxToken}`
     : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
   return (
@@ -373,7 +386,9 @@ function PostProperty() {
             {/* Price & Area */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Giá (triệu)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {listingType === 'thue' ? 'Giá (triệu/tháng)' : 'Giá (triệu)'}
+                </label>
                 <div className="relative">
                   <input
                     type="number"
@@ -555,8 +570,8 @@ function PostProperty() {
                   <TileLayer
                     url={mapTileUrl}
                     attribution={mapboxToken ? '© Mapbox © OpenStreetMap' : '© OpenStreetMap contributors'}
-                    tileSize={mapboxToken ? 512 : 256}
-                    zoomOffset={mapboxToken ? -1 : 0}
+                    tileSize={256}
+                    zoomOffset={0}
                   />
                   <RecenterOnPosition position={position} />
                   <ClickToMoveMarker onChange={(latlng) => setPosition(latlng)} />
@@ -649,8 +664,8 @@ function PostProperty() {
                   >
                     <option value="">Chọn</option>
                     <option value="1">Sổ đỏ</option>
-                    <option value="2">Sổ hồng</option>
-                    <option value="3">Hợp đồng</option>
+                    <option value="1">Sổ hồng</option>
+                    <option value="2">Hợp đồng</option>
                     <option value="4">Khác</option>
                   </select>
                 </div>

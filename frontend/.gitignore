@@ -124,3 +124,6 @@ ui-debug.log
 
 # Local development
 *.log
+
+# structure file
+filelist.txt

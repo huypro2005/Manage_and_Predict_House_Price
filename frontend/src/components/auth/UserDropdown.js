@@ -13,12 +13,18 @@ import {
   Home
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useChat } from '../../contexts/ChatContext';
 import VerificationBadge from '../VerificationBadge';
 
 const UserDropdown = React.memo(() => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const { user, logout } = useAuth();
+  
+  // Get total unread count from ChatContext
+  // ChatContext should always be available since ChatProvider wraps the app
+  const { getTotalUnreadCount } = useChat();
+  const totalUnreadCount = getTotalUnreadCount();
 
   console.log('UserDropdown rendered: ', user);
 
@@ -119,32 +125,46 @@ const UserDropdown = React.memo(() => {
       icon: LogOut,
       label: 'Đăng xuất',
       onClick: handleLogout,
-      className: 'text-red-600 hover:text-red-700',
+      className: 'text-red-600 hover:text-red-700 cursor-pointer',
       style: {cursor: 'pointer'}
     }
   ], [handleMenuItemClick, handleLogout]);
 
   // Memoized avatar component
   const AvatarComponent = useMemo(() => (
-    <div className="w-8 h-8 rounded-full ring-2 ring-gray-200 overflow-hidden bg-gray-100 flex items-center justify-center text-gray-600 font-semibold text-xs">
-      {userAvatar ? (
-        <img src={userAvatar} alt="avatar" className="w-full h-full object-cover" />
-      ) : (
-        <span>{userInitials}</span>
+    <div className="relative w-8 h-8">
+      <div className="w-8 h-8 rounded-full ring-2 ring-gray-200 overflow-hidden bg-gray-100 flex items-center justify-center text-gray-600 font-semibold text-xs">
+        {userAvatar ? (
+          <img src={userAvatar} alt="avatar" className="w-full h-full object-cover" />
+        ) : (
+          <span>{userInitials}</span>
+        )}
+      </div>
+      {totalUnreadCount > 0 && (
+        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+          {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
+        </span>
       )}
     </div>
-  ), [userAvatar, userInitials]);
+  ), [userAvatar, userInitials, totalUnreadCount]);
 
   // Memoized large avatar component
   const LargeAvatarComponent = useMemo(() => (
-    <div className="w-10 h-10 rounded-full ring-2 ring-gray-200 overflow-hidden bg-gray-100 flex items-center justify-center text-gray-600 font-semibold">
-      {userAvatar ? (
-        <img src={userAvatar} alt="avatar" className="w-full h-full object-cover" />
-      ) : (
-        <span>{userInitials}</span>
+    <div className="relative w-10 h-10">
+      <div className="w-10 h-10 rounded-full ring-2 ring-gray-200 overflow-hidden bg-gray-100 flex items-center justify-center text-gray-600 font-semibold">
+        {userAvatar ? (
+          <img src={userAvatar} alt="avatar" className="w-full h-full object-cover" />
+        ) : (
+          <span>{userInitials}</span>
+        )}
+      </div>
+      {totalUnreadCount > 0 && (
+        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+          {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
+        </span>
       )}
     </div>
-  ), [userAvatar, userInitials]);
+  ), [userAvatar, userInitials, totalUnreadCount]);
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -186,17 +206,27 @@ const UserDropdown = React.memo(() => {
 
             {/* Menu Items */}
             <div className="py-1">
-              {menuItems.map((item, index) => (
-                <a
-                  key={index}
-                  href={item.href}
-                  onClick={item.onClick}
-                  className={`flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors ${item.className || ''}`}
-                >
-                  <item.icon className="h-4 w-4" />
-                  <span>{item.label}</span>
-                </a>
-              ))}
+              {menuItems.map((item, index) => {
+                const isMessagesItem = item.href === '/messages';
+                return (
+                  <a
+                    key={index}
+                    href={item.href}
+                    onClick={item.onClick}
+                    className={`flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors ${item.className || ''}`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.label}</span>
+                    </div>
+                    {isMessagesItem && totalUnreadCount > 0 && (
+                      <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
+                        {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
+                      </span>
+                    )}
+                  </a>
+                );
+              })}
             </div>
           </motion.div>
         )}

@@ -4,6 +4,128 @@ import { baseUrl } from '../base';
 const apiCache = new Map();
 const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
 
+const AUTH_REFRESH_ENDPOINT = `${baseUrl}auth/token/refresh/`;
+let refreshTokenPromise = null;
+
+const dispatchTokenRefreshed = (token) => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('auth:tokenRefreshed', { detail: { token } }));
+  }
+};
+
+const dispatchForceLogout = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('auth:forceLogout'));
+  }
+};
+
+const clearAuthStorage = () => {
+  try {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+  } catch (_) {
+    // ignore
+  }
+};
+
+export const refreshAccessToken = async () => {
+  if (refreshTokenPromise) {
+    return refreshTokenPromise;
+  }
+
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (!refreshToken) {
+    return null;
+  }
+
+  refreshTokenPromise = (async () => {
+    try {
+      const response = await fetch(AUTH_REFRESH_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refresh: refreshToken }),
+        skipAuthRefresh: true,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Refresh token failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      const newAccessToken = data?.access;
+
+      if (!newAccessToken) {
+        throw new Error('Refresh token response did not include access token');
+      }
+
+      localStorage.setItem('token', newAccessToken);
+      dispatchTokenRefreshed(newAccessToken);
+      return newAccessToken;
+    } catch (error) {
+      console.error('Failed to refresh access token:', error);
+      clearAuthStorage();
+      dispatchForceLogout();
+      return null;
+    } finally {
+      refreshTokenPromise = null;
+    }
+  })();
+
+  return refreshTokenPromise;
+};
+
+const performAuthenticatedFetch = async (url, options = {}, retry = true) => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Error('No authentication token found');
+  }
+
+  const originalHeaders = options.headers || {};
+  const fetchOptions = {
+    ...options,
+    headers: {
+      ...originalHeaders,
+      'Authorization': `Bearer ${token}`,
+    },
+    skipAuthRefresh: true,
+  };
+
+  const response = await fetch(url, fetchOptions);
+
+  if ((response.status === 401 || response.status === 403) && retry) {
+    const newToken = await refreshAccessToken();
+    if (!newToken) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const retryOptions = {
+      ...options,
+      headers: {
+        ...originalHeaders,
+        'Authorization': `Bearer ${newToken}`,
+      },
+      skipAuthRefresh: true,
+    };
+
+    const retryResponse = await fetch(url, retryOptions);
+
+    if (retryResponse.status === 401 || retryResponse.status === 403) {
+      dispatchForceLogout();
+      throw new Error(`HTTP error! status: ${retryResponse.status}`);
+    }
+
+    return retryResponse;
+  }
+
+  if (response.status === 401 || response.status === 403) {
+    dispatchForceLogout();
+  }
+
+  return response;
+};
+
 // Utility function to get cached response
 const getCachedResponse = (url, params = {}) => {
   const cacheKey = `${url}?${new URLSearchParams(params).toString()}`;
@@ -91,14 +213,20 @@ const apiService = {
   // POST with FormData (for file uploads)
   async postFormData(endpoint, formData) {
     const url = `${baseUrl}${endpoint}`;
-    
+    const token = localStorage.getItem('token');
     try {
+      // Don't set Content-Type header - browser will set it automatically with boundary
       const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token || ''}`,
+        },
         method: 'POST',
         body: formData,
       });
       
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('FormData upload error:', errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
@@ -135,17 +263,11 @@ const apiService = {
 
   // Authenticated PUT request
   async authenticatedPut(endpoint, data = {}) {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
     const url = `${baseUrl}${endpoint}`;
     try {
-      const response = await fetch(url, {
+      const response = await performAuthenticatedFetch(url, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
@@ -189,11 +311,6 @@ const apiService = {
 
   // Authenticated requests - only add token when needed
   async authenticatedGet(endpoint, params = {}, useCache = true) {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-    
     const url = `${baseUrl}${endpoint}`;
     
     // Check cache first
@@ -209,24 +326,18 @@ const apiService = {
     const fullUrl = queryString ? `${url}?${queryString}` : url;
     
     try {
-      const response = await fetch(fullUrl, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      
+      const response = await performAuthenticatedFetch(fullUrl, {}, true);
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
-      // Cache successful authenticated GET responses
-      if (useCache && response.ok) {
+
+      if (useCache) {
         setCachedResponse(url, params, data);
       }
-      
+
       return data;
     } catch (error) {
       console.error('Authenticated API GET error:', error);
@@ -235,18 +346,12 @@ const apiService = {
   },
 
   async authenticatedPost(endpoint, data = {}) {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-    
     const url = `${baseUrl}${endpoint}`;
     
     try {
-      const response = await fetch(url, {
+      const response = await performAuthenticatedFetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
