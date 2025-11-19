@@ -16,6 +16,7 @@ import hashlib
 import datetime
 from django.db import transaction
 from apps.love_cart.models import FavouriteProperty
+import json
 # Create your views here.
 
 
@@ -109,12 +110,23 @@ class PropertyListView(APIView):
 
         return Response(result, status=status.HTTP_200_OK)
 
+    @transaction.atomic
     def post(self, request):
         try:
             user = request.user
             serializer = PropertyCreateFullV1Serializer(data=request.data, context={'request': request})
             serializer.is_valid(raise_exception=True)
             property = serializer.save(user=user)
+            
+            if 'attributes' in request.data:
+                attributes = json.loads(request.data.get('attributes'))
+                # print(attributes)
+                for attr in attributes:
+                    property.attribute_values.create(
+                        attribute_id=attr['attribute_id'],
+                        value=attr['value'],
+                        is_active=True
+                    )
 
             if 'images' in request.FILES:
                 for image in request.FILES.getlist('images'):

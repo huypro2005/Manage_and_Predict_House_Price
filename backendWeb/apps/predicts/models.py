@@ -5,7 +5,7 @@ from apps.accounts.models import CustomUser
 class Dashboard(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
     # Add any additional fields you need for the dashboard
-    countRemain = models.IntegerField(default=10)
+    countRemain = models.IntegerField(default=100)
     Is_premium = models.BooleanField(default=False)
     expired = models.DateTimeField(null=True, blank=True)
     class Meta:

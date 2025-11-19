@@ -25,6 +25,7 @@ function ChatMessage() {
     syncUnreadCounts,
     sendMessage: sendMessageContext,
     subscribeToMessages,
+    subscribeToFriendSearch,
     setCurrentViewingConversation,
   } = useChat();
 
@@ -39,12 +40,16 @@ function ChatMessage() {
   const [showSidebar, setShowSidebar] = useState(true); // Mobile sidebar toggle
   const [searchQuery, setSearchQuery] = useState('');
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   // === REFS ===
   const messagesContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const selectedChatRef = useRef(selectedChat);
   const lastMarkedMessageIdRef = useRef(null);
   const isAutoScrollingRef = useRef(false);
+  const searchTimeoutRef = useRef(null);
+  const socketRef = useRef(null);
 
   /**
    * Keep selectedChatRef in sync with selectedChat state
@@ -241,6 +246,45 @@ function ChatMessage() {
 
   // === WEBSOCKET MESSAGE HANDLING ===
 
+  // Subscribe to friend search results
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const unsubscribe = subscribeToFriendSearch((friends) => {
+      setSearchResults(friends);
+      setIsSearching(false);
+    });
+
+    return unsubscribe;
+  }, [isAuthenticated, subscribeToFriendSearch]);
+
+  // Handle search with debounce
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (searchQuery.trim().length > 0) {
+      setIsSearching(true);
+      searchTimeoutRef.current = setTimeout(() => {
+        // Emit socket event to search for friends
+        sendMessageContext({
+          action: 'find_friend_conversation',
+          user_filter: searchQuery.trim()
+        });
+      }, 500); // 500ms debounce
+    } else {
+      setSearchResults([]);
+      setIsSearching(false);
+    }
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery, sendMessageContext]);
+
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -270,7 +314,25 @@ function ChatMessage() {
 
       // If viewing this conversation
       const currentChat = selectedChatRef.current;
-      if (currentChat && conversationId === currentChat.id) {
+      
+      // If we're in a new conversation (no id) and receive a message, update the chat with conversation_id
+      if (currentChat && !currentChat.id && conversationId) {
+        setSelectedChat(prev => ({
+          ...prev,
+          id: conversationId
+        }));
+        setCurrentViewingConversation(conversationId, user?.id);
+      }
+      
+      // Show message if: 
+      // 1. We're viewing this conversation (by id), OR
+      // 2. We're in a new conversation (no id) and receive any message (will update conversation_id)
+      const shouldShowMessage = currentChat && (
+        conversationId === currentChat.id || 
+        (!currentChat.id && conversationId)
+      );
+      
+      if (shouldShowMessage) {
         const newMessage = {
           id: messageData.id,
           sender: messageData.sender,
@@ -381,10 +443,17 @@ function ChatMessage() {
   useEffect(() => {
     if (selectedChat) {
       lastMarkedMessageIdRef.current = null;
-      setCurrentViewingConversation(selectedChat.id, user?.id);
-      // Reset hasMoreMessages khi chọn conversation mới
-      setHasMoreMessages(true);
-      fetchMessages(selectedChat.id);
+      
+      // Only fetch messages if conversation exists (has id)
+      if (selectedChat.id) {
+        setCurrentViewingConversation(selectedChat.id, user?.id);
+        setHasMoreMessages(true);
+        fetchMessages(selectedChat.id);
+      } else {
+        // New conversation - no messages yet
+        setMessages([]);
+        setCurrentViewingConversation(null, user?.id);
+      }
       
       // On mobile, hide sidebar when chat selected
       if (window.innerWidth < 768) {
@@ -397,26 +466,105 @@ function ChatMessage() {
 
   // === USER ACTIONS ===
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputMessage.trim() || !selectedChat) return;
 
     const messageText = inputMessage.trim();
     setInputMessage('');
 
-    const sent = sendMessageContext({
-      action: 'send_message',
-      conversation_id: selectedChat.id,
-      content: messageText,
-      reply: null
-    });
+    // If this is a new conversation (no conversation_id), send DM
+    if (!selectedChat.id && selectedChat.toUserId) {
+      const sent = sendMessageContext({
+        action: 'dm',
+        to_user_id: selectedChat.toUserId,
+        content: messageText,
+        reply: null
+      });
 
-    if (!sent) {
-      alert('Không thể kết nối. Vui lòng thử lại.');
+      if (!sent) {
+        alert('Không thể kết nối. Vui lòng thử lại.');
+        return;
+      }
+
+      // Reload conversations list after sending first message
+      setTimeout(() => {
+        fetchConversations().then(() => {
+          // Try to find the new conversation and update selectedChat
+          // The conversation_id will be set when we receive the message response
+        });
+      }, 1000);
+    } else {
+      // Existing conversation
+      const sent = sendMessageContext({
+        action: 'send_message',
+        conversation_id: selectedChat.id,
+        content: messageText,
+        reply: null
+      });
+
+      if (!sent) {
+        alert('Không thể kết nối. Vui lòng thử lại.');
+      }
     }
   };
 
   const handleSelectChat = (chat) => {
     setSelectedChat(chat);
+  };
+
+  /**
+   * Handle selecting a user from search results
+   */
+  const handleSelectUser = async (selectedUser) => {
+    try {
+      const token = localStorage.getItem('access') || localStorage.getItem('token');
+      if (!token) return;
+
+      // Call API to get/create conversation
+      const response = await fetch(
+        `${BASE_URL}/api/v1/conversations/user/?to_user_id=${selectedUser.id}`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+
+      const data = await response.json();
+      const conversationId = data.data?.conversation_id;
+
+      if (conversationId) {
+        // Conversation exists, navigate to it
+        const existingChat = chatList.find(c => c.id === conversationId);
+        if (existingChat) {
+          setSelectedChat(existingChat);
+        } else {
+          // Fetch conversation details if not in list
+          await fetchConversations();
+          const updatedChat = chatList.find(c => c.id === conversationId);
+          if (updatedChat) {
+            setSelectedChat(updatedChat);
+          }
+        }
+      } else {
+        // New conversation - create a temporary chat object
+        const newChat = {
+          id: null, // Will be set after first message
+          name: selectedUser.username,
+          lastMessage: '',
+          timestamp: new Date(),
+          avatar: selectedUser.avatar,
+          isOnline: false,
+          toUserId: selectedUser.id
+        };
+        setSelectedChat(newChat);
+        setMessages([]);
+      }
+
+      // Clear search
+      setSearchQuery('');
+      setSearchResults([]);
+    } catch (error) {
+      console.error('❌ Error selecting user:', error);
+    }
   };
 
   const handleBackToList = () => {
@@ -454,8 +602,8 @@ function ChatMessage() {
     });
   };
 
-  // Filter conversations by search
-  const filteredChatList = searchQuery
+  // Filter conversations by search (only if not showing search results)
+  const filteredChatList = searchQuery && searchResults.length === 0
     ? chatList.filter(chat =>
         chat.name.toLowerCase().includes(searchQuery.toLowerCase())
       )
@@ -522,15 +670,55 @@ function ChatMessage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
             />
+            {isSearching && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Conversation List */}
+        {/* Conversation List / Search Results */}
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center p-8 space-y-4">
               <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
               <p className="text-gray-500">Đang tải cuộc trò chuyện...</p>
+            </div>
+          ) : searchResults.length > 0 ? (
+            // Show search results
+            <div>
+              <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
+                <p className="text-sm font-semibold text-gray-700">Kết quả tìm kiếm</p>
+              </div>
+              {searchResults.map((user) => (
+                <div
+                  key={user.id}
+                  onClick={() => handleSelectUser(user)}
+                  className="p-4 border-b border-gray-100 cursor-pointer transition-all hover:bg-gray-50"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="relative flex-shrink-0">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white font-semibold text-lg">
+                        {user.username?.charAt(0).toUpperCase() || 'U'}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 truncate">
+                        {user.username}
+                      </h3>
+                      {user.first_name || user.last_name ? (
+                        <p className="text-sm text-gray-600 truncate">
+                          {[user.first_name, user.last_name].filter(Boolean).join(' ')}
+                        </p>
+                      ) : null}
+                      {user.email && (
+                        <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : filteredChatList.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-8 space-y-4">

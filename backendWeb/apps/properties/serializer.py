@@ -3,6 +3,7 @@ from .models import Property, PropertyImage
 from datetime import datetime
 from apps.utils import datetimeFormat
 from apps.accounts.serializer import CustomUserV1Serializer
+from apps.defaults.serializer import AttributeSerializer
 
 class PropertyImageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -15,7 +16,8 @@ class PropertyV1Serializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField()
     class Meta:
         model = Property
-        fields = ['id', 'title', 'description', 'price', 'area_m2', 'address', 'thumbnail', 'views', 'time']
+        fields = ['id', 'title', 'description', 
+                  'price', 'area_m2', 'address', 'thumbnail', 'views', 'time']
 
     # time là thời gian đăng so với hiện tại
 
@@ -51,6 +53,8 @@ class PropertyDetailV1Serializer(serializers.ModelSerializer):
     user_fullname = serializers.CharField(source='user.get_full_name', read_only=True)
     user_email = serializers.EmailField(source='user.email', read_only=True)
     username = serializers.CharField(source='user.username', read_only=True)
+    attributes = serializers.SerializerMethodField()
+    property_type_name = serializers.CharField(source='property_type.name', read_only=True)
 
     class Meta:
         model = Property
@@ -59,15 +63,27 @@ class PropertyDetailV1Serializer(serializers.ModelSerializer):
                   'district', 'title', 
                   'description', 'price', 
                   'area_m2', 'address', 
-                  'images', 'thumbnail', 
+                  'thumbnail', 
                   'property_type', 'bedrooms',
                   'floors', 'coord_x', 'coord_y',
                   'legal_status', 'tab',
                   'user_fullname', 'user_email',
                   'views', 'created_at',
-                  'updated_at']
-        read_only_fields = ['id', 'user', 'created_at', 'updated_at', 'views', 'images']
+                  'updated_at', 'property_type_name', 
+                  'attributes', 'images']
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at', 'views', 'images', 'attributes']
 
+    def get_attributes(self, obj):
+        attribute_values = obj.attribute_values.filter(is_active=True)
+        return [
+            {
+                'attribute_id': attr_value.attribute.id,
+                'attribute_name': attr_value.attribute.name,
+                'value': attr_value.value,
+                'unit': attr_value.attribute.unit
+            }
+            for attr_value in attribute_values
+        ]
     
 
 
@@ -77,17 +93,31 @@ class PropertyDetailV1Serializer(serializers.ModelSerializer):
 class PropertyCreateFullV1Serializer(serializers.ModelSerializer):
     # Nếu bạn muốn thêm hình ảnh, sử dụng PropertyImageSerializer
     images = PropertyImageSerializer(many=True, required=False)  # Tùy chọn thêm hình ảnh
-    
+    attributes = serializers.SerializerMethodField()
+
+
     class Meta:
         model = Property
         fields = [
             'id', 'province', 'district', 'title', 'description', 'price',
             'area_m2', 'address', 'images', 'thumbnail', 'property_type',
-            'bedrooms', 'floors', 'coord_x', 'coord_y', 'legal_status',
-            'tab', 'price_per_m2', 'frontage', 'user'
+             'coord_x', 'coord_y', 'legal_status',
+            'tab', 'price_per_m2',  'user', 'attributes'
         ]
         read_only_fields = ['user', 'id']  # user chỉ được ghi từ context, không từ frontend
 
     def create(self, validated_data):
         property = super().create(validated_data)
         return property
+    
+    def get_attributes(self, obj):
+        attribute_values = obj.attribute_values.filter(is_active=True)
+        return [
+            {
+                'attribute_id': attr_value.attribute.id,
+                'attribute_name': attr_value.attribute.name,
+                'value': attr_value.value,
+                'unit': attr_value.attribute.unit
+            }
+            for attr_value in attribute_values
+        ]

@@ -19,7 +19,6 @@ class NotificationLP(APIView):
     def get(self, request):
         user = request.user
         last_version = get_current_notification_version(user.id)
-        print('Last version:', last_version)
         time_limit = 10
         start_time = time.time()
         while time.time() - start_time < time_limit:

@@ -25,6 +25,9 @@ class ChatSocket {
     this.isConnected = false;
     this.pendingMessages = [];
     this.reconnectTimer = null;
+    this.onMessage = null;
+    this.onOpen = null;
+    this.onFriendFound = null;
     
     // Attach token to URL
     const token = localStorage.getItem('access') || localStorage.getItem('token');
@@ -33,7 +36,12 @@ class ChatSocket {
     }
   }
 
-  connect(onMessage, onOpen) {
+  connect(onMessage, onOpen, onFriendFound) {
+    // Store callbacks for reconnection
+    this.onMessage = onMessage;
+    this.onOpen = onOpen;
+    this.onFriendFound = onFriendFound;
+    
     try {
       this.socket = new WebSocket(this.url);
 
@@ -42,7 +50,7 @@ class ChatSocket {
         this.isConnected = true;
         
         // Callback to update parent state
-        if (onOpen) onOpen();
+        if (this.onOpen) this.onOpen();
         
         // Send all pending messages
         while (this.pendingMessages.length > 0) {
@@ -57,8 +65,13 @@ class ChatSocket {
           console.log('📨 WebSocket message received:', data);
           
           // Call the message handler
-          if (data.type === 'message' && onMessage) {
-            onMessage(data.data);
+          if (data.type === 'message' && this.onMessage) {
+            this.onMessage(data.data);
+          }
+          
+          // Handle friend_found event
+          if (data.type === 'friend_found' && this.onFriendFound) {
+            this.onFriendFound(data.data || []);
           }
         } catch (error) {
           console.error('❌ Error parsing WebSocket message:', error);
@@ -72,7 +85,7 @@ class ChatSocket {
         // Auto reconnect after 3 seconds
         this.reconnectTimer = setTimeout(() => {
           console.log('🔄 Reconnecting...');
-          this.connect(onMessage, onOpen);
+          this.connect(this.onMessage, this.onOpen, this.onFriendFound);
         }, 3000);
       };
 
@@ -125,6 +138,7 @@ export const ChatProvider = ({ children }) => {
   // === REFS ===
   const socketRef = useRef(null);
   const messageCallbacksRef = useRef([]); // Subscribers for incoming messages
+  const friendSearchCallbacksRef = useRef([]); // Subscribers for friend search results
   const currentViewingConversationIdRef = useRef(null); // Which conversation user is viewing
   const currentUserIdRef = useRef(null); // Current user ID
 
@@ -247,7 +261,19 @@ export const ChatProvider = ({ children }) => {
       console.log('✅ WebSocket ready');
     };
 
-    socket.connect(handleIncomingMessage, handleConnected);
+    const handleFriendFound = (friends) => {
+      console.log('👥 Friend search results:', friends);
+      // Notify all subscribers
+      friendSearchCallbacksRef.current.forEach(callback => {
+        try {
+          callback(friends);
+        } catch (error) {
+          console.error('Error in friend search callback:', error);
+        }
+      });
+    };
+
+    socket.connect(handleIncomingMessage, handleConnected, handleFriendFound);
     socketRef.current = socket;
 
     // Cleanup on unmount
@@ -269,6 +295,18 @@ export const ChatProvider = ({ children }) => {
     
     return () => {
       messageCallbacksRef.current = messageCallbacksRef.current.filter(cb => cb !== callback);
+    };
+  }, []);
+
+  /**
+   * Subscribe to friend search results
+   * Returns unsubscribe function
+   */
+  const subscribeToFriendSearch = useCallback((callback) => {
+    friendSearchCallbacksRef.current.push(callback);
+    
+    return () => {
+      friendSearchCallbacksRef.current = friendSearchCallbacksRef.current.filter(cb => cb !== callback);
     };
   }, []);
 
@@ -418,6 +456,7 @@ export const ChatProvider = ({ children }) => {
     // Messaging
     sendMessage,
     subscribeToMessages,
+    subscribeToFriendSearch,
     setCurrentViewingConversation,
   };
 

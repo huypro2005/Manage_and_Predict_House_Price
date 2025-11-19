@@ -167,10 +167,10 @@ DB_HOST=localhost
 DB_PORT=3306
 
 # Redis
-USERNAME_REDIS=default
-PASSWORD_REDIS=your_redis_password
-HOST_REDIS=localhost
-PORT_REDIS=6379
+USERNAME_REDIS=''
+PASSWORD_REDIS=''
+HOST_REDIS='localhost'
+PORT_REDIS='6379'
 
 # Mapbox
 MAPBOX_TOKEN=your_mapbox_token

@@ -89,10 +89,12 @@ function PostProperty() {
   // Step 2 state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [bedrooms, setBedrooms] = useState('');
-  const [frontage, setFrontage] = useState(''); // meters
   const [legalStatus, setLegalStatus] = useState(''); // numeric code
-  const [floor, setFloor] = useState(''); // số tầng
+  
+  // Attributes state
+  const [attributesList, setAttributesList] = useState([]);
+  const [selectedAttributes, setSelectedAttributes] = useState([]); // [{attribute_id, value, name, unit}]
+  const [openForms, setOpenForms] = useState([]); // [{id, attributeId, value}]
 
   // Map / geocode
   const [position, setPosition] = useState(null);
@@ -112,6 +114,74 @@ function PostProperty() {
     console.log(parts);
     return parts;
   }, [address, districtNames, provinceName]);
+
+  // Fetch attributes khi property_type thay đổi
+  useEffect(() => {
+    const fetchAttributes = async () => {
+      if (selectedPropertyTypeIds.length === 1) {
+        try {
+          const response = await fetch(`${baseUrl}attributes/?property_type_id=${selectedPropertyTypeIds[0]}`);
+          if (response.ok) {
+            const data = await response.json();
+            setAttributesList(data.data || []);
+            setSelectedAttributes([]);
+            setOpenForms([]);
+          }
+        } catch (error) {
+          console.error('Error fetching attributes:', error);
+        }
+      } else {
+        setAttributesList([]);
+        setSelectedAttributes([]);
+        setOpenForms([]);
+      }
+    };
+    fetchAttributes();
+  }, [selectedPropertyTypeIds]);
+
+  // Lấy danh sách attributes chưa được thêm vào danh sách
+  const availableAttributes = attributesList.filter(
+    attr => !selectedAttributes.some(selected => selected.attribute_id === attr.id)
+  );
+
+  // Mở form thêm attribute mới
+  const handleOpenForm = () => {
+    setOpenForms([...openForms, { id: Date.now(), attributeId: '', value: '' }]);
+  };
+
+  // Cập nhật form
+  const handleUpdateForm = (formId, field, value) => {
+    setOpenForms(openForms.map(form => 
+      form.id === formId ? { ...form, [field]: value } : form
+    ));
+  };
+
+  // Thêm attribute từ form
+  const handleAddAttribute = (formId) => {
+    const form = openForms.find(f => f.id === formId);
+    if (!form || !form.attributeId || !form.value.trim()) return;
+    
+    const attr = attributesList.find(a => a.id === parseInt(form.attributeId));
+    if (attr && !selectedAttributes.some(s => s.attribute_id === attr.id)) {
+      setSelectedAttributes([...selectedAttributes, {
+        attribute_id: attr.id,
+        value: form.value.trim(),
+        name: attr.name,
+        unit: attr.unit
+      }]);
+      setOpenForms(openForms.filter(f => f.id !== formId));
+    }
+  };
+
+  // Đóng form
+  const handleCloseForm = (formId) => {
+    setOpenForms(openForms.filter(f => f.id !== formId));
+  };
+
+  // Xóa attribute
+  const handleRemoveAttribute = (attributeId) => {
+    setSelectedAttributes(selectedAttributes.filter(a => a.attribute_id !== attributeId));
+  };
 
   const handleProvinceSelect = (name, id) => {
     setProvinceName(name || '');
@@ -257,10 +327,16 @@ function PostProperty() {
       formData.append('coord_x', position?.lng ?? '');
       formData.append('coord_y', position?.lat ?? '');
       formData.append('property_type', selectedPropertyTypeIds[0] || '');
-      formData.append('bedrooms', bedrooms ? Number(bedrooms) : '');
-      formData.append('frontage', frontage ? Number(frontage) : '');
       formData.append('legal_status', legalStatus ? Number(legalStatus) : '');
-      formData.append('floors', floor ? Number(floor) : '');
+
+      // Add attributes
+      if (selectedAttributes.length > 0) {
+        const attributes = selectedAttributes.map(attr => ({
+          attribute_id: attr.attribute_id,
+          value: attr.value
+        }));
+        formData.append('attributes', JSON.stringify(attributes));
+      }
 
       // Add files
       if (thumbnailFile) {
@@ -611,65 +687,116 @@ function PostProperty() {
                   onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Số phòng ngủ</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min="0"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent pr-10"
-                      placeholder="Ví dụ: 3"
-                      value={bedrooms}
-                      onChange={(e) => setBedrooms(e.target.value)}
-                    />
-                    <Bed className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Số tầng</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min="0"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent pr-10"
-                      placeholder="Ví dụ: 2"
-                      value={floor}
-                      onChange={(e) => setFloor(e.target.value)}
-                    />
-                    <Landmark className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Mặt tiền (m)</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent pr-10"
-                      placeholder="Ví dụ: 5"
-                      value={frontage}
-                      onChange={(e) => setFrontage(e.target.value)}
-                    />
-                    <Landmark className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Pháp lý</label>
-                  <select
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    value={legalStatus}
-                    onChange={(e) => setLegalStatus(e.target.value)}
-                  >
-                    <option value="">Chọn</option>
-                    <option value="1">Sổ đỏ</option>
-                    <option value="1">Sổ hồng</option>
-                    <option value="2">Hợp đồng</option>
-                    <option value="4">Khác</option>
-                  </select>
-                </div>
+              
+              {/* Legal Status */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Pháp lý</label>
+                <select
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  value={legalStatus}
+                  onChange={(e) => setLegalStatus(e.target.value)}
+                >
+                  <option value="">Chọn</option>
+                  <option value="1">Sổ đỏ, Sổ hồng</option>
+                  <option value="2">Hợp đồng</option>
+                  <option value="4">Khác</option>
+                </select>
               </div>
+
+              {/* Attributes Box */}
+              {attributesList.length > 0 && (
+                <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Thuộc tính</h3>
+                  
+                  {/* Danh sách attributes đã thêm */}
+                  {selectedAttributes.length > 0 && (
+                    <div className="space-y-2 mb-4">
+                      {selectedAttributes.map((attr) => (
+                        <div key={attr.attribute_id} className="flex items-center gap-3 bg-white p-3 rounded-lg border border-gray-200">
+                          <div className="flex-1">
+                            <span className="text-sm font-medium text-gray-700">{attr.name}:</span>
+                            <span className="ml-2 text-sm text-gray-900">
+                              {attr.value}{attr.unit ? ` ${attr.unit}` : ''}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveAttribute(attr.attribute_id)}
+                            className="text-red-600 hover:text-red-700 p-1"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Các form thêm attribute */}
+                  {openForms.map((form) => {
+                    const selectedAttr = form.attributeId ? attributesList.find(a => a.id === parseInt(form.attributeId)) : null;
+                    const isNumeric = selectedAttr && ['Số phòng ngủ', 'Số phòng tắm, vệ sinh', 'Mặt tiền', 'Đường vào'].includes(selectedAttr.name);
+                    return (
+                      <div key={form.id} className="bg-white p-4 rounded-lg border border-gray-200 space-y-3 mb-3">
+                        <div className="flex items-center gap-3">
+                          <select
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            value={form.attributeId}
+                            onChange={(e) => handleUpdateForm(form.id, 'attributeId', e.target.value)}
+                          >
+                            <option value="">Chọn thuộc tính</option>
+                            {availableAttributes.map(attr => (
+                              <option key={attr.id} value={attr.id}>{attr.name}</option>
+                            ))}
+                          </select>
+                          {form.attributeId ? (
+                            <input
+                              type={isNumeric ? 'number' : 'text'}
+                              min={isNumeric ? '0' : undefined}
+                              step={isNumeric ? (selectedAttr.name === 'Mặt tiền' || selectedAttr.name === 'Đường vào' ? '0.01' : '1') : undefined}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                              placeholder={selectedAttr?.unit ? `Nhập ${selectedAttr.unit.toLowerCase()}` : 'Nhập giá trị'}
+                              value={form.value}
+                              onChange={(e) => handleUpdateForm(form.id, 'value', e.target.value)}
+                            />
+                          ) : (
+                            <div className="flex-1 px-3 py-2 text-gray-400 text-sm border border-gray-200 rounded-lg bg-gray-50">
+                              Chọn thuộc tính trước
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleAddAttribute(form.id)}
+                            disabled={!form.attributeId || !form.value.trim()}
+                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Thêm
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCloseForm(form.id)}
+                            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                          >
+                            Hủy
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Nút thêm thuộc tính */}
+                  <button
+                    type="button"
+                    onClick={handleOpenForm}
+                    disabled={availableAttributes.length === 0}
+                    className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-green-500 hover:text-green-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="text-lg">+</span>
+                    <span>Thêm thuộc tính</span>
+                  </button>
+                </div>
+              )}
 
               <div className="flex justify-between">
                 <button

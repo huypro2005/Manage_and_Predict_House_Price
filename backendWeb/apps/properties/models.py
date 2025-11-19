@@ -6,9 +6,7 @@ from apps.utils import upload_to_app_model
 # Create your models here.
 
 
-
 class Property(models.Model):
-
     INTERIOR = [
         (1, 'sổ đỏ'),
         (1, 'sổ hồng'),
@@ -18,6 +16,10 @@ class Property(models.Model):
         ('thue', 'thue'),
         ('ban', 'ban')
     ]
+    class STATUS(models.TextChoices):
+        PENDING = 'pending', 'Đợi duyệt'
+        APPROVED = 'approved', 'Đã duyệt'
+        REJECTED = 'rejected', 'Bị từ chối'
 
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='properties', blank=True, null=True)
     province = models.ForeignKey(Province, on_delete=models.CASCADE, related_name='properties')
@@ -42,6 +44,7 @@ class Property(models.Model):
     is_active = models.BooleanField(default=True)
     views = models.IntegerField(default=0)
     tab = models.CharField(max_length=10, choices=STATUS_SELL, default='ban')
+    status = models.CharField(max_length=20, choices=STATUS.choices, default=STATUS.PENDING)
 
     class Meta:
         db_table = 'property'
@@ -53,6 +56,10 @@ class Property(models.Model):
 
     thumbnail_tag.allow_tags = True
     thumbnail_tag.short_description = 'Thumbnail'
+
+    def get_status_display(self):
+        return self.STATUS(self.status).label
+
 
     def __str__(self):
         return self.title[:50] + '...' if len(self.title) > 50 else self.title

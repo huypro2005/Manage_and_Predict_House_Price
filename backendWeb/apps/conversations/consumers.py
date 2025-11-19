@@ -6,8 +6,11 @@ from channels.db import database_sync_to_async
 from django.core.exceptions import PermissionDenied
 from apps.chat_message.serializers import MessageSerializer
 from apps.participantConversation.models import ConversationParticipants
+from apps.accounts.models import CustomUser
+from apps.accounts.serializer import CustomUserV1Serializer
 from apps.chat_message.models import Message
 from .models import Conversation
+import html
 
 
 def user_group_name(user_id: int) -> str:
@@ -69,6 +72,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             conv_id = content.get('conversation_id')
             conv_id = int(conv_id)
             msg_content = content.get('content', '')
+            msg_content = html.escape(msg_content)
             reply = content.get('reply', None)
             msg = await self._create_and_dispatch_message(conv_id, msg_content, reply)
             data = await self.serialize_message(msg)
@@ -77,6 +81,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         if action == 'dm':
             to_user_id = int(content.get('to_user_id'))
             msg_content = content.get('content', '')
+            msg_content = html.escape(msg_content)
             reply = content.get('reply', None)
             conv_id = await self._get_or_create_direct_conversation(self.user.id, to_user_id)
             conv_id = int(conv_id)
@@ -88,6 +93,11 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             conv_id = content.get('conversation_id')
             message_id = content.get('message_id')
             await self._mark_read(conv_id, message_id)
+            return
+        
+        if action == 'find_friend_conversation':
+            user_filter = str(content.get('user_filter'))
+            await self._find_friend(user_filter)
             return
             
         
@@ -104,6 +114,9 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
     async def chat_read(self, event):
         await self.send_json({'type': 'read', 'data': event['data']})
+
+    async def friend_found(self, event):
+        await self.send_json({'type': 'friend_found', 'data': event['data']})
     
     # ----------------- helpers (DB) -----------------
     @database_sync_to_async
@@ -186,8 +199,17 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         )
 
     @database_sync_to_async
+    def _get_list_users(self, user_filter):
+        print("Filter:", user_filter)
+        return list(CustomUser.objects.filter(username__icontains=user_filter)
+                    .exclude(id=self.user.id)
+                    .values('id', 'username', 'first_name', 'last_name', 'email'))
+
+    @database_sync_to_async
     def serialize_message(self, msg):
         return MessageSerializer(msg).data
+    
+    
 
     #---------------------------------------------------------------------
 
@@ -229,3 +251,11 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 {'type':'chat.read', 'data':data}
             )
 
+
+    async def _find_friend(self, user_filter):
+        users = await self._get_list_users(user_filter)
+        datas = CustomUserV1Serializer(users, many=True).data
+        await self.channel_layer.group_send(
+            self.user_group,
+            {'type':'friend.found', 'data':datas}
+        )

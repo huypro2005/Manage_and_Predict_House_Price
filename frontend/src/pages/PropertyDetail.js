@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { baseUrl, ConfigUrl } from '../base';
 import PropertyMap from '../components/PropertyMap';
@@ -44,6 +44,9 @@ function PropertyDetail() {
     email: '',
     content: ''
   });
+  const [recommendations, setRecommendations] = useState([]);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  const [recommendationsError, setRecommendationsError] = useState('');
 
   const navigationItems = [
         { id: 'ban', label: 'Nhà đất bán' },
@@ -81,6 +84,34 @@ function PropertyDetail() {
       fetchPropertyDetail();
     }
   }, [id, navigate]);
+
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      if (!id) return;
+      setRecommendationsLoading(true);
+      setRecommendationsError('');
+      try {
+        const response = await fetch(`${baseUrl}properties/${id}/recommendations/`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (Array.isArray(data?.data)) {
+          setRecommendations(data.data);
+        } else {
+          setRecommendations([]);
+        }
+      } catch (error) {
+        console.error('Error fetching recommendations:', error);
+        setRecommendations([]);
+        setRecommendationsError('Không thể tải danh sách đề xuất. Vui lòng thử lại sau.');
+      } finally {
+        setRecommendationsLoading(false);
+      }
+    };
+
+    fetchRecommendations();
+  }, [id]);
 
   // Check if property is in favorites
   useEffect(() => {
@@ -273,6 +304,42 @@ function PropertyDetail() {
     }));
   };
 
+  const attributeList = useMemo(() => {
+    if (!property || !Array.isArray(property.attributes)) return [];
+    return property.attributes.filter(
+      (attr) =>
+        attr &&
+        typeof attr.attribute_name === 'string' &&
+        attr.attribute_name.trim().length > 0 &&
+        attr.value !== null &&
+        attr.value !== undefined &&
+        `${attr.value}`.trim().length > 0
+    );
+  }, [property]);
+
+  const findAttributeByName = (name) => {
+    if (!name) return null;
+    return attributeList.find(
+      (attr) =>
+        attr.attribute_name &&
+        attr.attribute_name.trim().toLowerCase() === name.trim().toLowerCase()
+    );
+  };
+
+  const formatAttributeValue = (attr, fallbackValue, fallbackUnit = '') => {
+    if (attr) {
+      return `${attr.value}${attr.unit ? ` ${attr.unit}` : ''}`;
+    }
+    if (fallbackValue === null || fallbackValue === undefined || fallbackValue === '' || Number.isNaN(fallbackValue)) {
+      return null;
+    }
+    return `${fallbackValue}${fallbackUnit ? ` ${fallbackUnit}` : ''}`.trim();
+  };
+
+  const bedroomsAttribute = findAttributeByName('Số phòng ngủ');
+  const floorsAttribute = findAttributeByName('Số tầng');
+  const frontageAttribute = findAttributeByName('Mặt tiền') || findAttributeByName('Đường vào');
+
   function formatLegalStatus(status) {
     switch (status) {
       case 1:
@@ -283,6 +350,52 @@ function PropertyDetail() {
         return 'Khác';
     }
   }
+
+  // Tạo attributes_map dạng key-value để hiển thị
+  const attributes_map = useMemo(() => {
+    if (!property) return {};
+    
+    const map = {};
+    
+
+
+    // loại bất động sản
+    if (property.property_type_name) {
+      map['Loại bất động sản'] = property.property_type_name;
+    }
+    // Giá
+    if (property.price) {
+      map['Giá'] = formatPrice(property.price);
+    }
+    
+    // Diện tích
+    if (property.area_m2) {
+      map['Diện tích'] = formatArea(property.area_m2);
+    }
+    
+    // Pháp lý
+    if (property.legal_status) {
+      map['Pháp lý'] = formatLegalStatus(property.legal_status);
+    }
+    
+    // Giá/m²
+    if (property.price_per_m2) {
+      map['Giá/m²'] = `${parseFloat(property.price_per_m2).toLocaleString()} triệu`;
+    }
+
+    
+    
+    // Thêm tất cả các attributes từ API (tránh trùng lặp với các trường đã có)
+    attributeList.forEach((attr) => {
+      const attrName = attr.attribute_name.trim();
+      // Chỉ thêm nếu chưa có trong map
+      if (!map[attrName]) {
+        map[attrName] = `${attr.value}${attr.unit ? ` ${attr.unit}` : ''}`;
+      }
+    });
+    
+    return map;
+  }, [property, attributeList, bedroomsAttribute, floorsAttribute, frontageAttribute]);
 
   // Gửi tin nhắn liên hệ qua HTTP API
   const handleSendContact = async () => {
@@ -541,18 +654,18 @@ function PropertyDetail() {
                      </div>
                    </div>
                  )}
-                 {property.bedrooms && (
+                 {formatAttributeValue(bedroomsAttribute, property.bedrooms) && (
                    <div className="text-center p-4 bg-gray-50 rounded-lg">
                      <div className="text-2xl font-bold text-gray-900">
-                       {property.bedrooms}
+                       {formatAttributeValue(bedroomsAttribute, property.bedrooms)}
                      </div>
                      <div className="text-sm text-gray-500">Phòng ngủ</div>
                    </div>
                  )}
-                 {property.floors && (
+                 {formatAttributeValue(floorsAttribute, property.floors) && (
                    <div className="text-center p-4 bg-gray-50 rounded-lg">
                      <div className="text-2xl font-bold text-gray-900">
-                       {property.floors}
+                       {formatAttributeValue(floorsAttribute, property.floors)}
                      </div>
                      <div className="text-sm text-gray-500">Tầng</div>
                    </div>
@@ -568,61 +681,45 @@ function PropertyDetail() {
               </div>
 
         {/* Additional Details */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {Object.keys(attributes_map).length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Thông tin chi tiết</h3>
-                <div className="space-y-2 text-sm">
-                {property.price && (
-                    <div className="flex justify-between">
-                    <span className="text-gray-600">Giá:</span>
-                    <span className="font-medium">{formatPrice(property.price)}</span>
-                    </div>
-                )}
-                {property.area_m2 && (
-                    <div className="flex justify-between">
-                    <span className="text-gray-600">Diện tích:</span>
-                    <span className="font-medium">{formatArea(property.area_m2)}</span>
-                    </div>
-                )}
-                {property.bedrooms && (
-                    <div className="flex justify-between">
-                    <span className="text-gray-600">Phòng ngủ:</span>
-                    <span className="font-medium">{property.bedrooms}</span>
-                    </div>
-                )}
-                {property.price_per_m2 && (
-                    <div className="flex justify-between">
-                    <span className="text-gray-600">Giá/m²:</span>
-                    <span className="font-medium">{parseFloat(property.price_per_m2).toLocaleString()} triệu</span>
-                    </div>
-                )}
-                </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Thông tin chi tiết</h3>
+              <div className="space-y-2 text-sm">
+                {Object.entries(attributes_map).map(([key, value], index) => {
+                  // Chia đều 2 cột: cột trái (index chẵn), cột phải (index lẻ)
+                  if (index % 2 === 0) {
+                    return (
+                      <div key={key} className="flex justify-between">
+                        <span className="text-gray-600">{key}:</span>
+                        <span className="font-medium">{value}</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
             </div>
 
             <div className="flex flex-col">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">&nbsp;</h3>
-                <div className="space-y-2 text-sm">
-                {property.legal_status && (
-                    <div className="flex justify-between">
-                    <span className="text-gray-600">Pháp lý:</span>
-                    <span className="font-medium">{formatLegalStatus(property.legal_status)}</span>
-                    </div>
-                )}
-                { (parseInt(property.floors) > 0) && (                   
-                    <div className="flex justify-between">
-                    <span className="text-gray-600">Số tầng:</span>
-                    <span className="font-medium">{property.floors}</span>
-                    </div>
-                )}
-                { (parseInt(property.frontage) > 0) && (
-                    <div className="flex justify-between">
-                    <span className="text-gray-600">Mặt tiền:</span>
-                    <span className="font-medium">{property.frontage}m</span>
-                    </div>
-                )}
-                </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">&nbsp;</h3>
+              <div className="space-y-2 text-sm">
+                {Object.entries(attributes_map).map(([key, value], index) => {
+                  // Chia đều 2 cột: cột trái (index chẵn), cột phải (index lẻ)
+                  if (index % 2 === 1) {
+                    return (
+                      <div key={key} className="flex justify-between">
+                        <span className="text-gray-600">{key}:</span>
+                        <span className="font-medium">{value}</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
             </div>
-            </div>
+          </div>
+        )}
               </div>
 
               {/* Map section */}
@@ -677,9 +774,92 @@ function PropertyDetail() {
           </div>
         </div>
 
+        <div className="mt-12">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-2xl font-bold text-gray-900">Bất động sản đề xuất</h3>
+            {recommendations.length > 0 && (
+              <span className="text-sm text-gray-500">Dựa trên tin đang xem</span>
+            )}
+          </div>
+
+          {recommendationsLoading ? (
+            <div className="flex flex-col items-center justify-center py-10 bg-white rounded-xl shadow">
+              <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+              <p className="text-gray-500">Đang tải đề xuất...</p>
+            </div>
+          ) : recommendationsError ? (
+            <div className="bg-red-50 text-red-700 p-4 rounded-xl border border-red-100">
+              {recommendationsError}
+            </div>
+          ) : recommendations.length === 0 ? (
+            <div className="bg-white rounded-xl shadow p-6 text-center text-gray-500">
+              Hiện chưa có đề xuất phù hợp cho bất động sản này.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recommendations.map((item, index) => (
+                <div
+                  key={`${item.id}-${index}`}
+                  className="bg-white rounded-xl shadow hover:shadow-lg transition-shadow flex flex-col"
+                >
+                  <button
+                    onClick={() => navigate(`/property/${item.id}`)}
+                    className="relative h-48 w-full overflow-hidden rounded-t-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                  >
+                    {item.thumbnail ? (
+                      <img
+                        src={ConfigUrl(item.thumbnail)}
+                        alt={item.title}
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">
+                        Không có ảnh
+                      </div>
+                    )}
+                    {item.time && (
+                      <span className="absolute top-3 left-3 bg-black/70 text-white text-xs px-3 py-1 rounded-full">
+                        {item.time}
+                      </span>
+                    )}
+                  </button>
+                  <div className="p-5 flex flex-col flex-1 space-y-3">
+                    <div className="space-y-1">
+                      <h4
+                        className="text-lg font-semibold text-gray-900 line-clamp-2 cursor-pointer hover:text-red-600 transition-colors"
+                        onClick={() => navigate(`/property/${item.id}`)}
+                      >
+                        {item.title}
+                      </h4>
+                      <div className="text-red-600 font-bold text-xl">
+                        {item.price || 'Thỏa thuận'}
+                      </div>
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600 space-x-2">
+                      <MapPin className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{item.address}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm text-gray-500">
+                      <span>{item.area_m2 ? `${parseFloat(item.area_m2).toFixed(0)} m²` : '—'}</span>
+                      <span className="flex items-center space-x-1">
+                        <Eye className="h-4 w-4" />
+                        <span>{item.views ?? 0}</span>
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => navigate(`/property/${item.id}`)}
+                      className="mt-auto w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium py-2 rounded-lg transition-colors"
+                    >
+                      Xem chi tiết
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         
-        
-       </div>
+      </div>
       
 
       {/* Footer (match App.js) */}
