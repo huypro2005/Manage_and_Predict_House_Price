@@ -80,10 +80,17 @@ REACT_APP_FIREBASE_STORAGE_BUCKET={FIREBASE STORAGE BUCKET}
 REACT_APP_FIREBASE_MESSAGING_SENDING_ID={FIREBASE MESSAGING SENDING ID}
 REACT_APP_FIREBASE_APP_ID={FIREBASE APP ID}
 REACT_APP_FIREBASE_MEASUREMENT_ID={FIREBASE MEASUREMENT ID}
+REACT_APP_URL_HTTP=http://localhost:8000
+REACT_APP_URL_WEBSOCKET=ws://localhost:8000
 <!-- thông tin có khi tạo project trên firebase -->
 ```
 
-3. Lưu file và khởi động lại server phát triển:
+3. Cài đặt thư viện 
+```sh
+npm install
+```
+
+4. Lưu file và khởi động lại server phát triển:
 ```bash
 npm start
 ```

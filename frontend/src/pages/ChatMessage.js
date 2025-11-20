@@ -6,9 +6,10 @@ import {
 import { useChat } from '../contexts/ChatContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { originUrl } from '../base';
 
 // TODO: Replace with your actual API base URL
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = originUrl;
 
 /**
  * ChatMessage Component
