@@ -1,6 +1,7 @@
 import React from 'react';
 import NotificationDropdown from './NotificationDropdown';
 import FavoriteHeart from './FavoriteHeart';
+import MessageIcon from './MessageIcon';
 import { useFavoriteCount } from '../hooks/useFavoriteCount';
 
 const HeaderActions = ({
@@ -21,6 +22,7 @@ const HeaderActions = ({
             onClick={onFavoriteClick}
             isFavoritePage={isFavoritePage}
           />
+          <MessageIcon />
           <NotificationDropdown />
         </div>
       )}
@@ -33,6 +35,7 @@ const HeaderActions = ({
             onClick={onFavoriteClick}
             isFavoritePage={isFavoritePage}
           />
+          <MessageIcon />
           <NotificationDropdown />
         </div>
       )}

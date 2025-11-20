@@ -13,7 +13,6 @@ import {
   Home
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useChat } from '../../contexts/ChatContext';
 import VerificationBadge from '../VerificationBadge';
 
 const UserDropdown = React.memo(() => {
@@ -23,9 +22,6 @@ const UserDropdown = React.memo(() => {
   
   // Get total unread count from ChatContext
   // ChatContext should always be available since ChatProvider wraps the app
-  const { getTotalUnreadCount } = useChat();
-  const totalUnreadCount = getTotalUnreadCount();
-
   console.log('UserDropdown rendered: ', user);
 
   // Memoized user initials
@@ -140,13 +136,8 @@ const UserDropdown = React.memo(() => {
           <span>{userInitials}</span>
         )}
       </div>
-      {totalUnreadCount > 0 && (
-        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-          {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
-        </span>
-      )}
     </div>
-  ), [userAvatar, userInitials, totalUnreadCount]);
+  ), [userAvatar, userInitials]);
 
   // Memoized large avatar component
   const LargeAvatarComponent = useMemo(() => (
@@ -158,13 +149,8 @@ const UserDropdown = React.memo(() => {
           <span>{userInitials}</span>
         )}
       </div>
-      {totalUnreadCount > 0 && (
-        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-          {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
-        </span>
-      )}
     </div>
-  ), [userAvatar, userInitials, totalUnreadCount]);
+  ), [userAvatar, userInitials]);
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -206,9 +192,7 @@ const UserDropdown = React.memo(() => {
 
             {/* Menu Items */}
             <div className="py-1">
-              {menuItems.map((item, index) => {
-                const isMessagesItem = item.href === '/messages';
-                return (
+              {menuItems.map((item, index) => (
                   <a
                     key={index}
                     href={item.href}
@@ -219,14 +203,8 @@ const UserDropdown = React.memo(() => {
                       <item.icon className="h-4 w-4" />
                       <span>{item.label}</span>
                     </div>
-                    {isMessagesItem && totalUnreadCount > 0 && (
-                      <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
-                        {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
-                      </span>
-                    )}
                   </a>
-                );
-              })}
+              ))}
             </div>
           </motion.div>
         )}

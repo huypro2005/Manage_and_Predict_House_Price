@@ -30,4 +30,4 @@ class Range(models.Model):
     length = models.IntegerField()
 
     class Meta:
-        db_table = 'Range'
+        db_table = 'range'
