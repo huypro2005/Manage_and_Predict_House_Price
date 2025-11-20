@@ -113,6 +113,17 @@ const Notifications = () => {
     }
   };
 
+  const handleNotificationClick = (notification) => {
+    if (notification.type === 'property_view' && notification.url) {
+      // Extract id from URL: "/api/v1/properties/18/" -> 18
+      const match = notification.url.match(/\/properties\/(\d+)\//);
+      if (match && match[1]) {
+        navigate(`/property/${match[1]}`);
+        markAsRead(notification.id);
+      }
+    }
+  };
+
   const renderNotificationContent = (notification) => {
     switch (notification.type) {
       case 'contact_request':
@@ -307,9 +318,10 @@ const Notifications = () => {
             {filteredNotifications.map((notification) => (
               <div
                 key={notification.id}
+                onClick={() => handleNotificationClick(notification)}
                 className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 transition-colors ${
                   (notification.isRead ?? notification.is_read ?? false) ? '' : 'border-l-4 border-l-blue-500 bg-blue-50'
-                }`}
+                } ${notification.type === 'property_view' ? 'cursor-pointer hover:bg-gray-50' : ''}`}
               >
                 <div className="flex items-start space-x-4">
                   {renderNotificationIcon(notification.type)}

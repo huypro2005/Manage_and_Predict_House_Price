@@ -24,6 +24,17 @@ const NotificationToast = ({ notification, onClose, onMarkAsRead }) => {
       onMarkAsRead(notification.id);
     }
     
+    // Handle property_view type with url
+    if (notification.type === 'property_view' && notification.url) {
+      const match = notification.url.match(/\/properties\/(\d+)\//);
+      if (match && match[1]) {
+        navigate(`/property/${match[1]}`);
+        setIsVisible(false);
+        setTimeout(onClose, 300);
+        return;
+      }
+    }
+    
     if (notification.property_id) {
       navigate(`/property/${notification.property_id}`);
     }

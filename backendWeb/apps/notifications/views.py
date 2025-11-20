@@ -134,6 +134,7 @@ def create_notification(user, type, message, url=None, ranges=None, image_repres
                     length=range['length']
                 )
         serializer = NotificationV1Serializer(notification)
+        print('Creating notification in DB:', serializer.data)
         add_to_cache(user.id, notification.id, serializer.data)
         return notification
     except Exception as e:

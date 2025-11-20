@@ -55,10 +55,29 @@ function PropertyDetail() {
     ];
 
   useEffect(() => {
+    // Chỉ fetch nếu id là số (tránh conflict với các route khác)
+    if (!id || isNaN(Number(id))) {
+      navigate('/property-list');
+      return;
+    }
+
     const fetchPropertyDetail = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`${baseUrl}properties/${id}/`);
+        const token = localStorage.getItem('token');
+        const headers = {
+          'Content-Type': 'application/json',
+        };
+        
+        // Thêm JWT token nếu có (để owner có thể xem property rejected)
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const response = await fetch(`${baseUrl}properties/${id}/`, {
+          headers
+        });
+        
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -80,9 +99,7 @@ function PropertyDetail() {
       }
     };
 
-    if (id) {
-      fetchPropertyDetail();
-    }
+    fetchPropertyDetail();
   }, [id, navigate]);
 
   useEffect(() => {
@@ -351,6 +368,19 @@ function PropertyDetail() {
     }
   }
 
+  function getStatusInfo(status) {
+    switch (status) {
+      case 'approved':
+        return { text: 'Đã duyệt', color: 'bg-green-100 text-green-800 border-green-200' };
+      case 'rejected':
+        return { text: 'Đã từ chối', color: 'bg-red-100 text-red-800 border-red-200' };
+      case 'pending':
+        return { text: 'Đang chờ duyệt', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' };
+      default:
+        return { text: 'Không xác định', color: 'bg-gray-100 text-gray-800 border-gray-200' };
+    }
+  }
+
   // Tạo attributes_map dạng key-value để hiển thị
   const attributes_map = useMemo(() => {
     if (!property) return {};
@@ -609,9 +639,16 @@ function PropertyDetail() {
 
             {/* Property Information */}
             <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                {property.title || 'Không có tiêu đề'}
-              </h2>
+              <div className="flex items-start justify-between mb-4">
+                <h2 className="text-2xl font-bold text-gray-900 flex-1">
+                  {property.title || 'Không có tiêu đề'}
+                </h2>
+                {property.status && (
+                  <span className={`ml-4 px-3 py-1 rounded-full text-xs font-semibold border ${getStatusInfo(property.status).color}`}>
+                    {getStatusInfo(property.status).text}
+                  </span>
+                )}
+              </div>
               
                 <div className="flex items-center justify-between text-sm text-gray-500 mb-6">
                  <div className="flex items-center space-x-4">
@@ -803,7 +840,7 @@ function PropertyDetail() {
                   className="bg-white rounded-xl shadow hover:shadow-lg transition-shadow flex flex-col"
                 >
                   <button
-                    onClick={() => navigate(`/property/${item.id}`)}
+                    onClick={() => navigate(`/${item.id}`)}
                     className="relative h-48 w-full overflow-hidden rounded-t-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                   >
                     {item.thumbnail ? (
@@ -827,7 +864,7 @@ function PropertyDetail() {
                     <div className="space-y-1">
                       <h4
                         className="text-lg font-semibold text-gray-900 line-clamp-2 cursor-pointer hover:text-red-600 transition-colors"
-                        onClick={() => navigate(`/property/${item.id}`)}
+                        onClick={() => navigate(`/${item.id}`)}
                       >
                         {item.title}
                       </h4>
@@ -847,7 +884,7 @@ function PropertyDetail() {
                       </span>
                     </div>
                     <button
-                      onClick={() => navigate(`/property/${item.id}`)}
+                      onClick={() => navigate(`/${item.id}`)}
                       className="mt-auto w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium py-2 rounded-lg transition-colors"
                     >
                       Xem chi tiết

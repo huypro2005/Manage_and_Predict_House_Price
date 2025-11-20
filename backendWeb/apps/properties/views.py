@@ -96,6 +96,7 @@ class PropertyListView(APIView):
             print(params['is_active'])
         else:
             filters['is_active'] = 1
+        filters['status'] = 'approved'
 
         properties = Property.objects.filter(**filters).order_by('-created_at') # trả về danh sách bất động sản sắp xếp theo thời gian tạo gần nhất
         paginator = self.pagination_class()
@@ -140,22 +141,34 @@ class PropertyListView(APIView):
 
 class PropertyDetailView(APIView): 
     permission_classes = [IsAuthenticatedOrReadOnly]
+    
     # retrieve a property with all its images
     def get_object(self, pk):
         try:
             property = Property.objects.get(pk=pk, is_active=True)
-            property.views += 1
-            property.save()
+            if property.status != 'approved':
+                if not self.user:
+                    raise Http404('Property not found')
+                if self.user.id == property.user.id or (self.user.is_staff and self.user.is_active):
+                    return property
+                else:
+                    raise Http404('Property not found')
+            else:
+                property.views += 1
+                property.save()
             return property
         except Property.DoesNotExist:
             raise Http404('Property not found')
 
     def get(self, request, pk):
+        if request.user.is_authenticated:
+            self.user = request.user
         prop = self.get_object(pk)
         serializer = PropertyDetailV1Serializer(prop)
         return Response({'message': 'Property retrieved successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
 
     def put(self, request, pk):
+        self.user = request.user
         prop = self.get_object(pk)
         if request.user and request.user.is_staff and request.user.is_active:
             pass
@@ -169,6 +182,7 @@ class PropertyDetailView(APIView):
 
     @transaction.atomic
     def delete(self, request, pk):
+        user = request.user
         property = self.get_object(pk)
         if request.user and request.user.is_staff and request.user.is_active:
             pass

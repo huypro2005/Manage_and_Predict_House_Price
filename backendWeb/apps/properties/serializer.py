@@ -16,7 +16,7 @@ class PropertyV1Serializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField()
     class Meta:
         model = Property
-        fields = ['id', 'title', 'description', 
+        fields = ['id', 'title', 'description', 'status',
                   'price', 'area_m2', 'address', 'thumbnail', 'views', 'time']
 
     # time là thời gian đăng so với hiện tại
@@ -70,8 +70,8 @@ class PropertyDetailV1Serializer(serializers.ModelSerializer):
                   'user_fullname', 'user_email',
                   'views', 'created_at',
                   'updated_at', 'property_type_name', 
-                  'attributes', 'images']
-        read_only_fields = ['id', 'user', 'created_at', 'updated_at', 'views', 'images', 'attributes']
+                  'attributes', 'images', 'status']
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at', 'views', 'images', 'attributes', 'status']
 
     def get_attributes(self, obj):
         attribute_values = obj.attribute_values.filter(is_active=True)

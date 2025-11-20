@@ -51,6 +51,8 @@ class PropertyRecommendationView(APIView):
         # - Giá hợp lý: 2 điểm
         # - Diện tích hợp lý: 2 điểm
         # - Cùng số phòng ngủ: 1 điểm
+        # Các loại property không được trùng nhau
+        related_queryset = related_queryset.exclude(id=property.id)
         related = related_queryset.annotate(
             score_same_district=Case(
                 When(district_id=property.district_id, then=Value(4)),
@@ -81,11 +83,11 @@ class PropertyRecommendationView(APIView):
             total_score=F('score_same_district') + F('score_same_province') +
                         F('score_same_property_type') + F('score_price_in_range') +
                         F('score_same_bedrooms'),
-        ).order_by(
+        ).distinct().order_by(
             '-total_score',
             '-views',
             '-created_at'
-        )[:9]
+        )[:10]  # Lấy top 10 kết quả
 
         serializer = PropertyV1Serializer(related, many=True)
         return Response({

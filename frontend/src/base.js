@@ -2,6 +2,7 @@ export const baseUrl = 'http://localhost:8000/api/v1/';
 export const baseUrlImage = 'http://localhost:8000/';
 export const baseUrlWebsocket = 'ws://localhost:8000/ws/';
 export const baseUrlWeb = 'http://localhost:8000/api/v1';
+export const originUrl = 'http://localhost:8000';
 function ConfigUrl(url){
     // Guard against undefined/null or non-string values
     if (!url || typeof url !== 'string') {

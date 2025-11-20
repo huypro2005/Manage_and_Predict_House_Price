@@ -165,7 +165,12 @@ const NotificationDropdown = ({
                         await markAsRead(notification.id);
                       }   
                       // Navigate based on notification type
-                      if (notification.type === 'contact_request' && notification.url) {
+                      if (notification.type === 'property_view' && notification.url) {
+                        const match = notification.url.match(/\/properties\/(\d+)\//);
+                        if (match && match[1]) {
+                          navigate(`/property/${match[1]}`);
+                        }
+                      } else if (notification.type === 'contact_request' && notification.url) {
                         navigate(`${baseUrlWeb}${notification.url}`);
                       } else if (notification.url) {
                         navigate(`${baseUrlWeb}${notification.url}`);  

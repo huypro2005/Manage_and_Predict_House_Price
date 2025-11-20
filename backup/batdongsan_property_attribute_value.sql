@@ -35,7 +35,7 @@ CREATE TABLE `property_attribute_value` (
   KEY `property_attribute_value_attribute_id_d8c53ddf_fk_attribute_id` (`attribute_id`),
   CONSTRAINT `property_attribute_value_attribute_id_d8c53ddf_fk_attribute_id` FOREIGN KEY (`attribute_id`) REFERENCES `attribute` (`id`),
   CONSTRAINT `property_attribute_value_property_id_e8eca465_fk_property_id` FOREIGN KEY (`property_id`) REFERENCES `property` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -44,6 +44,7 @@ CREATE TABLE `property_attribute_value` (
 
 LOCK TABLES `property_attribute_value` WRITE;
 /*!40000 ALTER TABLE `property_attribute_value` DISABLE KEYS */;
+INSERT INTO `property_attribute_value` VALUES (1,'1',1,'2025-11-18 16:06:31.597211','2025-11-18 16:06:31.597229',1,20),(2,'15',1,'2025-11-18 16:06:31.600166','2025-11-18 16:06:31.600187',5,20),(3,'Đông nam',1,'2025-11-18 16:06:31.601532','2025-11-18 16:06:31.601549',6,20),(4,'1',1,'2025-11-18 16:06:54.214621','2025-11-18 16:06:54.214670',1,19),(5,'2',1,'2025-11-18 16:07:09.760045','2025-11-18 16:07:09.760072',1,18),(12,'2',1,'2025-11-18 18:33:32.540440','2025-11-18 18:33:32.540464',1,31),(13,'1',1,'2025-11-18 18:33:32.545399','2025-11-18 18:33:32.545421',4,31),(14,'Tây - Bắc',1,'2025-11-18 18:33:32.546183','2025-11-18 18:33:32.546200',6,31),(15,'Đông - Nam',1,'2025-11-18 18:33:32.547189','2025-11-18 18:33:32.547203',7,31),(16,'Đầy đủ',1,'2025-11-18 18:33:32.547873','2025-11-18 18:33:32.547894',8,31),(17,'5',1,'2025-11-18 18:39:06.824133','2025-11-18 18:39:06.824160',1,32),(18,'11',1,'2025-11-18 18:39:06.825533','2025-11-18 18:39:06.825551',3,32),(19,'Đầy đủ',1,'2025-11-18 18:39:06.826341','2025-11-18 18:39:06.826373',8,32);
 /*!40000 ALTER TABLE `property_attribute_value` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -56,4 +57,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-18  0:28:51
+-- Dump completed on 2025-11-20 14:45:45

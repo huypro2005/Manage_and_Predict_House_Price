@@ -38,7 +38,7 @@ CREATE TABLE `conversationparticipants` (
   CONSTRAINT `conversationparticip_conversation_id_9c87cc0d_fk_conversat` FOREIGN KEY (`conversation_id`) REFERENCES `conversation` (`id`),
   CONSTRAINT `conversationparticip_last_read_message_id_1098ae9e_fk_message_i` FOREIGN KEY (`last_read_message_id`) REFERENCES `message` (`id`),
   CONSTRAINT `conversationparticipants_user_id_1d1ff264_fk_customuser_id` FOREIGN KEY (`user_id`) REFERENCES `customuser` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -47,7 +47,7 @@ CREATE TABLE `conversationparticipants` (
 
 LOCK TABLES `conversationparticipants` WRITE;
 /*!40000 ALTER TABLE `conversationparticipants` DISABLE KEYS */;
-INSERT INTO `conversationparticipants` VALUES (1,NULL,'2025-11-16 07:41:43.980602',NULL,1,107,18),(2,NULL,'2025-11-16 07:41:42.269213',NULL,1,107,20),(3,NULL,'2025-11-09 15:50:02.458767',NULL,2,6,15),(4,NULL,'2025-11-16 07:12:18.773787',NULL,2,102,18);
+INSERT INTO `conversationparticipants` VALUES (1,NULL,'2025-11-16 07:41:43.980602',NULL,1,107,18),(2,NULL,'2025-11-16 07:41:42.269213',NULL,1,107,20),(3,NULL,'2025-11-19 17:44:23.952025',NULL,2,113,15),(4,NULL,'2025-11-20 05:33:39.411742',NULL,2,114,18),(5,NULL,'2025-11-19 06:19:29.261923',NULL,3,111,15),(6,NULL,NULL,NULL,3,NULL,16);
 /*!40000 ALTER TABLE `conversationparticipants` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -60,4 +60,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-18  0:28:52
+-- Dump completed on 2025-11-20 14:45:45

@@ -30,7 +30,7 @@ CREATE TABLE `conversation` (
   `type` varchar(30) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_1_to_1_index` (`unique_1_to_1_index`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -39,7 +39,7 @@ CREATE TABLE `conversation` (
 
 LOCK TABLES `conversation` WRITE;
 /*!40000 ALTER TABLE `conversation` DISABLE KEYS */;
-INSERT INTO `conversation` VALUES (1,'2025-11-09 10:30:43.562711','2025-11-16 07:41:42.273734','18:20','private'),(2,'2025-11-09 14:41:24.008453','2025-11-16 07:12:18.778770','15:18','private');
+INSERT INTO `conversation` VALUES (1,'2025-11-09 10:30:43.562711','2025-11-16 07:41:42.273734','18:20','private'),(2,'2025-11-09 14:41:24.008453','2025-11-20 05:33:39.415732','15:18','private'),(3,'2025-11-19 06:19:16.870538','2025-11-19 06:19:29.269018','15:16','private');
 /*!40000 ALTER TABLE `conversation` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -52,4 +52,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-18  0:28:54
+-- Dump completed on 2025-11-20 14:45:50
