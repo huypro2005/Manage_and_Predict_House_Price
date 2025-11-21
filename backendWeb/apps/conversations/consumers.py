@@ -115,6 +115,9 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
     async def chat_read(self, event):
         await self.send_json({'type': 'read', 'data': event['data']})
 
+    async def chat_read_by_me(self, event):
+        await self.send_json({'type': 'read_by_me', 'data': event['data']})
+
     async def friend_found(self, event):
         await self.send_json({'type': 'friend_found', 'data': event['data']})
     
@@ -250,6 +253,10 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                 user_group_name(id),
                 {'type':'chat.read', 'data':data}
             )
+        await self.channel_layer.group_send(
+            self.user_group,
+            {'type':'chat.read.by.me', 'data':data}
+        )
 
 
     async def _find_friend(self, user_filter):

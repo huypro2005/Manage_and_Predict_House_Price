@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
-
+import { baseUrlWebsocket } from '../base';
 // TODO: Import from your config file
 // import { baseUrlWebsocket } from '../base';
-const baseUrlWebsocket = 'ws://localhost:8000/ws/'; // Placeholder
 
 const ChatContext = createContext(null);
 
@@ -28,6 +27,7 @@ class ChatSocket {
     this.onMessage = null;
     this.onOpen = null;
     this.onFriendFound = null;
+    this.onReadByMe = null;
     
     // Attach token to URL
     const token = localStorage.getItem('access') || localStorage.getItem('token');
@@ -36,11 +36,12 @@ class ChatSocket {
     }
   }
 
-  connect(onMessage, onOpen, onFriendFound) {
+  connect(onMessage, onOpen, onFriendFound, onReadByMe) {
     // Store callbacks for reconnection
     this.onMessage = onMessage;
     this.onOpen = onOpen;
     this.onFriendFound = onFriendFound;
+    this.onReadByMe = onReadByMe;
     
     try {
       this.socket = new WebSocket(this.url);
@@ -73,6 +74,11 @@ class ChatSocket {
           if (data.type === 'friend_found' && this.onFriendFound) {
             this.onFriendFound(data.data || []);
           }
+          
+          // Handle read_by_me event
+          if (data.type === 'read_by_me' && this.onReadByMe) {
+            this.onReadByMe(data.data);
+          }
         } catch (error) {
           console.error('❌ Error parsing WebSocket message:', error);
         }
@@ -85,7 +91,7 @@ class ChatSocket {
         // Auto reconnect after 3 seconds
         this.reconnectTimer = setTimeout(() => {
           console.log('🔄 Reconnecting...');
-          this.connect(this.onMessage, this.onOpen, this.onFriendFound);
+          this.connect(this.onMessage, this.onOpen, this.onFriendFound, this.onReadByMe);
         }, 3000);
       };
 
@@ -273,7 +279,25 @@ export const ChatProvider = ({ children }) => {
       });
     };
 
-    socket.connect(handleIncomingMessage, handleConnected, handleFriendFound);
+    const handleReadByMe = (readData) => {
+      const conversationId = readData.conversation_id;
+      if (!conversationId) return;
+
+      console.log('✅ Read by me received:', readData);
+      
+      // Set unread count to 0 for this conversation
+      setUnreadCounts(prev => ({
+        ...prev,
+        [conversationId]: 0
+      }));
+
+      // Remove unread messages for this conversation
+      setUnreadMessages(prev => 
+        prev.filter(msg => msg.conversationId !== conversationId)
+      );
+    };
+
+    socket.connect(handleIncomingMessage, handleConnected, handleFriendFound, handleReadByMe);
     socketRef.current = socket;
 
     // Cleanup on unmount
@@ -372,14 +396,9 @@ export const ChatProvider = ({ children }) => {
 
     console.log('📤 Sending read_up_to:', readMessage);
     
-    const sent = socketRef.current.send(readMessage);
-    
-    if (sent) {
-      markConversationAsRead(conversationId);
-    } else {
-      console.log('⏳ Read message queued');
-    }
-  }, [markConversationAsRead]);
+    // Only send socket, wait for read_by_me response to update unread count
+    socketRef.current.send(readMessage);
+  }, []);
 
   /**
    * Sync unread counts from server API
