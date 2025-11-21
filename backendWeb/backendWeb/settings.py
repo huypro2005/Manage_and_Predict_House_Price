@@ -33,7 +33,13 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = [
+    'localhost', 
+    '127.0.0.1',
+    'se104-airport.space',
+    'www.se104-airport.space',
+    '.se104-airport.space',
+    ]
 
 
 # Application definition
@@ -213,8 +219,15 @@ CORS_ORIGIN_WHITELIST = [
     'http://localhost:5500',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:5500',
+    "https://se104-airport.space",
+    "https://www.se104-airport.space"
 ]
 
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://se104-airport.space",
+    "https://www.se104-airport.space"
+]
 
 
 # JWT Configs
