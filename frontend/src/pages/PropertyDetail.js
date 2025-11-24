@@ -4,7 +4,9 @@ import { baseUrl, ConfigUrl } from '../base';
 import PropertyMap from '../components/PropertyMap';
 import AuthWrapper from '../components/auth/AuthWrapper';
 import { useAuth } from '../contexts/AuthContext';
+import { useChat } from '../contexts/ChatContext';
 import HeaderActions from '../components/HeaderActions';
+
 
 import { 
   MapPin, 
@@ -26,7 +28,8 @@ import {
 function PropertyDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { isAuthenticated, handleApiResponse } = useAuth();
+  const { isAuthenticated, handleApiResponse, user } = useAuth();
+  const { sendMessage } = useChat();
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -427,10 +430,8 @@ function PropertyDetail() {
     return map;
   }, [property, attributeList, bedroomsAttribute, floorsAttribute, frontageAttribute]);
 
-  // Gửi tin nhắn liên hệ qua HTTP API
+  // Gửi tin nhắn liên hệ qua Chat Socket
   const handleSendContact = async () => {
-    console.log('🚀 handleSendContact được gọi');
-    
     // Kiểm tra các trường bắt buộc
     if (!contactInfo.name.trim()) {
       alert('Vui lòng nhập tên của bạn!');
@@ -445,45 +446,70 @@ function PropertyDetail() {
       return;
     }
 
-    console.log('✅ Validation passed, bắt đầu gửi HTTP request');
+    // Kiểm tra property và user_id
+    if (!property) {
+      alert('Không tìm thấy thông tin tài sản!');
+      return;
+    }
+
+    // Lấy user_id của chủ bài viết (thử nhiều khả năng)
+    const ownerUserId = property.user;
+    if (!ownerUserId) {
+      console.error('Property object:', property);
+      alert('Không tìm thấy thông tin chủ sở hữu!');
+      return;
+    }
+
+    // Kiểm tra nếu người gửi là chủ bài viết thì không được gửi
+    if (user?.id === ownerUserId) {
+      alert('Bạn không thể gửi tin nhắn cho chính mình!');
+      return;
+    }
+
     setSendingMessage(true);
     
     try {
-      // Tạo message tổng hợp đầy đủ thông tin
-      const fullMessage = `
-        Thông tin liên hệ:
+      // Tạo message theo format yêu cầu
+      const currentUrl = window.location.href;
+      const propertyTitle = property.title || 'N/A';
+      // Format số điện thoại: giữ 6 số đầu, ẩn 4 số cuối
+      const phoneDisplay = contactInfo.phone.length > 4 
+        ? contactInfo.phone.slice(0, -4) + ' ****' 
+        : contactInfo.phone;
+
+      const messageContent = `Tôi đang quan tâm tài sản có tiêu đề: ${propertyTitle}
+
+Thông tin liên hệ:
+
         - Tên: ${contactInfo.name}
-        - Số điện thoại: ${contactInfo.phone}
+
+        - Số điện thoại: ${phoneDisplay}
+
         - Email: ${contactInfo.email || 'Không có'}
+
         Nội dung tin nhắn:
+
         ${contactInfo.content}
-      `.trim();
 
-      console.log('📝 Message được tạo:', fullMessage);
+Link bài viết: ${currentUrl}`;
 
-      // Gửi thông báo qua HTTP API
-      const response = await fetch(`${baseUrl}contact-requests/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          property: parseInt(id),
-          message: fullMessage
-        })
+      // Gửi qua chat socket
+      const sent = sendMessage({
+        action: 'dm',
+        to_user_id: ownerUserId,
+        content: messageContent,
+        reply: null
       });
 
-      if (response.ok) {
-        console.log('✅ Contact request sent via HTTP API');
+      if (sent) {
         alert('Tin nhắn đã được gửi thành công!');
         setContactInfo({ name: '', phone: '', email: '', content: '' });
         setShowContactForm(false);
       } else {
-        throw new Error('HTTP request failed');
+        alert('Không thể kết nối. Vui lòng thử lại!');
       }
     } catch (error) {
-      console.error('❌ Error sending contact request:', error);
+      console.error('❌ Error sending contact message:', error);
       alert('Có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại!');
     } finally {
       setSendingMessage(false);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Send, Search, MoreVertical, ArrowLeft, Phone, Video, 
-  Info, Paperclip, Smile, X, Menu 
+  Send, Search, ArrowLeft, Phone, Video, 
+  Info, Paperclip, Smile
 } from 'lucide-react';
 import { useChat } from '../contexts/ChatContext';
 import { useNavigate } from 'react-router-dom';
@@ -35,7 +35,8 @@ function ChatMessage() {
   const [selectedChat, setSelectedChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
-  const [currentLastMessageId, setCurrentLastMessageId] = useState(null);
+  const [loadMoreMessageId, setLoadMoreMessageId] = useState(null); // Cho load more messages
+  const [lastReadMessageId, setLastReadMessageId] = useState(null); // Cho mark as read
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true); // Mobile sidebar toggle
@@ -50,7 +51,7 @@ function ChatMessage() {
   const lastMarkedMessageIdRef = useRef(null);
   const isAutoScrollingRef = useRef(false);
   const searchTimeoutRef = useRef(null);
-  const socketRef = useRef(null);
+  const textareaRef = useRef(null);
 
   /**
    * Keep selectedChatRef in sync with selectedChat state
@@ -164,50 +165,29 @@ function ChatMessage() {
         });
       } else {
         setMessages(formattedMessages);
+        // Khi fetch lần đầu, set lastReadMessageId là tin nhắn mới nhất (nếu có)
+        if (formattedMessages.length > 0) {
+          const newestMessageId = Math.max(...formattedMessages.map(m => m.id));
+          setLastReadMessageId(prev => {
+            if (!prev || newestMessageId > prev) {
+              return newestMessageId;
+            }
+            return prev;
+          });
+        }
         setTimeout(() => scrollToBottom(), 100);
       }
 
-      // QUAN TRỌNG: Xử lý last_message_id với logic so sánh
-      // Chỉ cập nhật nếu:
-      // 1. lastMessageId mới > lastMessageId cũ
-      // 2. lastMessageId mới = null (hết tin nhắn)
-      // 3. Chưa có lastMessageId cũ (lần đầu load)
-      const shouldUpdate = () => {
-        if (lastMessageId === null) {
-          // null = hết tin nhắn, luôn cập nhật
-          return true;
-        }
-        if (currentLastMessageId === null) {
-          // Chưa có giá trị cũ, cập nhật
-          return true;
-        }
-        // Chỉ cập nhật nếu giá trị mới lớn hơn
-        return lastMessageId > currentLastMessageId;
-      };
-
-      if (shouldUpdate()) {
-        if (lastMessageId !== undefined && lastMessageId !== null) {
-          // Còn tin nhắn để load
-          setCurrentLastMessageId(lastMessageId);
-          setHasMoreMessages(true);
-          console.log('✅ Updated lastMessageId:', {
-            old: currentLastMessageId,
-            new: lastMessageId,
-            reason: 'New value is greater or first time'
-          });
-        } else {
-          // lastMessageId = null -> đã hết tin nhắn
-          setCurrentLastMessageId(null);
-          setHasMoreMessages(false);
-          console.log('🛑 No more messages to load (lastMessageId is null)');
-        }
+      // Cập nhật loadMoreMessageId khi fetch messages
+      if (lastMessageId !== undefined && lastMessageId !== null) {
+        // Còn tin nhắn để load
+        setLoadMoreMessageId(lastMessageId);
+        setHasMoreMessages(true);
       } else {
-        // Không cập nhật vì giá trị mới nhỏ hơn giá trị cũ
-        console.log('⚠️ Not updating lastMessageId - new value is smaller:', {
-          current: currentLastMessageId,
-          new: lastMessageId,
-          reason: 'New value is smaller than current, keeping current value'
-        });
+        // lastMessageId = null -> đã hết tin nhắn
+        setLoadMoreMessageId(null);
+        setHasMoreMessages(false);
+        console.log('🛑 No more messages to load (lastMessageId is null)');
       }
 
     } catch (error) {
@@ -227,14 +207,14 @@ function ChatMessage() {
       console.log('🛑 No more messages available');
       return;
     }
-    if (!currentLastMessageId || !selectedChat || isLoadingMore) return;
+    if (!loadMoreMessageId || !selectedChat || isLoadingMore) return;
 
     const container = messagesContainerRef.current;
     const oldScrollHeight = container?.scrollHeight || 0;
 
     await fetchMessages(selectedChat.id, {
       append: true,
-      beforeId: currentLastMessageId
+      beforeId: loadMoreMessageId
     });
 
     setTimeout(() => {
@@ -351,21 +331,14 @@ function ChatMessage() {
           return [...prev, newMessage];
         });
 
-        // Cập nhật lastMessageId khi nhận tin nhắn mới
-        // Chỉ cập nhật nếu messageId mới > currentLastMessageId hoặc chưa có giá trị
+        // Cập nhật lastReadMessageId khi nhận tin nhắn mới (chỉ khi lớn hơn giá trị hiện tại)
         const newMessageId = messageData.id;
-        if (!currentLastMessageId || newMessageId > currentLastMessageId) {
-          setCurrentLastMessageId(newMessageId);
-          console.log('🔵 [DEBUG] Updated lastMessageId from new message:', {
-            old: currentLastMessageId,
-            new: newMessageId
-          });
-        } else {
-          console.log('⚠️ [DEBUG] Not updating lastMessageId from new message - value is smaller:', {
-            current: currentLastMessageId,
-            new: newMessageId
-          });
-        }
+        setLastReadMessageId(prev => {
+          if (!prev || newMessageId > prev) {
+            return newMessageId;
+          }
+          return prev;
+        });
         setTimeout(() => scrollToBottom('smooth'), 100);
 
         // Mark as read if not own message
@@ -379,6 +352,7 @@ function ChatMessage() {
     });
 
     return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, subscribeToMessages, user, markAsRead]);
 
   // === SCROLL HANDLING ===
@@ -412,9 +386,9 @@ function ChatMessage() {
         const { scrollTop, scrollHeight, clientHeight } = container;
         const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
 
-        if (isAtBottom && currentLastMessageId && lastMarkedMessageIdRef.current !== currentLastMessageId) {
-          markAsRead(selectedChat.id, currentLastMessageId);
-          lastMarkedMessageIdRef.current = currentLastMessageId;
+        if (isAtBottom && lastReadMessageId && lastMarkedMessageIdRef.current !== lastReadMessageId) {
+          markAsRead(selectedChat.id, lastReadMessageId);
+          lastMarkedMessageIdRef.current = lastReadMessageId;
         }
       }, 300);
     };
@@ -425,7 +399,7 @@ function ChatMessage() {
       container.removeEventListener('scroll', handleScroll);
       if (scrollTimeout) clearTimeout(scrollTimeout);
     };
-  }, [messages, selectedChat, currentLastMessageId, markAsRead]);
+  }, [messages, selectedChat, lastReadMessageId, markAsRead]);
 
   const handleScroll = (e) => {
     if (e.target.scrollTop < 100 && !isLoadingMore) {
@@ -439,11 +413,14 @@ function ChatMessage() {
     if (isAuthenticated) {
       fetchConversations();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   useEffect(() => {
     if (selectedChat) {
       lastMarkedMessageIdRef.current = null;
+      setLastReadMessageId(null); // Reset khi chọn chat mới
+      setLoadMoreMessageId(null); // Reset khi chọn chat mới
       
       // Only fetch messages if conversation exists (has id)
       if (selectedChat.id) {
@@ -463,15 +440,36 @@ function ChatMessage() {
     } else {
       setCurrentViewingConversation(null, user?.id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChat, user?.id, setCurrentViewingConversation]);
 
   // === USER ACTIONS ===
+
+  // Auto-resize textarea (max 4 rows)
+  const autoResizeTextarea = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      const maxHeight = 4 * 24; // 4 rows * 24px per row (approximate)
+      const newHeight = Math.min(textareaRef.current.scrollHeight, maxHeight);
+      textareaRef.current.style.height = `${newHeight}px`;
+    }
+  };
+
+  // Auto-resize when inputMessage changes
+  useEffect(() => {
+    autoResizeTextarea();
+  }, [inputMessage]);
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || !selectedChat) return;
 
     const messageText = inputMessage.trim();
     setInputMessage('');
+    
+    // Reset textarea height after sending
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
 
     // If this is a new conversation (no conversation_id), send DM
     if (!selectedChat.id && selectedChat.toUserId) {
@@ -941,8 +939,12 @@ function ChatMessage() {
               {/* Text input */}
               <div className="flex-1 relative">
                 <textarea
+                  ref={textareaRef}
                   value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
+                  onChange={(e) => {
+                    setInputMessage(e.target.value);
+                    autoResizeTextarea();
+                  }}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
@@ -950,9 +952,9 @@ function ChatMessage() {
                     }
                   }}
                   placeholder="Nhập tin nhắn..."
-                  className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-gray-50"
+                  className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-gray-50 overflow-y-auto"
                   rows={1}
-                  style={{ maxHeight: '120px' }}
+                  style={{ minHeight: '48px', maxHeight: '96px' }}
                 />
                 {/* Emoji button */}
                 <button className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-200 rounded transition-colors">

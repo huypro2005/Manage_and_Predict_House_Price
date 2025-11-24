@@ -4,13 +4,14 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Notification
 from apps.utils import datetime_to_timestamp
 import asyncio, time
+from .views import get_current_notification_version
 
 
-def get_current_notification_version(user_id):
-    notif = Notification.objects.filter(user_id=user_id).order_by('-created_at').first()
-    if notif:
-        return datetime_to_timestamp(notif.created_at)
-    return 0
+# def get_current_notification_version(user_id):
+#     notif = Notification.objects.filter(user_id=user_id).order_by('-created_at').first()
+#     if notif:
+#         return datetime_to_timestamp(notif.created_at)
+#     return 0
 
 
 class NotificationLP(APIView):
@@ -19,7 +20,8 @@ class NotificationLP(APIView):
     def get(self, request):
         user = request.user
         last_version = get_current_notification_version(user.id)
-        time_limit = 60
+        print('Last version from client:', last_version)
+        time_limit = 10
         start_time = time.time()
         while time.time() - start_time < time_limit:
             current_version = get_current_notification_version(user.id)

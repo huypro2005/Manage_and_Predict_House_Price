@@ -219,6 +219,7 @@ CORS_ORIGIN_WHITELIST = [
     'http://localhost:5500',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:5500',
+    'https://d37u3m9dkftg82.cloudfront.net',
     "https://se104-airport.space",
     "https://www.se104-airport.space"
 ]

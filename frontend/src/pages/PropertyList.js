@@ -2,12 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { baseUrl, ConfigUrl } from '../base';
-import AuthWrapper from '../components/auth/AuthWrapper';
-import HeaderActions from '../components/HeaderActions';
 import Layout from '../components/Layout';
 import { Facebook, Instagram, Twitter, Youtube, Phone, Mail } from 'lucide-react';
 import { 
-  ArrowLeft, 
   Search, 
   MapPin, 
   Square, 

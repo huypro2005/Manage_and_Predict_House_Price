@@ -52,8 +52,10 @@ export const clearAllDataExceptToken = () => {
 };
 
 // Export default
-export default {
+const localStorageDebug = {
   debugLocalStorage,
   clearNotificationData,
   clearAllDataExceptToken
 };
+
+export default localStorageDebug;

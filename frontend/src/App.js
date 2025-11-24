@@ -5,30 +5,12 @@ import { baseUrl, ConfigUrl } from './base';
 import PropertyTypeSelect from './useAPI/PropertyTypeSelect';
 import LocationSelect from './useAPI/LocationSelect';
 import PropertyList from './pages/PropertyList';
-import AuthWrapper from './components/auth/AuthWrapper';
-import UserDropdown from './components/auth/UserDropdown';
 import { useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import NotificationManager from './components/NotificationManager';
-import NotificationDebug from './components/NotificationDebug';
 import { 
-  Home, 
-  User, 
-  Settings, 
-  Bell, 
-  Search, 
-  Plus, 
   Heart, 
-  MessageCircle,
-  ArrowRight,
-  Star,
-  TrendingUp,
-  Users,
-  Calendar,
-  CheckCircle,
   MapPin,
-  DollarSign,
-  Square,
   Clock,
   Phone,
   Mail,
@@ -36,7 +18,6 @@ import {
   Instagram,
   Twitter,
   Youtube,
-  ChevronDown,
   ChevronRight,
   Play
 } from 'lucide-react';
@@ -44,62 +25,20 @@ import {
 
 
 
-
-
-
-
-const districtUrl = baseUrl + 'districts/';
-const provinceUrl = baseUrl + 'provinces/';
-const propertyTypeUrl = baseUrl + 'property-types/';
-
-const pairPrice = {
-  'Dưới 1 tỷ': [0, 1000],
-  '1-3 tỷ': [1000, 3000],
-  '3-5 tỷ': [3000, 5000],
-  '5-10 tỷ': [5000, 10000],
-  'Trên 10 tỷ': [10000, Infinity]
-}
-
-{/* <option>Diện tích</option>
-                    <option>Dưới 30 m²</option>
-                    <option>30-50 m²</option>
-                    <option>50-80 m²</option>
-                    <option>80-120 m²</option>
-                    <option>Trên 120 m²</option> */}
-const pairArea = {
-  'Dưới 30 m²': [0, 30],
-  '30-50 m²': [30, 50],
-  '50-80 m²': [50, 80],
-  '80-120 m²': [80, 120],
-  'Trên 120 m²': [120, Infinity]
-}
-
-
-
 function App() {
   const [activeTab, setActiveTab] = useState('ban');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState(null);
-  const [propertyType, setPropertyType] = useState(null);
   const [priceRange, setPriceRange] = useState('');
   const [area, setArea] = useState('');
-  const [districts, setDistricts] = useState([]);
   const [selectedDistricts, setSelectedDistricts] = useState([]);
-  const [selectedDistrictNames, setSelectedDistrictNames] = useState([]);
   const [selectedPropertyTypes, setSelectedPropertyTypes] = useState([]);
-  const [selectedPropertyTypeNames, setSelectedPropertyTypeNames] = useState([]);
   const [currentPage, setCurrentPage] = useState('search'); // 'search' or 'propertyList'
   const [searchParams, setSearchParams] = useState({});
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState([]);
 
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const navigationItems = [
-    { id: 'ban', label: 'Nhà đất bán' },
-    { id: 'thue', label: 'Nhà đất thuê' },
-    { id: 'tintuc', label: 'Tin tức' },
-  ];
 
   // Fetch favorite IDs
   useEffect(() => {
@@ -134,7 +73,7 @@ function App() {
       const token = localStorage.getItem('token');
       if (!token) {
         // Redirect to login or show login modal
-        navigate('/login');
+        navigate('/');
         return;
       }
 
@@ -169,8 +108,6 @@ function App() {
     console.log('Đã chọn tỉnh thành:', provinceName, 'ID:', provinceId);
     
     // Reset lại danh sách districts đã chọn khi chọn tỉnh mới
-    setSelectedDistricts([]);
-    setSelectedDistrictNames([]);
     
     // Có thể lưu thông tin tỉnh đã chọn để sử dụng sau này
     setSelectedCity(provinceId); // nếu bạn có state này
@@ -181,7 +118,6 @@ function App() {
   
   const handlePropertyTypeSelect = (propertyTypeIds, propertyTypeNames) => {
     setSelectedPropertyTypes(propertyTypeIds || []);
-    setSelectedPropertyTypeNames(propertyTypeNames || []);
     console.log('Danh sách property type IDs đã chọn:', propertyTypeIds);
     console.log('Danh sách property type names đã chọn:', propertyTypeNames);
   };
@@ -259,7 +195,6 @@ function App() {
   // 2. Sửa hàm handleDis trictsChange - giữ nguyên logic nhưng thêm log
   const handleDistrictsChange = (districtIds, districtNames) => {
     setSelectedDistricts(districtIds || []);
-    setSelectedDistrictNames(districtNames || []);
     
     console.log('Danh sách district IDs đã chọn cập nhật:', districtIds);
     console.log('Danh sách district names đã chọn cập nhật:', districtNames);
@@ -276,15 +211,6 @@ function App() {
 
 
 
-  const handleNavigateToPropertyList = (tab) => {
-    if (tab === 'ban') {
-      navigate(`/property-list?tab=ban`);
-    } else if (tab === 'thue') {
-      navigate(`/property-list?tab=thue`);
-    } else {
-      navigate('/property-list');
-    }
-  }
   const [propertyListings, setPropertyListings] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -343,13 +269,7 @@ function App() {
     fetchFeaturedNews();
   }, []);
 
-  const handelNavigateToPostProperty = () => {
-    if (!isAuthenticated) {
-      alert('Vui lòng đăng nhập để đăng tin!');
-      return;
-    }
-    navigate('/post-property');
-  };
+
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -843,10 +763,10 @@ function App() {
             <div>
               <h4 className="text-lg font-semibold mb-4">Dịch vụ</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Mua bán nhà đất</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Cho thuê nhà đất</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Dự án bất động sản</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Tư vấn đầu tư</a></li>
+                <li><a href="/property-list?tab=ban" className="hover:text-white transition-colors">Mua bán nhà đất</a></li>
+                <li><a href="/property-list?tab=thue" className="hover:text-white transition-colors">Cho thuê nhà đất</a></li>
+                <li><a href="/news" className="hover:text-white transition-colors">Dự án bất động sản</a></li>
+                <li><a href="/price-prediction" className="hover:text-white transition-colors">Tư vấn đầu tư</a></li>
               </ul>
             </div>
 

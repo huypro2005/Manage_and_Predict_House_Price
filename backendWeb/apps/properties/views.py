@@ -19,6 +19,7 @@ from apps.love_cart.models import FavouriteProperty
 import json
 # Create your views here.
 
+CACHE_KEY_PROPERTIES_OF_USER = "properties_of_user_{user_id}"
 
 class CustomPagination(PageNumberPagination):
     page_size = 12
@@ -107,7 +108,7 @@ class PropertyListView(APIView):
             'data': serializer.data,
             'count': properties.count()
         }
-        cache.set(cache_key, result, 60)  # Cache for 1 minutes
+        cache.set(cache_key, result, 60*3)  # Cache for 3 minutes
 
         return Response(result, status=status.HTTP_200_OK)
 
@@ -118,7 +119,6 @@ class PropertyListView(APIView):
             serializer = PropertyCreateFullV1Serializer(data=request.data, context={'request': request})
             serializer.is_valid(raise_exception=True)
             property = serializer.save(user=user)
-            
             if 'attributes' in request.data:
                 attributes = json.loads(request.data.get('attributes'))
                 # print(attributes)
@@ -132,7 +132,7 @@ class PropertyListView(APIView):
             if 'images' in request.FILES:
                 for image in request.FILES.getlist('images'):
                     PropertyImage.objects.create(property=property, image=image)
-
+            # cache.clear()  # Clear cache after creating a new property
             return Response({'message': 'Property created successfully', 'data': serializer.data}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({'message': 'Property creation failed', 'errors': str(e)}, status=status.HTTP_400_BAD_REQUEST)

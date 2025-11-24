@@ -226,7 +226,7 @@ export const AuthProvider = ({ children }) => {
       
       // Thêm timeout cho request để tránh chờ quá lâu
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 giây timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 giây timeout
 
       const requestBody = { token: googleToken };
       console.log('Request body prepared');

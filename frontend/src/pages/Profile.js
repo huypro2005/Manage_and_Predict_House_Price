@@ -2,18 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { baseUrl, ConfigUrl } from '../base';
-import ProfileTest from '../components/ProfileTest';
 import { 
   User, 
   Mail, 
   Phone, 
-  MapPin, 
   Calendar, 
   Camera, 
   Save, 
-  Edit3, 
-  CheckCircle, 
-  XCircle,
+  Edit3,
   Upload,
   AlertCircle,
   Shield,
@@ -144,7 +140,7 @@ const Profile = () => {
   // Load user data on mount
   useEffect(() => {
     fetchUserProfile();
-  }, []);
+  }, [fetchUserProfile]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
