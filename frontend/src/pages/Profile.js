@@ -9,7 +9,7 @@ import {
   Calendar, 
   Camera, 
   Save, 
-  Edit3,
+  Edit3, 
   Upload,
   AlertCircle,
   Shield,
@@ -140,7 +140,7 @@ const Profile = () => {
   // Load user data on mount
   useEffect(() => {
     fetchUserProfile();
-  }, [fetchUserProfile]);
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
