@@ -11,9 +11,9 @@ from apps.permission import IsAdminOrIsAuthenticated
 from apps.accounts.models import CustomUser
 from .favourite_cache import (
     add_fav,
-    set_list_cache,
+    # set_list_cache,
     get_fav_ids,
-    get_list_cache,
+    # get_list_cache,
     remove_fav,
     seed_set_if_empty
 )
@@ -40,9 +40,11 @@ class FavouritePropertyListView(APIView):
         #     print('ids:', get_ids_from_cache(user.id))
         #     return Response({'data': cached, 'message': 'Success (from cache)'}, status=status.HTTP_200_OK)
 
-        data = get_list_cache(user.id)
+        data = get_fav_ids(user.id)
         if data:
-            return Response({'data': data, 'message': 'Success (from cache)'}, status=status.HTTP_200_OK)
+            favs = FavouriteProperty.objects.filter(id__in=data, is_active=True).select_related('property').order_by('-created_at')
+            serializer = FavouritePropertyV1Serializer(favs, many=True)
+            return Response({'data': serializer.data, 'message': 'Success (from cache)'}, status=status.HTTP_200_OK)
         
         favs = FavouriteProperty.objects.filter(
             user=user,
@@ -56,7 +58,7 @@ class FavouritePropertyListView(APIView):
         # 3. ghi vào cache
         ids = [fav.property.id for fav in favs]
         seed_set_if_empty(user.id, ids)
-        set_list_cache(user.id, data)
+        # set_list_cache(user.id, data)
 
         return Response({'data': data, 'message': 'Success (from DB)'}, status=status.HTTP_200_OK)
 

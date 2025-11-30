@@ -9,6 +9,8 @@ from apps.utils import datetime_to_timestamp
 from django.db.models import Case, When, IntegerField, Value, F
 from apps.comments.models import Comment
 from rest_framework.pagination import PageNumberPagination
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 
 
 class NewsPagination(PageNumberPagination):
@@ -18,6 +20,7 @@ class NewsPagination(PageNumberPagination):
 class NewsListView(APIView):
     permission_classes = [AllowAny]
 
+    @method_decorator(cache_page(60*10))  # Cache for 10 minutes
     def get(self, request):
         try:
             limit = int(request.query_params.get('limit'))
@@ -40,6 +43,7 @@ class NewsListView(APIView):
 class NewsDetailView(APIView):
     permission_classes = [AllowAny]
 
+    @method_decorator(cache_page(60*10))  # Cache for 10 minutes
     def get(self, request, pk):
         try:
             article = NewsArticle.objects.get(pk=pk, is_deleted=False, is_approved=True)

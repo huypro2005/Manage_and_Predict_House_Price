@@ -90,7 +90,7 @@ root.render(
           } 
         />
         
-                  <Route 
+          <Route 
             path='/price-prediction' 
             element={
               <ProtectedRoute>

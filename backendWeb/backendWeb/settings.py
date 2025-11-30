@@ -38,7 +38,7 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     'se104-airport.space',
     'www.se104-airport.space',
-    '.se104-airport.space',
+    '.se104-airport.space', 
     ]
 
 
@@ -221,7 +221,9 @@ CORS_ORIGIN_WHITELIST = [
     'http://127.0.0.1:5500',
     'https://d37u3m9dkftg82.cloudfront.net',
     "https://se104-airport.space",
-    "https://www.se104-airport.space"
+    "https://www.se104-airport.space",
+    "https://www.restate-housing-day.store",
+    "https://restate-housing-day.store",
 ]
 
 

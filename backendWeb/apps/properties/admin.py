@@ -20,7 +20,7 @@ class PropertyAttributeValueInline(admin.TabularInline):
 @admin.register(Property)
 class PropertyAdmin(admin.ModelAdmin):
     inlines = [PropertyImagesInline, PropertyAttributeValueInline]
-    list_display = ('thumbnail_tag', 'title', 'price', 'area_m2', 'is_active')
+    list_display = ('thumbnail_tag', 'title', 'price', 'area_m2', 'is_active', 'status')
 
     def thumbnail_tag(self, obj):
         return format_html(obj.thumbnail_tag())

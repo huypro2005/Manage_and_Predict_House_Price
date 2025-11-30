@@ -44,6 +44,7 @@ function ChatMessage() {
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(false);
   // === REFS ===
   const messagesContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -59,6 +60,32 @@ function ChatMessage() {
   useEffect(() => {
     selectedChatRef.current = selectedChat;
   }, [selectedChat]);
+
+  /**
+   * Detect mobile viewport to adjust layout similar to Messenger mobile flow
+   */
+  useEffect(() => {
+    const checkMobile = () => {
+      if (typeof window !== 'undefined') {
+        setIsMobileView(window.innerWidth < 768);
+      }
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  /**
+   * Ensure sidebar visibility syncs with viewport + selection state
+   */
+  useEffect(() => {
+    if (!isMobileView) {
+      setShowSidebar(true);
+    } else if (!selectedChat) {
+      setShowSidebar(true);
+    }
+  }, [isMobileView, selectedChat]);
 
   // === API FUNCTIONS ===
 
@@ -434,14 +461,14 @@ function ChatMessage() {
       }
       
       // On mobile, hide sidebar when chat selected
-      if (window.innerWidth < 768) {
+      if (isMobileView) {
         setShowSidebar(false);
       }
     } else {
       setCurrentViewingConversation(null, user?.id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedChat, user?.id, setCurrentViewingConversation]);
+  }, [selectedChat, user?.id, setCurrentViewingConversation, isMobileView]);
 
   // === USER ACTIONS ===
 
@@ -509,6 +536,9 @@ function ChatMessage() {
 
   const handleSelectChat = (chat) => {
     setSelectedChat(chat);
+    if (isMobileView) {
+      setShowSidebar(false);
+    }
   };
 
   /**
@@ -610,6 +640,18 @@ function ChatMessage() {
 
   const totalUnread = getTotalUnreadCount();
 
+  const sidebarClassNames = isMobileView
+    ? `absolute inset-0 z-20 flex w-full transform transition-transform duration-300 ${
+        showSidebar ? 'translate-x-0' : '-translate-x-full'
+      }`
+    : 'hidden md:flex w-full md:w-80 lg:w-96';
+
+  const chatPanelClassNames = isMobileView
+    ? `absolute inset-0 flex flex-col bg-gray-50 transform transition-transform duration-300 ${
+        showSidebar ? 'translate-x-full' : 'translate-x-0'
+      }`
+    : 'flex-1 flex flex-col';
+
   // === RENDER ===
 
   if (!isAuthenticated) {
@@ -630,12 +672,12 @@ function ChatMessage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="relative flex h-[100dvh] md:h-screen bg-gray-50 overflow-hidden">
       {/* === SIDEBAR: Conversation List === */}
       <div
-        className={`${
-          showSidebar ? 'flex' : 'hidden'
-        } md:flex flex-col w-full md:w-80 lg:w-96 bg-white border-r border-gray-200 transition-all duration-300`}
+        className={`${sidebarClassNames} flex-col bg-white border-r border-gray-200 transition-all duration-300 ${
+          isMobileView ? 'shadow-2xl' : ''
+        }`}
       >
         {/* Sidebar Header */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white">
@@ -791,232 +833,227 @@ function ChatMessage() {
       </div>
 
       {/* === MAIN: Message View === */}
-      {selectedChat ? (
-        <div
-          className={`${
-            showSidebar ? 'hidden' : 'flex'
-          } md:flex flex-col flex-1 transition-all duration-300`}
-        >
-          {/* Chat Header */}
-          <div className="bg-white border-b border-gray-200 px-4 py-3 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                {/* Back button for mobile */}
-                <button
-                  onClick={handleBackToList}
-                  className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <ArrowLeft className="h-5 w-5 text-gray-600" />
-                </button>
+      <div className={chatPanelClassNames}>
+        {selectedChat ? (
+          <>
+            {/* Chat Header */}
+            <div className="bg-white border-b border-gray-200 px-4 py-3 shadow-sm sticky top-0 z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  {/* Back button for mobile */}
+                  <button
+                    onClick={handleBackToList}
+                    className="md:hidden p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <ArrowLeft className="h-5 w-5 text-gray-600" />
+                  </button>
 
-                {/* Avatar */}
-                <div className="relative">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white font-semibold">
-                    {selectedChat.name.charAt(0).toUpperCase()}
+                  {/* Avatar */}
+                  <div className="relative">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white font-semibold">
+                      {selectedChat.name.charAt(0).toUpperCase()}
+                    </div>
+                    {selectedChat.isOnline && (
+                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
+                    )}
                   </div>
-                  {selectedChat.isOnline && (
-                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
-                  )}
+
+                  {/* Name and status */}
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{selectedChat.name}</h3>
+                    <p className="text-xs text-gray-500">
+                      {selectedChat.isOnline ? 'Đang hoạt động' : 'Không hoạt động'}
+                    </p>
+                  </div>
                 </div>
 
-                {/* Name and status */}
-                <div>
-                  <h3 className="font-semibold text-gray-900">{selectedChat.name}</h3>
-                  <p className="text-xs text-gray-500">
-                    {selectedChat.isOnline ? 'Đang hoạt động' : 'Không hoạt động'}
-                  </p>
+                {/* Action buttons */}
+                <div className="flex items-center space-x-1">
+                  <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                    <Phone className="h-5 w-5 text-gray-600" />
+                  </button>
+                  <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                    <Video className="h-5 w-5 text-gray-600" />
+                  </button>
+                  <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                    <Info className="h-5 w-5 text-gray-600" />
+                  </button>
                 </div>
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex items-center space-x-1">
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <Phone className="h-5 w-5 text-gray-600" />
-                </button>
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <Video className="h-5 w-5 text-gray-600" />
-                </button>
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <Info className="h-5 w-5 text-gray-600" />
-                </button>
               </div>
             </div>
-          </div>
 
-          {/* Messages Container */}
-          <div
-            ref={messagesContainerRef}
-            onScroll={handleScroll}
-            className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-50 to-white"
-          >
-            {/* Loading more indicator */}
-            {isLoadingMore && (
-              <div className="flex justify-center py-2">
-                <div className="bg-white rounded-full px-4 py-2 shadow-sm flex items-center space-x-2">
-                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-sm text-gray-600">Đang tải thêm...</span>
+            {/* Messages Container */}
+            <div
+              ref={messagesContainerRef}
+              onScroll={handleScroll}
+              className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-50 to-white"
+            >
+              {/* Loading more indicator */}
+              {isLoadingMore && (
+                <div className="flex justify-center py-2">
+                  <div className="bg-white rounded-full px-4 py-2 shadow-sm flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm text-gray-600">Đang tải thêm...</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Messages */}
-            {messages.map((message, index) => {
-              const showTimestamp = index === 0 || 
-                new Date(messages[index - 1].timestamp).toDateString() !== new Date(message.timestamp).toDateString();
+              {/* Messages */}
+              {messages.map((message, index) => {
+                const showTimestamp = index === 0 || 
+                  new Date(messages[index - 1].timestamp).toDateString() !== new Date(message.timestamp).toDateString();
 
-              return (
-                <React.Fragment key={message.id}>
-                  {/* Date separator */}
-                  {showTimestamp && (
-                    <div className="flex justify-center my-4">
-                      <span className="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full">
-                        {new Date(message.timestamp).toLocaleDateString('vi-VN', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </span>
-                    </div>
-                  )}
+                return (
+                  <React.Fragment key={message.id}>
+                    {/* Date separator */}
+                    {showTimestamp && (
+                      <div className="flex justify-center my-4">
+                        <span className="bg-gray-200 text-gray-600 text-xs px-3 py-1 rounded-full">
+                          {new Date(message.timestamp).toLocaleDateString('vi-VN', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    )}
 
-                  {/* Message bubble */}
-                  <div className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`flex items-end space-x-2 max-w-[70%] ${message.isOwn ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                      {/* Avatar for other user's messages */}
-                      {!message.isOwn && (
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                          {message.senderUsername?.charAt(0).toUpperCase() || 'U'}
-                        </div>
-                      )}
+                    {/* Message bubble */}
+                    <div className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`flex items-end space-x-2 max-w-[80%] md:max-w-[70%] ${
+                        message.isOwn ? 'flex-row-reverse space-x-reverse' : ''
+                      }`}>
+                        {/* Avatar for other user's messages */}
+                        {!message.isOwn && (
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+                            {message.senderUsername?.charAt(0).toUpperCase() || 'U'}
+                          </div>
+                        )}
 
-                      {/* Message content */}
-                      <div className={`group relative`}>
-                        <div
-                          className={`px-4 py-2 rounded-2xl ${
-                            message.isOwn
-                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-sm'
-                              : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm shadow-sm'
-                          }`}
-                        >
-                          <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
-                            {message.content}
-                          </p>
-                        </div>
+                        {/* Message content */}
+                        <div className="group relative">
+                          <div
+                            className={`px-4 py-2 rounded-2xl ${
+                              message.isOwn
+                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-sm shadow-lg shadow-blue-200/60'
+                                : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm shadow-sm'
+                            }`}
+                          >
+                            <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
+                              {message.content}
+                            </p>
+                          </div>
 
-                        {/* Time and status */}
-                        <div
-                          className={`flex items-center space-x-1 mt-1 text-xs ${
-                            message.isOwn ? 'justify-end' : 'justify-start'
-                          }`}
-                        >
-                          <span className="text-gray-500">{formatMessageTime(message.timestamp)}</span>
-                          {message.isOwn && (
-                            <span className="text-blue-600">
-                              {message.status === 'read' ? '✓✓' : '✓'}
-                            </span>
-                          )}
+                          {/* Time and status */}
+                          <div
+                            className={`flex items-center space-x-1 mt-1 text-xs ${
+                              message.isOwn ? 'justify-end' : 'justify-start'
+                            }`}
+                          >
+                            <span className="text-gray-500">{formatMessageTime(message.timestamp)}</span>
+                            {message.isOwn && (
+                              <span className="text-blue-600">
+                                {message.status === 'read' ? '✓✓' : '✓'}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </React.Fragment>
-              );
-            })}
+                  </React.Fragment>
+                );
+              })}
 
-            {/* Scroll anchor */}
-            <div ref={messagesEndRef} />
-          </div>
+              {/* Scroll anchor */}
+              <div ref={messagesEndRef} />
+            </div>
 
-          {/* Input Box */}
-          <div className="bg-white border-t border-gray-200 p-4">
-            <div className="flex items-end space-x-2">
-              {/* Attachment button */}
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0">
-                <Paperclip className="h-5 w-5 text-gray-600" />
-              </button>
+            {/* Input Box */}
+            <div className="bg-white border-t border-gray-200 p-4">
+              <div className="flex items-end space-x-2">
+                {/* Attachment button */}
+                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0">
+                  <Paperclip className="h-5 w-5 text-gray-600" />
+                </button>
 
-              {/* Text input */}
-              <div className="flex-1 relative">
-                <textarea
-                  ref={textareaRef}
-                  value={inputMessage}
-                  onChange={(e) => {
-                    setInputMessage(e.target.value);
-                    autoResizeTextarea();
-                  }}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                  placeholder="Nhập tin nhắn..."
-                  className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-gray-50 overflow-y-auto"
-                  rows={1}
-                  style={{ minHeight: '48px', maxHeight: '96px' }}
-                />
-                {/* Emoji button */}
-                <button className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-200 rounded transition-colors">
-                  <Smile className="h-5 w-5 text-gray-600" />
+                {/* Text input */}
+                <div className="flex-1 relative">
+                  <textarea
+                    ref={textareaRef}
+                    value={inputMessage}
+                    onChange={(e) => {
+                      setInputMessage(e.target.value);
+                      autoResizeTextarea();
+                    }}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    placeholder="Nhập tin nhắn..."
+                    className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-gray-50 overflow-y-auto"
+                    rows={1}
+                    style={{ minHeight: '48px', maxHeight: '96px' }}
+                  />
+                  {/* Emoji button */}
+                  <button className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-200 rounded transition-colors">
+                    <Smile className="h-5 w-5 text-gray-600" />
+                  </button>
+                </div>
+
+                {/* Send button */}
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!inputMessage.trim()}
+                  className={`p-3 rounded-xl transition-all flex-shrink-0 ${
+                    inputMessage.trim()
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  <Send className="h-5 w-5" />
                 </button>
               </div>
-
-              {/* Send button */}
+            </div>
+          </>
+        ) : (
+          // No conversation selected - Welcome screen
+          <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+            <div className="text-center max-w-md">
+              <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full mx-auto mb-6 flex items-center justify-center shadow-2xl">
+                <Send className="h-12 w-12 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                Chào mừng đến với Chat
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Chọn một cuộc trò chuyện từ danh sách bên trái để bắt đầu nhắn tin
+              </p>
+              <div className="flex flex-col space-y-3 text-sm text-gray-500">
+                <div className="flex items-center justify-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <span>{isConnected ? 'Đã kết nối với server' : 'Đang kết nối lại...'}</span>
+                </div>
+                {totalUnread > 0 && (
+                  <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full inline-block">
+                    Bạn có {totalUnread} tin nhắn chưa đọc
+                  </div>
+                )}
+              </div>
+              
+              {/* Mobile: Show button to open sidebar */}
               <button
-                onClick={handleSendMessage}
-                disabled={!inputMessage.trim()}
-                className={`p-3 rounded-xl transition-all flex-shrink-0 ${
-                  inputMessage.trim()
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg'
-                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                }`}
+                onClick={() => setShowSidebar(true)}
+                className="md:hidden mt-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all"
               >
-                <Send className="h-5 w-5" />
+                Xem danh sách chat
               </button>
             </div>
-
-            {/* Typing indicator (optional) */}
-            {/* <div className="mt-2 text-xs text-gray-500 ml-2">
-              <span className="italic">Đang soạn tin...</span>
-            </div> */}
           </div>
-        </div>
-      ) : (
-        // No conversation selected - Welcome screen
-        <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
-          <div className="text-center max-w-md">
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full mx-auto mb-6 flex items-center justify-center shadow-2xl">
-              <Send className="h-12 w-12 text-white" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">
-              Chào mừng đến với Chat
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Chọn một cuộc trò chuyện từ danh sách bên trái để bắt đầu nhắn tin
-            </p>
-            <div className="flex flex-col space-y-3 text-sm text-gray-500">
-              <div className="flex items-center justify-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span>{isConnected ? 'Đã kết nối với server' : 'Đang kết nối lại...'}</span>
-              </div>
-              {totalUnread > 0 && (
-                <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full inline-block">
-                  Bạn có {totalUnread} tin nhắn chưa đọc
-                </div>
-              )}
-            </div>
-            
-            {/* Mobile: Show button to open sidebar */}
-            <button
-              onClick={() => setShowSidebar(true)}
-              className="md:hidden mt-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:from-blue-700 hover:to-indigo-700 transition-all"
-            >
-              Xem danh sách chat
-            </button>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

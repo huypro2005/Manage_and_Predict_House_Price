@@ -11,7 +11,8 @@ import { Building2,
   Phone, 
   Mail,
   ChevronLeft,
-  ChevronRight } from 'lucide-react';
+  ChevronRight,
+  Search } from 'lucide-react';
 import AuthWrapper from '../components/auth/AuthWrapper';
 import { useAuth } from '../contexts/AuthContext';
 import HeaderActions from '../components/HeaderActions';
@@ -147,7 +148,7 @@ function MyProperties() {
       fetchData();
       fetchFavoriteIds();
     }
-  }, [authLoading, user, currentPage, location.search, user_search, fetchFavoriteIds, handleApiResponse]);
+  }, [authLoading, user, currentPage, location.search, user_search]);
 
   const removeItem = async (id) => {
     if (!window.confirm('Xóa bất động sản này?')) return;
