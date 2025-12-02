@@ -17,6 +17,7 @@ import datetime
 from django.db import transaction
 from apps.love_cart.models import FavouriteProperty
 import json
+from .helpers import invalidate_property_cache
 # Create your views here.
 
 CACHE_KEY_PROPERTIES_OF_USER = "properties_of_user_{user_id}"
@@ -31,6 +32,11 @@ class PropertyListView(APIView):
     pagination_class = CustomPagination
 
     def get_params(self, request):
+        is_active = request.GET.get('is_active')
+        if request.user.is_authenticated and self.check_object_permissions(request, request.user):
+            pass
+        else:
+            is_active = '1'  # chỉ lấy property active nếu không phải admin hoặc không đăng nhập
         return {
             'username': request.GET.get('username'),
             'start_post': parse_datetime(request.GET.get('start_post')+'T00:00:00') if request.GET.get('start_post') else None,
@@ -42,16 +48,17 @@ class PropertyListView(APIView):
             'price_min': request.GET.get('price_min'),
             'price_max': request.GET.get('price_max'),
             'property_type': request.GET.get('property_type'),
-            'is_active': request.GET.get('is_active'),
+            'is_active': is_active,
             'tab' : request.GET.get('tab'),
             'page': request.GET.get('page')
         }
 
     def get(self, request):
         params = self.get_params(request)
+        print(params)
         cache_key = 'property_list_'+hashlib.md5(str(params).encode()).hexdigest()
         res = cache.get(cache_key)
-        if res:
+        if res is not None:
             print("Cache hit")
             return Response(res, status=status.HTTP_200_OK)
 
@@ -92,11 +99,8 @@ class PropertyListView(APIView):
             print(params['district'])
             # except ValueError:
             #     print(params['district'])
-        if params['is_active'] and request.user.is_authenticated:
-            filters['is_active'] = params['is_active']
-            print(params['is_active'])
-        else:
-            filters['is_active'] = 1
+        if params['is_active']:
+            filters['is_active'] = bool(int(params['is_active']))
         filters['status'] = 'approved'
 
         properties = Property.objects.filter(**filters).order_by('-created_at') # trả về danh sách bất động sản sắp xếp theo thời gian tạo gần nhất
@@ -132,7 +136,8 @@ class PropertyListView(APIView):
             if 'images' in request.FILES:
                 for image in request.FILES.getlist('images'):
                     PropertyImage.objects.create(property=property, image=image)
-            # cache.clear()  # Clear cache after creating a new property
+
+            invalidate_property_cache(user_id=user.id)
             return Response({'message': 'Property created successfully', 'data': serializer.data}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({'message': 'Property creation failed', 'errors': str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -177,6 +182,7 @@ class PropertyDetailView(APIView):
         serializer = PropertyDetailV1Serializer(prop, data=request.data)
         if serializer.is_valid():
             serializer.save()
+            invalidate_property_cache(user_id=prop.user.id)
             return Response({'message': 'Property updated successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
         return Response({'message': 'Property update failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -192,6 +198,7 @@ class PropertyDetailView(APIView):
         property.deleted_at = datetime.datetime.now()
         property.save()
         FavouriteProperty.objects.filter(property=property).update(is_active=True)
+        invalidate_property_cache(user_id=property.user.id)
         return Response({'message': 'Property deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
     
 
