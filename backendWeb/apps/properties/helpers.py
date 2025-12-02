@@ -18,6 +18,4 @@ def invalidate_property_cache(user_id=None):
         # Fallback: xoá hết cache nếu không có scan_iter
         cache.clear()
 
-    # Xoá cache danh sách property của user (nếu sau này bạn cache MyPropertyListView)
-    if user_id:
-        cache.delete(CACHE_KEY_PROPERTIES_OF_USER.format(user_id=user_id))
+

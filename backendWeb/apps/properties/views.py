@@ -55,7 +55,6 @@ class PropertyListView(APIView):
 
     def get(self, request):
         params = self.get_params(request)
-        print(params)
         cache_key = 'property_list_'+hashlib.md5(str(params).encode()).hexdigest()
         res = cache.get(cache_key)
         if res is not None:
