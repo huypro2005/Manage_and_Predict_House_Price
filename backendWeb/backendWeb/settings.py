@@ -36,9 +36,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'localhost', 
     '127.0.0.1',
-    'se104-airport.space',
-    'www.se104-airport.space',
-    '.se104-airport.space', 
+    'api.restate-housing-day.store',
     ]
 
 
@@ -220,16 +218,12 @@ CORS_ORIGIN_WHITELIST = [
     'http://127.0.0.1:3000',
     'http://127.0.0.1:5500',
     'https://d37u3m9dkftg82.cloudfront.net',
-    "https://se104-airport.space",
-    "https://www.se104-airport.space",
-    "https://www.restate-housing-day.store",
-    "https://restate-housing-day.store",
+    "https://api.restate-housing-day.store",
 ]
 
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://se104-airport.space",
-    "https://www.se104-airport.space"
+    "https://api.restate-housing-day.store",
 ]
 
 
