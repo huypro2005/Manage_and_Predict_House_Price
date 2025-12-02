@@ -64,4 +64,5 @@ EXPOSE 8000
 # Run the application.
 # CMD gunicorn 'backendWeb.wsgi' --bind=0.0.0.0:8000
 
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "backendWeb.asgi:application", "--bind", "0.0.0.0:8000", "--workers", "4"]
+# CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "backendWeb.asgi:application", "--bind", "0.0.0.0:8000", "--workers", "4"]
+CMD python manage.py runserver 0.0.0.0:8000 
