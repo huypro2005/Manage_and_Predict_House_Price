@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Notification
 from apps.utils import datetime_to_timestamp
 import asyncio, time
+from rest_framework import status
 from .views import get_current_notification_version
 
 
@@ -15,18 +16,18 @@ from .views import get_current_notification_version
 
 
 class NotificationLP(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
         last_version = get_current_notification_version(user.id)
-        print('Last version from client:', last_version)
-        time_limit = 10
+        # print('Last version from client:', last_version)
+        time_limit = 20
         start_time = time.time()
         while time.time() - start_time < time_limit:
             current_version = get_current_notification_version(user.id)
             if current_version > last_version:
-                return Response({'message': 'New notifications available', 'v': current_version}, status=200)
+                return Response({'message': 'New notifications available', 'v': current_version}, status=status.HTTP_200_OK)
             time.sleep(2)
-        return Response({'message': 'No new notifications', 'v': last_version}, status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
     
