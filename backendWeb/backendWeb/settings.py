@@ -219,6 +219,8 @@ CORS_ORIGIN_WHITELIST = [
     'http://127.0.0.1:5500',
     'https://d37u3m9dkftg82.cloudfront.net',
     "https://api.restate-housing-day.store",
+    "https://www.restate-housing-day.store",
+    "https://restate-housing-day.store"
 ]
 
 
