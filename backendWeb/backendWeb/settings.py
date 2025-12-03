@@ -37,6 +37,7 @@ ALLOWED_HOSTS = [
     'localhost', 
     '127.0.0.1',
     'api.restate-housing-day.store',
+    '47.129.118.58'
     ]
 
 
