@@ -40,14 +40,19 @@ class FavouritePropertyListView(APIView):
         #     print('ids:', get_ids_from_cache(user.id))
         #     return Response({'data': cached, 'message': 'Success (from cache)'}, status=status.HTTP_200_OK)
 
-        data = get_fav_ids(user.id)
-        if data:
-            favs = FavouriteProperty.objects.filter(id__in=data, is_active=True).select_related('property').order_by('-created_at')
+        ids = get_fav_ids(user.id)
+        if ids is not None:
+            favs = user.favourite_properties.filter(
+                property_id__in=ids,
+                is_active=True,
+                property__is_active=True,
+                property__status='approved'
+            ).select_related('property').order_by('-created_at')
             serializer = FavouritePropertyV1Serializer(favs, many=True)
             return Response({'data': serializer.data, 'message': 'Success (from cache)'}, status=status.HTTP_200_OK)
         
         favs = FavouriteProperty.objects.filter(
-            user=user,
+            user_id=user.id,
             is_active=True,
             property__is_active=True,
             property__status='approved'
