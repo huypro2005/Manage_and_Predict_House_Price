@@ -83,6 +83,7 @@ class PropertyRecommendationView(APIView):
             total_score=F('score_same_district') + F('score_same_province') +
                         F('score_same_property_type') + F('score_price_in_range') +
                         F('score_same_bedrooms'),
+        ).filter(Q(total_score__gt=0) & Q(is_active=True) & Q(status='approved')
         ).distinct().order_by(
             '-total_score',
             '-views',

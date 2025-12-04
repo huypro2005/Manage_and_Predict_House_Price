@@ -173,7 +173,7 @@ function PropertyDetail() {
       const token = localStorage.getItem('token');
       if (!token) {
         // Redirect to login or show login modal
-        navigate('/login');
+        navigate('/');
         return;
       }
 
@@ -866,7 +866,7 @@ Link bài viết: ${currentUrl}`;
                   className="bg-white rounded-xl shadow hover:shadow-lg transition-shadow flex flex-col"
                 >
                   <button
-                    onClick={() => navigate(`/${item.id}`)}
+                    onClick={() => navigate(`/property/${item.id}`)}
                     className="relative h-48 w-full overflow-hidden rounded-t-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                   >
                     {item.thumbnail ? (
@@ -890,7 +890,7 @@ Link bài viết: ${currentUrl}`;
                     <div className="space-y-1">
                       <h4
                         className="text-lg font-semibold text-gray-900 line-clamp-2 cursor-pointer hover:text-red-600 transition-colors"
-                        onClick={() => navigate(`/${item.id}`)}
+                        onClick={() => navigate(`/property/${item.id}`)}
                       >
                         {item.title}
                       </h4>
@@ -910,7 +910,7 @@ Link bài viết: ${currentUrl}`;
                       </span>
                     </div>
                     <button
-                      onClick={() => navigate(`/${item.id}`)}
+                      onClick={() => navigate(`/property/${item.id}`)}
                       className="mt-auto w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium py-2 rounded-lg transition-colors"
                     >
                       Xem chi tiết

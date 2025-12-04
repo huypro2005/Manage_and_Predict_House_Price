@@ -41,7 +41,6 @@ urlpatterns = [
     path('api/v1/', include('apps.accounts.urls')),
     path('api/v1/', include('apps.contacts.urls')),
     path('api/v1/', include('apps.defaults.urls')),
-    path('oauth2/', include('oauth2_provider.urls', namespace='oauth2_provider')),
     path('api/v1/', include('apps.properties.urls')),
     path('api/v1/', include('apps.predicts.urls')),
     path('api/v1/', include('apps.notifications.urls')),
@@ -58,3 +57,8 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+urlpatterns += static(
+    prefix=getattr(settings, 'STATIC_URL'),
+    document_root=getattr(settings, 'STATIC_ROOT')
+)

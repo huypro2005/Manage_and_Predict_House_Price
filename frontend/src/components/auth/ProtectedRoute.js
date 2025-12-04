@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { refreshAccessToken } from '../../utils/api';
 
 
-const ProtectedRoute = ({ children, redirectTo = '/login' }) => {
+const ProtectedRoute = ({ children, redirectTo = '/' }) => {
   const { isAuthenticated, loading } = useAuth();
 
   // Đang kiểm tra / thử refresh lần đầu

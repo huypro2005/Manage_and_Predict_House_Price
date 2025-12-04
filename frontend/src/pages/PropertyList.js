@@ -80,7 +80,7 @@ function PropertyList() {
       const token = localStorage.getItem('token');
       if (!token) {
         // Redirect to login or show login modal
-        navigate('/login');
+        navigate('/');
         return;
       }
 
