@@ -58,7 +58,7 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-urlpatterns += static(
-    prefix=getattr(settings, 'STATIC_URL'),
-    document_root=getattr(settings, 'STATIC_ROOT')
-)
+# urlpatterns += static(
+#     prefix=getattr(settings, 'STATIC_URL'),
+#     document_root=getattr(settings, 'STATIC_ROOT')
+# )

@@ -57,8 +57,7 @@ RUN mkdir -p /app/media && mkdir -p /app/staticfiles
 
 # 2. Set ownership for the user who will be running the app/commands
 # Assuming your application user is 'appuser' (replace if the name is different)
-RUN chown -R appuser:appuser /app/media && \
-    chown -R appuser:appuser /app/staticfiles
+RUN chown -R appuser:appuser /app/media && chown -R appuser:appuser /app/staticfiles
 
 # Switch to the non-privileged user to run the application.
 USER appuser
@@ -68,7 +67,8 @@ EXPOSE 8000
 
 # Run the application.
 # CMD gunicorn 'backendWeb.wsgi' --bind=0.0.0.0:8000
-CMD sh -c "python manage.py collectstatic --noinput || \
+# CMD sh -c "python manage.py collectstatic --noinput && \
+CMD sh -c "python manage.py collectstatic --noinput && \
            gunicorn -k uvicorn.workers.UvicornWorker \
            backendWeb.asgi:application \
            --bind 0.0.0.0:8000 --workers 4"
