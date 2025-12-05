@@ -28,7 +28,7 @@ RUN apt-get update \
 
 # Create a non-privileged user that the app will run under.
 # See https://docs.docker.com/go/dockerfile-user-best-practices/
-ARG UID=10001
+ARG UID=1000
 RUN adduser \
     --disabled-password \
     --gecos "" \
@@ -71,5 +71,5 @@ EXPOSE 8000
 CMD sh -c "python manage.py collectstatic --noinput && \
            gunicorn -k uvicorn.workers.UvicornWorker \
            backendWeb.asgi:application \
-           --bind 0.0.0.0:8000 --workers 4"
+           --bind 0.0.0.0:8000 --workers 2"
 # CMD python manage.py runserver 0.0.0.0:8000 
