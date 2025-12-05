@@ -175,7 +175,6 @@ def create_notification(user, type, message, url=None, ranges=None, image_repres
                     length=range['length']
                 )
         serializer = NotificationV1Serializer(notification)
-        print('Creating notification in DB:', serializer.data)
         set_a_notif_cache(user.id, notification)
         unread_count_old = get_unread_count_cache(user.id)
         set_unread_count_cache(user.id, unread_count_old + 1)

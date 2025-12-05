@@ -1,8 +1,8 @@
 -- MySQL dump 10.13  Distrib 8.0.43, for Win64 (x86_64)
 --
--- Host: 127.0.0.1    Database: batdongsan
+-- Host: user-service.clieg46wkhrm.ap-southeast-1.rds.amazonaws.com    Database: batdongsan
 -- ------------------------------------------------------
--- Server version	8.0.43
+-- Server version	8.0.42
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -33,7 +33,7 @@ CREATE TABLE `favouriteproperties` (
   KEY `FavouriteProperties_property_id_5832cf8b_fk_Property_id` (`property_id`),
   CONSTRAINT `FavouriteProperties_property_id_5832cf8b_fk_Property_id` FOREIGN KEY (`property_id`) REFERENCES `property` (`id`),
   CONSTRAINT `FavouriteProperties_user_id_989c066c_fk_CustomUser_id` FOREIGN KEY (`user_id`) REFERENCES `customuser` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -42,7 +42,7 @@ CREATE TABLE `favouriteproperties` (
 
 LOCK TABLES `favouriteproperties` WRITE;
 /*!40000 ALTER TABLE `favouriteproperties` DISABLE KEYS */;
-INSERT INTO `favouriteproperties` VALUES (9,'2025-08-23 16:27:10.472689',1,18,15),(23,'2025-08-24 21:08:32.807100',1,18,19),(31,'2025-11-15 09:40:16.888343',1,19,20);
+INSERT INTO `favouriteproperties` VALUES (9,'2025-08-23 16:27:10.472689',1,18,15),(23,'2025-08-24 21:08:32.807100',1,18,19),(31,'2025-11-15 09:40:16.888343',1,19,20),(33,'2025-12-03 04:42:31.045208',1,19,22),(34,'2025-12-03 08:29:20.623655',1,32,18);
 /*!40000 ALTER TABLE `favouriteproperties` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -55,4 +55,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-20 23:50:23
+-- Dump completed on 2025-12-05 13:20:07

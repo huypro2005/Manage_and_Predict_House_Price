@@ -1,8 +1,8 @@
 -- MySQL dump 10.13  Distrib 8.0.43, for Win64 (x86_64)
 --
--- Host: 127.0.0.1    Database: batdongsan
+-- Host: user-service.clieg46wkhrm.ap-southeast-1.rds.amazonaws.com    Database: batdongsan
 -- ------------------------------------------------------
--- Server version	8.0.43
+-- Server version	8.0.42
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -30,7 +30,7 @@ CREATE TABLE `conversation` (
   `type` varchar(30) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unique_1_to_1_index` (`unique_1_to_1_index`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -39,7 +39,7 @@ CREATE TABLE `conversation` (
 
 LOCK TABLES `conversation` WRITE;
 /*!40000 ALTER TABLE `conversation` DISABLE KEYS */;
-INSERT INTO `conversation` VALUES (1,'2025-11-09 10:30:43.562711','2025-11-16 07:41:42.273734','18:20','private'),(2,'2025-11-09 14:41:24.008453','2025-11-20 05:33:39.415732','15:18','private'),(3,'2025-11-19 06:19:16.870538','2025-11-19 06:19:29.269018','15:16','private');
+INSERT INTO `conversation` VALUES (1,'2025-11-09 10:30:43.562711','2025-11-16 07:41:42.273734','18:20','private'),(2,'2025-11-09 14:41:24.008453','2025-11-24 15:53:50.780611','15:18','private'),(3,'2025-11-19 06:19:16.870538','2025-11-19 06:19:29.269018','15:16','private'),(4,'2025-11-29 10:26:59.239943','2025-11-29 10:26:59.289846','18:23','private'),(5,'2025-12-03 11:56:15.883380','2025-12-03 12:10:22.278548','18:22','private');
 /*!40000 ALTER TABLE `conversation` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -52,4 +52,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-20 23:50:22
+-- Dump completed on 2025-12-05 13:20:02

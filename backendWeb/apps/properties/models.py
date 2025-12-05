@@ -21,10 +21,10 @@ class Property(models.Model):
         APPROVED = 'approved', 'Đã duyệt'
         REJECTED = 'rejected', 'Bị từ chối'
 
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='properties', blank=True, null=True)
-    province = models.ForeignKey(Province, on_delete=models.CASCADE, related_name='properties')
-    district = models.ForeignKey(District, on_delete=models.CASCADE, related_name='properties')
-    property_type = models.ForeignKey(PropertyType, on_delete=models.CASCADE, related_name='properties')
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='properties', blank=True, null=True, db_index=True)
+    province = models.ForeignKey(Province, on_delete=models.CASCADE, related_name='properties', db_index=True)
+    district = models.ForeignKey(District, on_delete=models.CASCADE, related_name='properties', db_index=True)
+    property_type = models.ForeignKey(PropertyType, on_delete=models.CASCADE, related_name='properties', db_index=True)
     title = models.CharField(max_length=255)
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -66,7 +66,7 @@ class Property(models.Model):
 
 
 class PropertyImage(models.Model):
-    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='images')
+    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='images', db_index=True)
     image = models.ImageField(upload_to=upload_to_app_model)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

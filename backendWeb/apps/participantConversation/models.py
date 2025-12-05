@@ -8,8 +8,8 @@ class ConversationParticipants(models.Model):
         ('member', 'member')
     ]
 
-    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, null=False, related_name='conversation_participants')
-    user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='user_participant')
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, null=False, related_name='conversation_participants', db_index=True)
+    user = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='user_participant', db_index=True)
     role = models.CharField(max_length=30, choices=ROLE_ROOM, null=True, default=None)
     last_read_message = models.ForeignKey(Message, on_delete=models.SET_NULL, blank=True, null=True, related_name='read_by_participant')
     last_read_at = models.DateTimeField(blank=True, null=True)
