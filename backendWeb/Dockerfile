@@ -73,3 +73,4 @@ CMD sh -c "python manage.py collectstatic --noinput && \
            backendWeb.asgi:application \
            --bind 0.0.0.0:8000 --workers 2"
 # CMD python manage.py runserver 0.0.0.0:8000 
+# /home/ubuntu/Manage_and_Predict_House_Price/backendWeb/media

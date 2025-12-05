@@ -469,14 +469,18 @@ function App() {
         </div>
 
         {/* Carousel Navigation */}
+        {/* 
         <button className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-yellow-400 transition-colors">
           <ChevronRight className="h-8 w-8 rotate-180" />
         </button>
         <button className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-yellow-400 transition-colors">
           <ChevronRight className="h-8 w-8" />
         </button>
+        */}
+        
 
         {/* Pagination Dots */}
+        {/*
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-2">
           {[1, 2, 3, 4, 5, 6].map((dot) => (
             <div
@@ -487,6 +491,8 @@ function App() {
             ></div>
           ))}
         </div>
+        */}
+        
       </div>
 
       {/* Featured News */}
