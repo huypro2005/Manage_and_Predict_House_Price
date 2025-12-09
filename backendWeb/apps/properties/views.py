@@ -2,11 +2,11 @@ from django.shortcuts import render
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from django.http import Http404
 from oauth2_provider.contrib.rest_framework import TokenHasReadWriteScope
 from .serializer import PropertyImageSerializer, PropertyV1Serializer, PropertyDetailV1Serializer, PropertyCreateFullV1Serializer
-from .models import Property, PropertyImage
+from .models import Property, PropertyImage, ViewsProperty
 from apps.permission import IsAuthenticatedOrReadOnly
 from django.utils.dateparse import parse_datetime
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -135,7 +135,7 @@ class PropertyListView(APIView):
             if 'images' in request.FILES:
                 for image in request.FILES.getlist('images'):
                     PropertyImage.objects.create(property=property, image=image)
-
+            ViewsProperty.objects.create(property=property, views=0)
             invalidate_property_cache(user_id=user.id)
             return Response({'message': 'Property created successfully', 'data': serializer.data}, status=status.HTTP_201_CREATED)
         except Exception as e:
@@ -158,8 +158,8 @@ class PropertyDetailView(APIView):
                 else:
                     raise Http404('Property not found')
             else:
-                property.views += 1
-                property.save()
+                property.viewed_property.views += 1
+                property.viewed_property.save()
             return property
         except Property.DoesNotExist:
             raise Http404('Property not found')
@@ -279,3 +279,14 @@ class PropertyImageDetailView(APIView):
 
 
 
+
+class create_ViewsProperty_for_existing_properties(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        properties = Property.objects.all()
+        created_count = 0
+        for prop in properties:
+            ViewsProperty.objects.get_or_create(property=prop, defaults={'views': 0})
+            created_count += 1
+        return Response({'message': f'ViewsProperty created for {created_count} existing properties.'}, status=status.HTTP_201_CREATED)

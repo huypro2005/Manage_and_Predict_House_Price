@@ -64,6 +64,12 @@ class Property(models.Model):
     def __str__(self):
         return self.title[:50] + '...' if len(self.title) > 50 else self.title
 
+class ViewsProperty(models.Model):
+    property = models.OneToOneField(Property, on_delete=models.CASCADE, related_name='viewed_property', db_index=True)
+    views = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = 'views_property'
 
 class PropertyImage(models.Model):
     property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='images', db_index=True)

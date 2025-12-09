@@ -14,6 +14,7 @@ class PropertyV1Serializer(serializers.ModelSerializer):
 
     time = serializers.SerializerMethodField()
     price = serializers.SerializerMethodField()
+    views = serializers.SerializerMethodField()
     class Meta:
         model = Property
         fields = ['id', 'title', 'description', 'status',
@@ -43,6 +44,9 @@ class PropertyV1Serializer(serializers.ModelSerializer):
             return f'{obj.price / 1000} tỷ'
         else:
             return f'{obj.price} triệu'
+        
+    def get_views(self, obj):
+        return obj.viewed_property.views if hasattr(obj, 'viewed_property') else 0
 
 
 class PropertyDetailV1Serializer(serializers.ModelSerializer):
