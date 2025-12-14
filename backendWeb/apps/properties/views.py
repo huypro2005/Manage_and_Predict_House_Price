@@ -5,11 +5,10 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from django.http import Http404
 from oauth2_provider.contrib.rest_framework import TokenHasReadWriteScope
-from .serializer import PropertyImageSerializer, PropertyV1Serializer, PropertyDetailV1Serializer, PropertyCreateFullV1Serializer
+from .serializer import PropertyImageSerializer, PropertyV1Serializer, PropertyDetailV1Serializer, PropertyCreateFullV1Serializer, PropertyUpdateSerializer
 from .models import Property, PropertyImage, ViewsProperty
 from apps.permission import IsAuthenticatedOrReadOnly
 from django.utils.dateparse import parse_datetime
-from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.pagination import PageNumberPagination
 from django.core.cache import cache 
 import hashlib
@@ -182,8 +181,44 @@ class PropertyDetailView(APIView):
         if serializer.is_valid():
             serializer.save()
             invalidate_property_cache(user_id=prop.user.id)
+            prop.status = Property.STATUS.PENDING
+            prop.save()
             return Response({'message': 'Property updated successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
         return Response({'message': 'Property update failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, pk):
+        self.user = request.user
+        prop = self.get_object(pk)
+
+        if not request.user.is_staff and request.user.id != prop.user_id:
+            return Response({"message": "Forbidden"}, status=403)
+        try:
+            serializer = PropertyUpdateSerializer(prop, data=request.data, partial=True)
+            gia = prop.price
+            dien_tich = prop.area_m2
+            price_per_m2 = prop.price_per_m2
+            if 'price' in request.data:
+                gia = float(request.data['price'])
+            if 'area_m2' in request.data:
+                dien_tich = float(request.data['area_m2'])
+            if 'price_per_m2' not in request.data:
+                price_per_m2 = gia / dien_tich if dien_tich > 0 else 0
+                request.data['price_per_m2'] = price_per_m2
+            serializer.is_valid()
+            serializer.save()
+            invalidate_property_cache(user_id=prop.user_id)
+
+            Property.objects.filter(id=prop.id).update(status=Property.STATUS.PENDING)
+
+            return Response({
+                "message": "Updated",
+                "data": PropertyDetailV1Serializer(prop).data
+            })
+        except Exception as e:
+            return Response({
+                "message": "Update failed",
+                "errors": str(e)
+            }, status=400)
 
     @transaction.atomic
     def delete(self, request, pk):

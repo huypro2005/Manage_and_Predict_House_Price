@@ -24,31 +24,30 @@ SET @@SESSION.SQL_LOG_BIN= 0;
 SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ '';
 
 --
--- Table structure for table `socialaccount_socialapp_sites`
+-- Table structure for table `views_property`
 --
 
-DROP TABLE IF EXISTS `socialaccount_socialapp_sites`;
+DROP TABLE IF EXISTS `views_property`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `socialaccount_socialapp_sites` (
+CREATE TABLE `views_property` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `socialapp_id` int NOT NULL,
-  `site_id` int NOT NULL,
+  `views` int NOT NULL,
+  `property_id` bigint NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `socialaccount_socialapp_sites_socialapp_id_site_id_71a9a768_uniq` (`socialapp_id`,`site_id`),
-  KEY `socialaccount_socialapp_sites_site_id_2579dee5_fk_django_site_id` (`site_id`),
-  CONSTRAINT `socialaccount_social_socialapp_id_97fb6e7d_fk_socialacc` FOREIGN KEY (`socialapp_id`) REFERENCES `socialaccount_socialapp` (`id`),
-  CONSTRAINT `socialaccount_socialapp_sites_site_id_2579dee5_fk_django_site_id` FOREIGN KEY (`site_id`) REFERENCES `django_site` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  UNIQUE KEY `property_id` (`property_id`),
+  CONSTRAINT `views_property_property_id_15683756_fk_property_id` FOREIGN KEY (`property_id`) REFERENCES `property` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `socialaccount_socialapp_sites`
+-- Dumping data for table `views_property`
 --
 
-LOCK TABLES `socialaccount_socialapp_sites` WRITE;
-/*!40000 ALTER TABLE `socialaccount_socialapp_sites` DISABLE KEYS */;
-/*!40000 ALTER TABLE `socialaccount_socialapp_sites` ENABLE KEYS */;
+LOCK TABLES `views_property` WRITE;
+/*!40000 ALTER TABLE `views_property` DISABLE KEYS */;
+INSERT INTO `views_property` VALUES (1,2,18),(2,0,19),(3,1,20),(4,4,31),(5,1,32),(6,0,36),(7,5,37),(8,4,38),(9,8,39);
+/*!40000 ALTER TABLE `views_property` ENABLE KEYS */;
 UNLOCK TABLES;
 SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -61,4 +60,4 @@ SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-12-13  0:38:24
+-- Dump completed on 2025-12-13  0:38:31

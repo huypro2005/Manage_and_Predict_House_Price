@@ -47,35 +47,42 @@ class ListPredictRequestsView(APIView):
         serializer = PredictRequestSerializer(predict_requests, many=True)
         return Response(serializer.data)
     
+
+    '''
+    Hiện tại chưa giới hạn số lần dự đoán
+    sau này sẽ thêm giới hạn cho người dùng thường
+    commented code liên quan đến giới hạn đã được giữ lại trong phần dưới đây
+    '''
     @transaction.atomic
     def post(self, request):
         dashboard = self.get_dashboard()
-        if dashboard.countRemain > 0 or dashboard.Is_premium:
-            serializer = PredictRequestSerializer(data=request.data)
-            if serializer.is_valid():
-                input_data = serializer.validated_data['input_data']
-                df = pd.DataFrame({
-                    'loại nhà đất': [int(input_data['loại nhà đất'])],
-                    'địa chỉ': [int(input_data['địa chỉ'])],
-                    'diện tích': [float(input_data['diện tích'])],
-                    'mặt tiền': [float(input_data['mặt tiền'])],
-                    'phòng ngủ': [int(input_data['phòng ngủ'])],
-                    'pháp lý': [int(input_data['pháp lý'])],
-                    'tọa độ x': [input_data['tọa độ x'] * 1000000000],
-                    'tọa độ y': [input_data['tọa độ y'] * 1000000000],
-                    'số tầng': [int(input_data['số tầng'])]
-                })
-                prediction = model.predict(df)
-                predicted_price_per_m2 = prediction[0]
-                predicted_total_price = predicted_price_per_m2 * input_data['diện tích']
-                serializer.save(user=request.user, dashboard=dashboard, predict_result=predicted_total_price, predict_price_per_m2=predicted_price_per_m2)
-                if not dashboard.Is_premium:
-                    dashboard.countRemain -= 1
-                    dashboard.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({"detail": "No remaining predictions."}, status=status.HTTP_403_FORBIDDEN)
+        # if dashboard.countRemain > 0 or dashboard.Is_premium:
+        serializer = PredictRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            input_data = serializer.validated_data['input_data']
+            df = pd.DataFrame({
+                'loại nhà đất': [int(input_data['loại nhà đất'])],
+                'địa chỉ': [int(input_data['địa chỉ'])],
+                'diện tích': [float(input_data['diện tích'])],
+                'mặt tiền': [float(input_data['mặt tiền'])],
+                'phòng ngủ': [int(input_data['phòng ngủ'])],
+                'pháp lý': [int(input_data['pháp lý'])],
+                'tọa độ x': [input_data['tọa độ x'] * 1000000000],
+                'tọa độ y': [input_data['tọa độ y'] * 1000000000],
+                'số tầng': [int(input_data['số tầng'])],
+                # 'mã tỉnh': [int(input_data['mã tỉnh'])],
+            })
+            prediction = model.predict(df)
+            predicted_price_per_m2 = prediction[0]
+            predicted_total_price = predicted_price_per_m2 * input_data['diện tích']
+            serializer.save(user=request.user, dashboard=dashboard, predict_result=predicted_total_price, predict_price_per_m2=predicted_price_per_m2)
+            # if not dashboard.Is_premium:
+            #     dashboard.countRemain -= 1
+            #     dashboard.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # else:
+        #     return Response({"detail": "No remaining predictions."}, status=status.HTTP_403_FORBIDDEN)
         
 
     

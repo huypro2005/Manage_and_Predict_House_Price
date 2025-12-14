@@ -8,6 +8,8 @@ import PropertyList from './pages/PropertyList';
 import { useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import NotificationManager from './components/NotificationManager';
+import LoginModal from './components/auth/LoginModal';
+import RegisterModal from './components/auth/RegisterModal';
 import { 
   Heart, 
   MapPin,
@@ -18,8 +20,7 @@ import {
   Instagram,
   Twitter,
   Youtube,
-  ChevronRight,
-  Play
+  ChevronRight
 } from 'lucide-react';
 
 
@@ -36,6 +37,8 @@ function App() {
   const [currentPage, setCurrentPage] = useState('search'); // 'search' or 'propertyList'
   const [searchParams, setSearchParams] = useState({});
   const [favoriteIds, setFavoriteIds] = useState([]);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
 
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -446,7 +449,10 @@ function App() {
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 leading-tight">
                 11 năm tôn vinh chủ đầu tư xuất sắc ngành bất động sản
               </h2>
-              <button className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-8 py-4 rounded-lg font-bold text-lg transition-colors">
+              <button 
+                onClick={() => setShowLoginModal(true)}
+                className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-8 py-4 rounded-lg font-bold text-lg transition-colors"
+              >
                 ĐĂNG KÝ TẠI ĐÂY
               </button>
             </motion.div>
@@ -454,15 +460,16 @@ function App() {
             <motion.div 
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
-              className="relative"
+              className="relative w-full"
             >
-              <div className="w-full h-48 sm:h-64 bg-gradient-to-br from-yellow-400/20 to-orange-500/20 rounded-2xl flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Play className="h-8 w-8 text-gray-900" />
-                  </div>
-                  <p className="text-white text-lg">Xem video giới thiệu</p>
-                </div>
+              <div className="w-full h-48 sm:h-80 rounded-2xl overflow-hidden">
+                <iframe
+                  src="https://www.youtube.com/embed/ufraSdLiqiE"
+                  title="Video giới thiệu"
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
               </div>
             </motion.div>
           </div>
@@ -810,6 +817,30 @@ function App() {
           </div>
         </div>
       </footer>
+
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => {
+          setShowLoginModal(false);
+          setShowRegisterModal(false);
+        }}
+        onSwitchToRegister={() => {
+          setShowLoginModal(false);
+          setShowRegisterModal(true);
+        }}
+      />
+
+      <RegisterModal
+        isOpen={showRegisterModal}
+        onClose={() => {
+          setShowLoginModal(false);
+          setShowRegisterModal(false);
+        }}
+        onSwitchToLogin={() => {
+          setShowRegisterModal(false);
+          setShowLoginModal(true);
+        }}
+      />
     </Layout>
   );
 }

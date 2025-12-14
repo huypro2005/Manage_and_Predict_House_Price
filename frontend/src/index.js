@@ -12,6 +12,7 @@ import PropertyDetail from './pages/PropertyDetail';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Favorites from './pages/Favorites';
 import MyProperties from './pages/MyProperties';
+import EditProperty from './pages/EditProperty';
 import MapTest from './components/MapTest';
 import PostProperty from './pages/PostProperty';
 import PricePrediction from './pages/PricePrediction';
@@ -86,6 +87,15 @@ root.render(
           element={
             <ProtectedRoute>
               <MyProperties />
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path='/edit-property/:id' 
+          element={
+            <ProtectedRoute>
+              <EditProperty />
             </ProtectedRoute>
           } 
         />

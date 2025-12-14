@@ -142,13 +142,57 @@ function PricePrediction() {
     fetchDistricts();
   }, [formData.province, provinces]);
 
+  // Helper function to check property type name
+  const getPropertyTypeName = (propertyTypeCode) => {
+    if (!propertyTypeCode) return '';
+    const selectedType = propertyTypes.find(pt => pt.code === parseInt(propertyTypeCode));
+    return selectedType ? selectedType.name.toLowerCase() : '';
+  };
+
+  // Check if property type is apartment (căn hộ chung cư, chung cư mini)
+  const isApartmentType = (propertyTypeCode) => {
+    const typeName = getPropertyTypeName(propertyTypeCode);
+    return typeName.includes('căn hộ chung cư') || 
+           typeName.includes('chung cư mini') || 
+           typeName.includes('căn hộ dịch vụ');
+  };
+
+  // Check if property type is land (bán đất, đất nền, đất nền dự án)
+  const isLandType = (propertyTypeCode) => {
+    const typeName = getPropertyTypeName(propertyTypeCode);
+    return typeName.includes('bán đất') || 
+           typeName.includes('đất nền') ||
+           typeName.includes('đất nền dự án');
+  };
+
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // Reset district when province changes
-    if (field === 'province') {
-      setFormData(prev => ({ ...prev, district: '' }));
-    }
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      
+      // Reset district when province changes
+      if (field === 'province') {
+        newData.district = '';
+      }
+      
+      // Handle property type changes
+      if (field === 'propertyType') {
+        const propertyTypeCode = value;
+        
+        // If apartment type: set frontage and floors to 0
+        if (isApartmentType(propertyTypeCode)) {
+          newData.frontage = '0';
+          newData.floors = '0';
+        }
+        
+        // If land type: set bedrooms and floors to 0
+        if (isLandType(propertyTypeCode)) {
+          newData.bedrooms = '0';
+          newData.floors = '0';
+        }
+      }
+      
+      return newData;
+    });
   };
 
   const handleMapClick = (lat, lng) => {
@@ -227,7 +271,20 @@ function PricePrediction() {
       return;
     }
 
-    const requiredFields = ['propertyType', 'province', 'district', 'area', 'frontage', 'bedrooms', 'legalStatus', 'floors'];
+    // Check required fields based on property type
+    const requiredFields = ['propertyType', 'province', 'district', 'area', 'legalStatus'];
+    
+    // Add conditional required fields
+    if (!isApartmentType(formData.propertyType)) {
+      requiredFields.push('frontage');
+    }
+    if (!isApartmentType(formData.propertyType) && !isLandType(formData.propertyType)) {
+      requiredFields.push('floors');
+    }
+    if (!isLandType(formData.propertyType)) {
+      requiredFields.push('bedrooms');
+    }
+    
     const missingFields = requiredFields.filter(field => !formData[field]);
     
     if (missingFields.length > 0) {
@@ -245,18 +302,22 @@ function PricePrediction() {
        const selectedProvince = provinces.find(p => p.code === parseInt(formData.province));
        const selectedDistrict = districts.find(d => d.code === parseInt(formData.district));
 
+       // Prepare request data with proper defaults for disabled fields
+       const isApartment = isApartmentType(formData.propertyType);
+       const isLand = isLandType(formData.propertyType);
+       
        const requestData = {
          input_data: {
            "loại nhà đất": selectedPropertyType?.code || 0,
            "địa chỉ": selectedDistrict?.code || 0,
-           "diện tích": parseFloat(formData.area),
-           "mặt tiền": parseFloat(formData.frontage),
-           "phòng ngủ": parseInt(formData.bedrooms),
-           "pháp lý": parseInt(formData.legalStatus),
-           "tọa độ x": formData.coordinates.lat,
-           "tọa độ y": formData.coordinates.lng,
-           "số tầng": parseInt(formData.floors),
-           "tỉnh": selectedProvince?.code || 0
+           "diện tích": parseFloat(formData.area) || 0,
+           "mặt tiền": isApartment ? 0 : (parseFloat(formData.frontage) || 0),
+           "phòng ngủ": isLand ? 0 : (parseInt(formData.bedrooms) || 0),
+           "pháp lý": parseInt(formData.legalStatus) || 0,
+           "tọa độ x": formData.coordinates.lat || 0,
+           "tọa độ y": formData.coordinates.lng || 0,
+           "số tầng": (isApartment || isLand) ? 0 : (parseInt(formData.floors) || 0),
+           "mã tỉnh": selectedProvince?.code || 0
          }
        };
 
@@ -535,40 +596,67 @@ function PricePrediction() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Mặt tiền (m) *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Mặt tiền (m) {isApartmentType(formData.propertyType) ? '' : '*'}
+                  </label>
                   <input
                     type="number"
                     value={formData.frontage}
                     onChange={(e) => handleInputChange('frontage', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    disabled={isApartmentType(formData.propertyType)}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      isApartmentType(formData.propertyType) ? 'bg-gray-100 cursor-not-allowed' : ''
+                    }`}
                     placeholder="5"
-                    required
+                    required={!isApartmentType(formData.propertyType)}
                   />
+                  {isApartmentType(formData.propertyType) && (
+                    <p className="text-xs text-gray-500 mt-1">Không áp dụng cho loại căn hộ</p>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Số phòng ngủ *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Số phòng ngủ {isLandType(formData.propertyType) ? '' : '*'}
+                  </label>
                   <input
                     type="number"
                     value={formData.bedrooms}
                     onChange={(e) => handleInputChange('bedrooms', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    disabled={isLandType(formData.propertyType)}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      isLandType(formData.propertyType) ? 'bg-gray-100 cursor-not-allowed' : ''
+                    }`}
                     placeholder="1"
-                    required
+                    required={!isLandType(formData.propertyType)}
                   />
+                  {isLandType(formData.propertyType) && (
+                    <p className="text-xs text-gray-500 mt-1">Không áp dụng cho loại đất</p>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Số tầng *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Số tầng {isApartmentType(formData.propertyType) ? '' : '*'}
+                  </label>
                   <input
                     type="number"
                     value={formData.floors}
                     onChange={(e) => handleInputChange('floors', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    disabled={isApartmentType(formData.propertyType)}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      (isApartmentType(formData.propertyType) || isLandType(formData.propertyType)) ? 'bg-gray-100 cursor-not-allowed' : ''
+                    }`}
                     placeholder="1"
-                    required
+                    required={!(isApartmentType(formData.propertyType) || isLandType(formData.propertyType))}
                   />
+                  {isApartmentType(formData.propertyType) && (
+                    <p className="text-xs text-gray-500 mt-1">Không áp dụng cho loại căn hộ</p>
+                  )}
+                  {isLandType(formData.propertyType) && !isApartmentType(formData.propertyType) && (
+                    <p className="text-xs text-gray-500 mt-1">Không áp dụng cho loại đất nền/bán đất</p>
+                  )}
                 </div>
               </div>
 

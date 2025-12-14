@@ -402,10 +402,10 @@ function NewsDetail() {
             <div>
               <h4 className="text-lg font-semibold mb-4">Dịch vụ</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Mua bán nhà đất</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Cho thuê nhà đất</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Dự án bất động sản</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Tư vấn đầu tư</a></li>
+                <li><a href="/property-list?tab=ban" className="hover:text-white transition-colors">Mua bán nhà đất</a></li>
+                <li><a href="/property-list?tab=thue" className="hover:text-white transition-colors">Cho thuê nhà đất</a></li>
+                <li><a href="/news" className="hover:text-white transition-colors">Dự án bất động sản</a></li>
+                <li><a href="/price-prediction" className="hover:text-white transition-colors">Tư vấn đầu tư</a></li>
               </ul>
             </div>
             <div>

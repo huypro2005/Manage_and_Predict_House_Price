@@ -1,8 +1,8 @@
 -- MySQL dump 10.13  Distrib 8.0.43, for Win64 (x86_64)
 --
--- Host: user-service.clieg46wkhrm.ap-southeast-1.rds.amazonaws.com    Database: batdongsan
+-- Host: database-1.clieg46wkhrm.ap-southeast-1.rds.amazonaws.com    Database: batdongsan
 -- ------------------------------------------------------
--- Server version	8.0.42
+-- Server version	8.0.43
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -14,6 +14,14 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+SET @MYSQLDUMP_TEMP_LOG_BIN = @@SESSION.SQL_LOG_BIN;
+SET @@SESSION.SQL_LOG_BIN= 0;
+
+--
+-- GTID state at the beginning of the backup 
+--
+
+SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ '';
 
 --
 -- Table structure for table `conversation`
@@ -39,9 +47,10 @@ CREATE TABLE `conversation` (
 
 LOCK TABLES `conversation` WRITE;
 /*!40000 ALTER TABLE `conversation` DISABLE KEYS */;
-INSERT INTO `conversation` VALUES (1,'2025-11-09 10:30:43.562711','2025-11-16 07:41:42.273734','18:20','private'),(2,'2025-11-09 14:41:24.008453','2025-11-24 15:53:50.780611','15:18','private'),(3,'2025-11-19 06:19:16.870538','2025-11-19 06:19:29.269018','15:16','private'),(4,'2025-11-29 10:26:59.239943','2025-11-29 10:26:59.289846','18:23','private'),(5,'2025-12-03 11:56:15.883380','2025-12-03 12:10:22.278548','18:22','private');
+INSERT INTO `conversation` VALUES (1,'2025-11-09 10:30:43.562711','2025-11-16 07:41:42.273734','18:20','private'),(2,'2025-11-09 14:41:24.008453','2025-12-05 13:22:22.417932','15:18','private'),(3,'2025-11-19 06:19:16.870538','2025-11-19 06:19:29.269018','15:16','private'),(4,'2025-11-29 10:26:59.239943','2025-11-29 10:26:59.289846','18:23','private'),(5,'2025-12-03 11:56:15.883380','2025-12-03 12:10:22.278548','18:22','private');
 /*!40000 ALTER TABLE `conversation` ENABLE KEYS */;
 UNLOCK TABLES;
+SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -52,4 +61,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-12-05 13:20:02
+-- Dump completed on 2025-12-13  0:38:39

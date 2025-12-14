@@ -12,7 +12,8 @@ import { Building2,
   Mail,
   ChevronLeft,
   ChevronRight,
-  Search } from 'lucide-react';
+  Search,
+  Pencil } from 'lucide-react';
 import AuthWrapper from '../components/auth/AuthWrapper';
 import { useAuth } from '../contexts/AuthContext';
 import HeaderActions from '../components/HeaderActions';
@@ -38,7 +39,7 @@ function MyProperties() {
       const token = localStorage.getItem('token');
       if (!token) return;
       
-      const res = await fetch(`${baseUrl}favorites/`, {
+      const res = await fetch(`${baseUrl}favourites/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -61,7 +62,7 @@ function MyProperties() {
       if (!token) return;
       
       const isFavorite = favoriteIds.includes(propertyId);
-      const url = isFavorite ? `${baseUrl}favorites/${propertyId}/` : `${baseUrl}favorites/`;
+      const url = isFavorite ? `${baseUrl}favourites/${propertyId}/` : `${baseUrl}favourites/`;
       const method = isFavorite ? 'DELETE' : 'POST';
       const body = isFavorite ? null : JSON.stringify({ property_id: propertyId });
       
@@ -103,21 +104,33 @@ function MyProperties() {
         const params = new URLSearchParams(location.search);
         const urlUsername = params.get('username');
         setUser_search(urlUsername);
-        // Use URL username if available, otherwise use authenticated user's username
-        const username = urlUsername || user?.username;
         
-        if (!username) {
+        // Determine if viewing own properties or another user's properties
+        const isOwnProperties = !urlUsername || urlUsername === user?.username;
+        
+        if (!user && !urlUsername) {
           setItems([]);
           setTotalCount(0);
           setTotalPages(0);
           return;
         }
         
-        // Build API URL with pagination
-        const apiUrl = new URL(`${baseUrl}properties/`);
-        apiUrl.searchParams.append('username', username);
-        apiUrl.searchParams.append('page', currentPage.toString());
-        apiUrl.searchParams.append('page_size', itemsPerPage.toString());
+        let apiUrl;
+        
+        // Use my-properties/ endpoint for own properties, properties/?username= for others
+        if (isOwnProperties) {
+          // Use my-properties/ endpoint for authenticated user's own properties
+          apiUrl = new URL(`${baseUrl}my-properties/`);
+          // Add pagination if API supports it
+          apiUrl.searchParams.append('page', currentPage.toString());
+          apiUrl.searchParams.append('page_size', itemsPerPage.toString());
+        } else {
+          // Use properties/?username= for viewing another user's properties
+          apiUrl = new URL(`${baseUrl}properties/`);
+          apiUrl.searchParams.append('username', urlUsername);
+          apiUrl.searchParams.append('page', currentPage.toString());
+          apiUrl.searchParams.append('page_size', itemsPerPage.toString());
+        }
         
         const res = await fetch(apiUrl.toString(), {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -131,6 +144,7 @@ function MyProperties() {
         
         const data = await res.json();
         
+        // Handle response format: { message, data: [...], count: ... }
         const propertyData = Array.isArray(data.data) ? data.data : (Array.isArray(data.results) ? data.results : []);
         setItems(propertyData);
         setTotalCount(data.count || 0);
@@ -267,7 +281,7 @@ function MyProperties() {
                     { user_search || user?.user_fullname || user?.username || 'User'}
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    Tham gia RealEstate {user?.date_joined ? new Date(user.date_joined).getFullYear() : '2024'}
+                    Tham gia RealEstate {user?.date_joined ? new Date(user.created_at).getFullYear() : '2024'}
                   </p>
                   
                   {/* Stats */}
@@ -320,18 +334,40 @@ function MyProperties() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between">
-                    <h3 className="font-semibold text-gray-900 line-clamp-2 mr-3">{item.title}</h3>
-                    {(() => {
-                      const params = new URLSearchParams(location.search);
-                      const urlUsername = params.get('username');
-                      const isOwnProperties = !urlUsername || urlUsername === user?.username;
-                      
-                      return isOwnProperties ? (
-                        <button className="text-gray-400 hover:text-red-600" onClick={(e)=>{e.stopPropagation(); removeItem(item.id);}}>
-                          <Trash2 className="h-5 w-5"/>
-                        </button>
-                      ) : null;
-                    })()}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 line-clamp-2">{item.title}</h3>
+                    </div>
+                    <div className="flex items-center space-x-2 ml-2 flex-shrink-0">
+                      {item.status && (
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                          item.status === 'approved' 
+                            ? 'bg-green-100 text-green-700' 
+                            : item.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : item.status === 'rejected'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {item.status === 'approved' ? 'Đã duyệt' : item.status === 'pending' ? 'Chờ duyệt' : item.status === 'rejected' ? 'Từ chối' : item.status}
+                        </span>
+                      )}
+                      {(() => {
+                        const params = new URLSearchParams(location.search);
+                        const urlUsername = params.get('username');
+                        const isOwnProperties = !urlUsername || urlUsername === user?.username;
+                        
+                        return isOwnProperties ? (
+                          <>
+                            <button className="text-gray-400 hover:text-blue-600 transition-colors" onClick={(e)=>{e.stopPropagation(); navigate(`/edit-property/${item.id}`);}}>
+                              <Pencil className="h-5 w-5"/>
+                            </button>
+                            <button className="text-gray-400 hover:text-red-600 transition-colors" onClick={(e)=>{e.stopPropagation(); removeItem(item.id);}}>
+                              <Trash2 className="h-5 w-5"/>
+                            </button>
+                          </>
+                        ) : null;
+                      })()}
+                    </div>
                   </div>
                   <div className="text-xs text-gray-500 mt-1 flex items-center"><MapPin className="h-4 w-4 mr-1"/>{item.address}</div>
                 </div>
@@ -436,10 +472,10 @@ function MyProperties() {
             <div>
               <h4 className="text-lg font-semibold mb-4">Dịch vụ</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-white transition-colors">Mua bán nhà đất</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Cho thuê nhà đất</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Dự án bất động sản</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Tư vấn đầu tư</a></li>
+                <li><a href="/property-list?tab=ban" className="hover:text-white transition-colors">Mua bán nhà đất</a></li>
+                <li><a href="/property-list?tab=thue" className="hover:text-white transition-colors">Cho thuê nhà đất</a></li>
+                <li><a href="/news" className="hover:text-white transition-colors">Dự án bất động sản</a></li>
+                <li><a href="/price-prediction" className="hover:text-white transition-colors">Tư vấn đầu tư</a></li>
               </ul>
             </div>
 

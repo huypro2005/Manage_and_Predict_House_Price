@@ -5,11 +5,61 @@ from apps.utils import datetimeFormat
 from apps.accounts.serializer import CustomUserV1Serializer
 from apps.defaults.serializer import AttributeSerializer
 
+# Hàm validate cho thuộc tính
+def validate_attributes(attributes):
+    for attr in attributes:
+        if 'attribute_id' not in attr or 'value' not in attr:
+            raise serializers.ValidationError("Each attribute must have 'attribute_id' and 'value'.")
+        if attr['name'] == 'Số phòng ngủ' : 
+            try:
+                int(attr['value'])
+                if int(attr['value']) < 0:
+                    raise serializers.ValidationError(f"The value for {attr['name']} must be a non-negative integer.")
+            except ValueError:
+                raise serializers.ValidationError(f"The value for {attr['name']} must be an integer.")
+        if attr['name'] == 'Số tầng':
+            try:
+                int(attr['value'])
+                if int(attr['value']) < 0:
+                    raise serializers.ValidationError(f"The value for {attr['name']} must be a non-negative integer.")
+            except ValueError:
+                raise serializers.ValidationError(f"The value for {attr['name']} must be a number.")
+        if attr['name'] == 'Số phòng tắm, vệ sinh':
+            try:
+                int(attr['value'])
+                if int(attr['value']) < 0:
+                    raise serializers.ValidationError(f"The value for {attr['name']} must be a non-negative integer.")
+            except ValueError:
+                raise serializers.ValidationError(f"The value for {attr['name']} must be an integer.")
+        if attr['name'] == 'Số phòng tắm, vệ sinh':
+            try:
+                int(attr['value'])
+                if int(attr['value']) < 0:
+                    raise serializers.ValidationError(f"The value for {attr['name']} must be a non-negative integer.")
+            except ValueError:
+                raise serializers.ValidationError(f"The value for {attr['name']} must be an integer.")
+        if attr['name'] == 'Mặt tiền':
+            try:
+                float(attr['value'])
+                if float(attr['value']) < 0:
+                    raise serializers.ValidationError(f"The value for {attr['name']} must be a non-negative number.")
+            except ValueError:
+                raise serializers.ValidationError(f"The value for {attr['name']} must be a number.")
+        if attr['name'] == 'Đường vào':
+            try:
+                float(attr['value'])
+                if float(attr['value']) < 0:
+                    raise serializers.ValidationError(f"The value for {attr['name']} must be a non-negative number.")
+            except ValueError:
+                raise serializers.ValidationError(f"The value for {attr['name']} must be a number.")
+            
+
 class PropertyImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = PropertyImage
         fields = '__all__'
 
+# Serializer cơ bản cho Property
 class PropertyV1Serializer(serializers.ModelSerializer):
 
     time = serializers.SerializerMethodField()
@@ -49,6 +99,7 @@ class PropertyV1Serializer(serializers.ModelSerializer):
         return obj.viewed_property.views if hasattr(obj, 'viewed_property') else 0
 
 
+# Serializer chi tiết Property với hình ảnh và thuộc tính
 class PropertyDetailV1Serializer(serializers.ModelSerializer):
 
     images = PropertyImageSerializer(many=True)
@@ -68,14 +119,18 @@ class PropertyDetailV1Serializer(serializers.ModelSerializer):
                   'description', 'price', 
                   'area_m2', 'address', 
                   'thumbnail', 
-                  'property_type', 'bedrooms',
-                  'floors', 'coord_x', 'coord_y',
+                  'property_type',
+                  'coord_x', 'coord_y',
                   'legal_status', 'tab',
                   'user_fullname', 'user_email',
                   'views', 'created_at',
                   'updated_at', 'property_type_name', 
                   'attributes', 'images', 'status']
-        read_only_fields = ['id', 'user', 'created_at', 'updated_at', 'views', 'images', 'attributes', 'status']
+        read_only_fields = ['id', 'user', 'created_at', 
+                            'updated_at', 'views', 'images', 
+                            'status', 'username', 
+                            'user_fullname', 'user_email', 'property_type_name',
+                            'tab', 'coord_x', 'coord_y', 'province', 'district', 'address']
 
     def get_attributes(self, obj):
         attribute_values = obj.attribute_values.filter(is_active=True)
@@ -89,11 +144,42 @@ class PropertyDetailV1Serializer(serializers.ModelSerializer):
             for attr_value in attribute_values
         ]
     
+class PropertyUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Property
+        fields = [
+            "title", "description",
+            "price", "area_m2",
+            "legal_status",
+            "thumbnail", "price_per_m2"
+        ]
 
+    def validate(self, attrs):
+        if "area_m2" in attrs and attrs["area_m2"] <= 0:
+            raise serializers.ValidationError({"area_m2": "area_m2 must be > 0"})
+        if "price" in attrs and attrs["price"] <= 0:
+            raise serializers.ValidationError({"price": "price must be > 0"})
+        return attrs
+
+    def update(self, instance, validated_data):
+        price_changed = "price" in validated_data
+        area_changed = "area_m2" in validated_data
+
+        for k, v in validated_data.items():
+            setattr(instance, k, v)
+
+        # auto calc price_per_m2
+        if price_changed or area_changed:
+            if instance.area_m2 and instance.area_m2 > 0:
+                instance.price_per_m2 = instance.price / instance.area_m2
+
+        instance.save()
+        return instance
 
 
     
-    
+
+# Serializer để tạo Property kèm thuộc tính và hình ảnh
 class PropertyCreateFullV1Serializer(serializers.ModelSerializer):
     # Nếu bạn muốn thêm hình ảnh, sử dụng PropertyImageSerializer
     images = PropertyImageSerializer(many=True, required=False)  # Tùy chọn thêm hình ảnh

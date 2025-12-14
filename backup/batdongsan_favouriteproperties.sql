@@ -1,8 +1,8 @@
 -- MySQL dump 10.13  Distrib 8.0.43, for Win64 (x86_64)
 --
--- Host: user-service.clieg46wkhrm.ap-southeast-1.rds.amazonaws.com    Database: batdongsan
+-- Host: database-1.clieg46wkhrm.ap-southeast-1.rds.amazonaws.com    Database: batdongsan
 -- ------------------------------------------------------
--- Server version	8.0.42
+-- Server version	8.0.43
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -14,6 +14,14 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+SET @MYSQLDUMP_TEMP_LOG_BIN = @@SESSION.SQL_LOG_BIN;
+SET @@SESSION.SQL_LOG_BIN= 0;
+
+--
+-- GTID state at the beginning of the backup 
+--
+
+SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ '';
 
 --
 -- Table structure for table `favouriteproperties`
@@ -42,9 +50,10 @@ CREATE TABLE `favouriteproperties` (
 
 LOCK TABLES `favouriteproperties` WRITE;
 /*!40000 ALTER TABLE `favouriteproperties` DISABLE KEYS */;
-INSERT INTO `favouriteproperties` VALUES (9,'2025-08-23 16:27:10.472689',1,18,15),(23,'2025-08-24 21:08:32.807100',1,18,19),(31,'2025-11-15 09:40:16.888343',1,19,20),(33,'2025-12-03 04:42:31.045208',1,19,22),(34,'2025-12-03 08:29:20.623655',1,32,18);
+INSERT INTO `favouriteproperties` VALUES (9,'2025-08-23 16:27:10.472689',1,18,15),(23,'2025-08-24 21:08:32.807100',1,18,19),(31,'2025-11-15 09:40:16.888343',1,19,20),(33,'2025-12-03 04:42:31.045208',1,19,22);
 /*!40000 ALTER TABLE `favouriteproperties` ENABLE KEYS */;
 UNLOCK TABLES;
+SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -55,4 +64,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-12-05 13:20:07
+-- Dump completed on 2025-12-13  0:37:45

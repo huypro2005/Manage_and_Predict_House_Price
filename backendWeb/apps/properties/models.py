@@ -63,6 +63,13 @@ class Property(models.Model):
 
     def __str__(self):
         return self.title[:50] + '...' if len(self.title) > 50 else self.title
+    
+    def update_price_per_m2(self):
+        if self.area_m2 > 0:
+            self.price_per_m2 = self.price / self.area_m2
+        else:
+            self.price_per_m2 = 0
+        self.save()
 
 class ViewsProperty(models.Model):
     property = models.OneToOneField(Property, on_delete=models.CASCADE, related_name='viewed_property', db_index=True)

@@ -1,8 +1,8 @@
 -- MySQL dump 10.13  Distrib 8.0.43, for Win64 (x86_64)
 --
--- Host: user-service.clieg46wkhrm.ap-southeast-1.rds.amazonaws.com    Database: batdongsan
+-- Host: database-1.clieg46wkhrm.ap-southeast-1.rds.amazonaws.com    Database: batdongsan
 -- ------------------------------------------------------
--- Server version	8.0.42
+-- Server version	8.0.43
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -14,6 +14,14 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+SET @MYSQLDUMP_TEMP_LOG_BIN = @@SESSION.SQL_LOG_BIN;
+SET @@SESSION.SQL_LOG_BIN= 0;
+
+--
+-- GTID state at the beginning of the backup 
+--
+
+SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ '';
 
 --
 -- Table structure for table `dashboard`
@@ -31,7 +39,7 @@ CREATE TABLE `dashboard` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_id` (`user_id`),
   CONSTRAINT `predicts_dashboard_user_id_5d7f3d16_fk_CustomUser_id` FOREIGN KEY (`user_id`) REFERENCES `customuser` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -40,9 +48,10 @@ CREATE TABLE `dashboard` (
 
 LOCK TABLES `dashboard` WRITE;
 /*!40000 ALTER TABLE `dashboard` DISABLE KEYS */;
-INSERT INTO `dashboard` VALUES (2,10,0,NULL,4),(3,10,0,NULL,7),(4,10,0,NULL,8),(7,6,0,NULL,15),(8,10,0,NULL,16),(9,10,0,NULL,17),(10,5,0,NULL,18),(11,10,0,NULL,19),(12,10,0,NULL,20),(13,10,0,NULL,21),(14,7,0,NULL,22),(15,99,0,NULL,24),(16,98,0,NULL,25);
+INSERT INTO `dashboard` VALUES (2,10,0,NULL,4),(3,10,0,NULL,7),(4,10,0,NULL,8),(7,6,0,NULL,15),(8,10,0,NULL,16),(9,10,0,NULL,17),(10,-1,0,NULL,18),(11,10,0,NULL,19),(12,10,0,NULL,20),(13,10,0,NULL,21),(14,7,0,NULL,22),(15,99,0,NULL,24),(16,98,0,NULL,25),(17,97,0,NULL,26);
 /*!40000 ALTER TABLE `dashboard` ENABLE KEYS */;
 UNLOCK TABLES;
+SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -53,4 +62,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-12-05 13:20:12
+-- Dump completed on 2025-12-13  0:38:08
