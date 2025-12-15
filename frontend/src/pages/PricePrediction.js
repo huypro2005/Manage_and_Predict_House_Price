@@ -309,7 +309,7 @@ function PricePrediction() {
        const requestData = {
          input_data: {
            "loại nhà đất": selectedPropertyType?.code || 0,
-           "địa chỉ": selectedDistrict?.code || 0,
+           "mã huyện": selectedDistrict?.code || 0,
            "diện tích": parseFloat(formData.area) || 0,
            "mặt tiền": isApartment ? 0 : (parseFloat(formData.frontage) || 0),
            "phòng ngủ": isLand ? 0 : (parseInt(formData.bedrooms) || 0),

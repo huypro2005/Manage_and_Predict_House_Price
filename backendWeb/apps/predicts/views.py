@@ -14,7 +14,7 @@ import json
 import pandas as pd
 # Create your views here.
 
-model_path = os.path.join(settings.BASE_DIR, 'apps/predicts/model_ai/model.pkl')
+model_path = os.path.join(settings.BASE_DIR, 'apps/predicts/model_ai/model1.pkl')
 model = jl.load(model_path)
 
 class DashboardView(APIView):
@@ -62,7 +62,7 @@ class ListPredictRequestsView(APIView):
             input_data = serializer.validated_data['input_data']
             df = pd.DataFrame({
                 'loại nhà đất': [int(input_data['loại nhà đất'])],
-                'địa chỉ': [int(input_data['địa chỉ'])],
+                'mã huyện': [int(input_data['mã huyện'])],
                 'diện tích': [float(input_data['diện tích'])],
                 'mặt tiền': [float(input_data['mặt tiền'])],
                 'phòng ngủ': [int(input_data['phòng ngủ'])],
@@ -70,7 +70,7 @@ class ListPredictRequestsView(APIView):
                 'tọa độ x': [input_data['tọa độ x'] * 1000000000],
                 'tọa độ y': [input_data['tọa độ y'] * 1000000000],
                 'số tầng': [int(input_data['số tầng'])],
-                # 'mã tỉnh': [int(input_data['mã tỉnh'])],
+                'mã tỉnh': [int(input_data['mã tỉnh'])],
             })
             prediction = model.predict(df)
             predicted_price_per_m2 = prediction[0]
