@@ -22,3 +22,8 @@ docker compose up --build -d
 ```
 
 Nếu không có lỗi gì xảy ra, 2 docker images đó đang được chạy trong ứng dụng docker desktop
+
+
+## VIDEO DEMO
+
+[![Watch the video](https://i.ytimg.com/vi/ufraSdLiqiE/hqdefault.jpg)](https://www.youtube.com/watch?v=ufraSdLiqiE)
