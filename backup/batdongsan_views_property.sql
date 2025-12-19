@@ -37,7 +37,7 @@ CREATE TABLE `views_property` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `property_id` (`property_id`),
   CONSTRAINT `views_property_property_id_15683756_fk_property_id` FOREIGN KEY (`property_id`) REFERENCES `property` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -46,7 +46,7 @@ CREATE TABLE `views_property` (
 
 LOCK TABLES `views_property` WRITE;
 /*!40000 ALTER TABLE `views_property` DISABLE KEYS */;
-INSERT INTO `views_property` VALUES (1,2,18),(2,0,19),(3,1,20),(4,4,31),(5,1,32),(6,0,36),(7,5,37),(8,4,38),(9,8,39);
+INSERT INTO `views_property` VALUES (1,2,18),(2,4,19),(3,3,20),(4,5,31),(5,3,32),(6,0,36),(7,13,37),(8,5,38),(9,10,39),(10,1,40),(11,6,41),(12,11,42),(13,13,43),(14,16,44),(15,0,45),(16,4,46);
 /*!40000 ALTER TABLE `views_property` ENABLE KEYS */;
 UNLOCK TABLES;
 SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
@@ -60,4 +60,4 @@ SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-12-13  0:38:31
+-- Dump completed on 2025-12-19 15:19:01

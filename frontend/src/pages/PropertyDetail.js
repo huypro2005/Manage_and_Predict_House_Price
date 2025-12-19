@@ -565,7 +565,17 @@ Link bài viết: ${currentUrl}`;
                 <button
                   key={item.id}
                   className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
-                  onClick={() => navigate('/property-list')}
+                  onClick={
+                    () => {
+                      if (item.id === 'ban') {
+                        navigate('/property-list?tab=ban');
+                      } else if (item.id === 'thue') {
+                        navigate('/property-list?tab=thue');
+                      } else if (item.id === 'tintuc') {
+                        navigate('/news');
+                      }
+                    }
+                  }
                 >
                   {item.label}
                 </button>

@@ -26,6 +26,7 @@ class PropertyAttributeValueInline(admin.TabularInline):
 class PropertyAdmin(admin.ModelAdmin):
     inlines = [PropertyImagesInline, PropertyAttributeValueInline]
     list_display = ('thumbnail_tag', 'title', 'price', 'area_m2', 'is_active', 'status')
+    actions = ['mark_as_approved']
 
     def thumbnail_tag(self, obj):
         return format_html(obj.thumbnail_tag())
@@ -42,13 +43,11 @@ class PropertyAdmin(admin.ModelAdmin):
             )
         ).order_by('pending_first', '-created_at')
 
+    @admin.action(description='Mark selected properties as Approved')
+    def mark_as_approved(self, request, queryset):
+        queryset.update(status=Property.STATUS.APPROVED)
+
     thumbnail_tag.short_description = 'Thumbnail'  
-'''
-score_same_province=Case(
-                When(province_id=property.province_id, then=Value(1)),
-                default=Value(0),
-                output_field=IntegerField()
-            ),
-'''
+
 
 

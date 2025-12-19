@@ -167,7 +167,24 @@ function PricePrediction() {
 
   const handleInputChange = (field, value) => {
     setFormData(prev => {
-      const newData = { ...prev, [field]: value };
+      const newData = { ...prev };
+
+      // Allow decimal numbers for area & frontage, integers for the rest
+      const decimalFields = ['area', 'frontage'];
+      const integerFields = ['bedrooms', 'floors'];
+
+      if (decimalFields.includes(field)) {
+        const decimalPattern = /^\d*\.?\d*$/;
+        if (value === '' || decimalPattern.test(value)) {
+          const numericValue = value === '' ? '' : parseFloat(value);
+          newData[field] = Number.isNaN(numericValue) ? '' : (numericValue < 0 ? '0' : value);
+        }
+      } else if (integerFields.includes(field)) {
+        const intValue = value === '' ? '' : parseInt(value, 10);
+        newData[field] = Number.isNaN(intValue) ? '' : Math.max(0, intValue).toString();
+      } else {
+        newData[field] = value;
+      }
       
       // Reset district when province changes
       if (field === 'province') {
@@ -588,10 +605,12 @@ function PricePrediction() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Diện tích (m²) *</label>
                   <input
                     type="number"
+                    step="0.01"
                     value={formData.area}
                     onChange={(e) => handleInputChange('area', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="100"
+                  min="0"
                     required
                   />
                 </div>
@@ -601,6 +620,7 @@ function PricePrediction() {
                   </label>
                   <input
                     type="number"
+                    step="0.01"
                     value={formData.frontage}
                     onChange={(e) => handleInputChange('frontage', e.target.value)}
                     disabled={isApartmentType(formData.propertyType)}
@@ -608,6 +628,7 @@ function PricePrediction() {
                       isApartmentType(formData.propertyType) ? 'bg-gray-100 cursor-not-allowed' : ''
                     }`}
                     placeholder="5"
+                  min="0"
                     required={!isApartmentType(formData.propertyType)}
                   />
                   {isApartmentType(formData.propertyType) && (
@@ -630,6 +651,7 @@ function PricePrediction() {
                       isLandType(formData.propertyType) ? 'bg-gray-100 cursor-not-allowed' : ''
                     }`}
                     placeholder="1"
+                  min="0"
                     required={!isLandType(formData.propertyType)}
                   />
                   {isLandType(formData.propertyType) && (
@@ -649,6 +671,7 @@ function PricePrediction() {
                       (isApartmentType(formData.propertyType) || isLandType(formData.propertyType)) ? 'bg-gray-100 cursor-not-allowed' : ''
                     }`}
                     placeholder="1"
+                  min="0"
                     required={!(isApartmentType(formData.propertyType) || isLandType(formData.propertyType))}
                   />
                   {isApartmentType(formData.propertyType) && (

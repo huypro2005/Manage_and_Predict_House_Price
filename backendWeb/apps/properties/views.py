@@ -222,7 +222,7 @@ class PropertyDetailView(APIView):
 
     @transaction.atomic
     def delete(self, request, pk):
-        user = request.user
+        self.user = request.user
         property = self.get_object(pk)
         if request.user and request.user.is_staff and request.user.is_active:
             pass
