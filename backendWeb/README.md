@@ -133,81 +133,126 @@ backendWeb/
 ## 🚀 Cài đặt và chạy dự án
 
 ### Yêu cầu hệ thống
-- Python 3.13+
-- MySQL 8.0+
-- Redis 6.0+
+- **Docker** và **Docker Compose** (đã cài đặt)
+- **MySQL 8.0+** (đã cài đặt và đang chạy trên máy host)
+- **File backup database** (file `.sql`)
 
-### 1. Clone repository
+### Bước 1: Clone repository
+
 ```bash
 git clone <repository-url>
 cd backendWeb
 ```
 
-### 2. Tạo virtual environment
-```bash
-python -m venv venv
-# Windows
-venv\Scripts\activate
-# Linux/Mac
-source venv/bin/activate
-```
+### Bước 2: Tạo file .env
 
-### 3. Cài đặt dependencies
-```bash
-pip install -r requirements.txt
-```
+Tạo file `.env` trong thư mục gốc của project (cùng cấp với `compose.yaml`) với nội dung sau:
 
-### 4. Cấu hình database
-Tạo file `.env` trong thư mục `backendWeb/`:
 ```env
+# Database Configuration
 DB_NAME=BATDONGSAN
 DB_USER=root
-DB_PASSWORD=your_password
-DB_HOST=localhost
+DB_PASSWORD=your_mysql_password
+DB_HOST=host.docker.internal
 DB_PORT=3306
 
-# Redis
-USERNAME_REDIS=''
-PASSWORD_REDIS=''
-HOST_REDIS='localhost'
-PORT_REDIS='6379'
+# Redis Configuration
+USERNAME_REDIS=
+PASSWORD_REDIS=
+HOST_REDIS=redis
+PORT_REDIS=6379
 
-# Mapbox
-MAPBOX_TOKEN=your_mapbox_token
+# Django Configuration
+DJANGO_SECRET_KEY=django-insecure-1uv@@ml1x1_6&yzuh!l@&%so)h5noqgz)mtry==n(aj-jmc)74
+DJANGO_DEBUG=True
 
-# Firebase
+# Mapbox Token (Optional - chỉ cần nếu sử dụng tính năng map)
+MAPBOX_TOKEN=your_mapbox_token_here
+
+# Firebase Configuration (Optional - chỉ cần nếu sử dụng OAuth Google)
 PATH_FIREBASE_ACCOUNT=path/to/firebase-service-account.json
-<!-- Thông tin có khi tạo project firebase -->
-
-# Secret key
-DJANGO_SECRET_KEY='django-insecure-1uv@@ml1x1_6&yzuh!l@&%so)h5noqgz)mtry==n(aj-jmc)74'
-
 ```
 
-### 5. Backup data
-Vào mysql 
+**Lưu ý**: 
+- Thay `your_mysql_password` bằng mật khẩu MySQL của bạn
+- `DB_HOST=host.docker.internal` để container có thể kết nối đến MySQL trên máy host
+- `HOST_REDIS=redis` để kết nối đến Redis container trong docker-compose
+- `MAPBOX_TOKEN` và `PATH_FIREBASE_ACCOUNT` là tùy chọn
+
+### Bước 3: Tạo Database và Import dữ liệu
+
+#### 3.1. Tạo database trong MySQL
+
 ```bash
-Create database batdongsan
+# Đăng nhập vào MySQL
+mysql -u root -p
+
+# Tạo database
+CREATE DATABASE batdongsan;
+
+# Thoát MySQL
+exit;
 ```
 
-### 6. Import data backup
+#### 3.2. Import dữ liệu backup
 
-```sh
-https://dev.mysql.com/doc/workbench/en/wb-admin-export-import-management.html
-```
+Import file backup database vào MySQL:
 
-### 7. Chạy docker redis
-
-```sh
-docker run --name my-redis -d -p 6379:6379 redis
-```
-
-### 8. Chạy server
 ```bash
-# Development
-python manage.py runserver
+# Import từ file backup
+mysql -u root -p BATDONGSAN < path/to/backup.sql
 
+# Hoặc sử dụng MySQL Workbench để import trực tiếp
+link: https://dev.mysql.com/doc/workbench/en/wb-admin-export-import-management.html
 ```
+
+### Bước 4: Chạy ứng dụng với Docker Compose
+
+```bash
+# Build và chạy tất cả services
+docker compose up --build
+
+# Hoặc chạy ở background
+docker compose up --build -d
+```
+
+**Lưu ý**: 
+- Lần đầu tiên chạy sẽ mất thời gian để build image
+- Server sẽ tự động chạy tại: http://localhost:8000
+- Redis sẽ tự động được khởi động cùng với ứng dụng
+
+### ✅ Kiểm tra cài đặt
+
+Sau khi container đã chạy, truy cập các URL sau:
+
+- **Swagger UI (API Documentation)**: http://localhost:8000/
+- **Admin Panel**: http://localhost:8000/admin/ (cần tạo superuser trước)
+
+### 🔧 Các lệnh Docker Compose hữu ích
+
+```bash
+# Xem logs
+docker compose logs -f
+
+# Dừng containers
+docker compose down
+
+# Dừng và xóa volumes
+docker compose down -v
+
+# Rebuild và restart
+docker compose up --build
+
+# Tạo superuser (chạy trong container)
+docker compose exec server python manage.py createsuperuser
+```
+
+### 📝 Lưu ý quan trọng
+
+1. **File .env**: Đảm bảo file `.env` nằm trong thư mục gốc (cùng cấp với `compose.yaml`)
+2. **Database**: Đảm bảo MySQL đang chạy trên máy host và database đã được tạo + import dữ liệu
+3. **Ports**: Đảm bảo port 8000 không bị chiếm dụng
+4. **Docker**: Đảm bảo Docker và Docker Compose đã được cài đặt và đang chạy
 
 ## 📚 API Documentation
 
