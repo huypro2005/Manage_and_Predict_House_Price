@@ -197,6 +197,46 @@ npm run build
 
 ---
 
+## 📚 Xem Chi Tiết Chức Năng
+
+Để xem chi tiết về các chức năng và cách hoạt động của hệ thống, vui lòng tham khảo các tài liệu sau:
+
+### Frontend
+- **[Tài Liệu Dự Án Frontend](./frontend/TAI_LIEU_DU_AN.md)** - Tài liệu chi tiết về:
+  - Kiến trúc hệ thống frontend
+  - Các chức năng chính (Authentication, Properties, Chat, Notifications, News, v.v.)
+  - API Endpoints
+  - Cấu trúc thư mục và components
+  - Context và State Management
+  - Custom Hooks
+  - Cách thức hoạt động
+
+- **[README Frontend](./frontend/README.md)** - Hướng dẫn cơ bản về frontend
+
+### Backend
+- **[Tài Liệu Chức Năng Backend](./backendWeb/TAI_LIEU_CHUC_NANG.md)** - Tài liệu chi tiết về:
+  - Quản lý tài khoản (Accounts)
+  - Xác thực JWT (AuthenticationJWT)
+  - OAuth2 với Google
+  - Quản lý bất động sản (Properties)
+  - Dự đoán giá bất động sản (Predicts)
+  - Hệ thống tin tức (News)
+  - Hệ thống comment (Comments)
+  - Thông báo (Notifications)
+  - Yêu thích (Love Cart)
+  - Chat real-time (Conversations & Chat Message)
+  - Dữ liệu mặc định (Defaults)
+
+- **[README Backend](./backendWeb/README.md)** - Hướng dẫn cơ bản về backend
+
+### API Documentation
+- **Swagger UI**: `http://localhost:8000/` (khi backend đang chạy)
+  - Xem tất cả API endpoints
+  - Test API trực tiếp trên trình duyệt
+  - Xem request/response schemas
+
+---
+
 ## 🎥 Video Demo
 
 [![Watch the video](https://i.ytimg.com/vi/ufraSdLiqiE/hqdefault.jpg)](https://www.youtube.com/watch?v=ufraSdLiqiE)
