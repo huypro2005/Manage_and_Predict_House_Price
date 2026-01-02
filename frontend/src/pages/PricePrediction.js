@@ -217,16 +217,34 @@ function PricePrediction() {
   };
 
   const searchAddressOnMap = async () => {
+    // Kiểm tra đã chọn đủ tỉnh/thành phố và quận/huyện chưa
+    if (!formData.province || !formData.district) {
+      alert('Vui lòng chọn đầy đủ Tỉnh/Thành phố và Quận/Huyện trước khi tìm kiếm địa chỉ');
+      return;
+    }
+
     if (!formData.detailedAddress.trim()) {
       alert('Vui lòng nhập địa chỉ chi tiết để tìm kiếm');
       return;
     }
 
     try {
+      // Lấy tên tỉnh/thành phố và quận/huyện đã chọn
+      const selectedProvince = provinces.find(p => p.code === parseInt(formData.province));
+      const selectedDistrict = districts.find(d => d.code === parseInt(formData.district));
+      
+      if (!selectedProvince || !selectedDistrict) {
+        alert('Không tìm thấy thông tin tỉnh/thành phố hoặc quận/huyện. Vui lòng thử lại.');
+        return;
+      }
+
+      // Tạo query string: địa chỉ chi tiết + quận huyện + tỉnh thành phố
+      const searchQuery = `${formData.detailedAddress.trim()}, ${selectedDistrict.name}, ${selectedProvince.name}, Vietnam`;
+      const encodedQuery = encodeURIComponent(searchQuery);
+      
       // Use Mapbox Geocoding API for better accuracy
-      const searchQuery = encodeURIComponent(`${formData.detailedAddress}, Vietnam`);
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${searchQuery}.json?access_token=${MAPBOX_ACCESS_TOKEN}&country=VN&limit=1`
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedQuery}.json?access_token=${MAPBOX_ACCESS_TOKEN}&country=VN&limit=1`
       );
       const data = await response.json();
 
@@ -516,24 +534,38 @@ function PricePrediction() {
                       value={formData.detailedAddress}
                       onChange={(e) => handleInputChange('detailedAddress', e.target.value)}
                       className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Nhập địa chỉ chi tiết để tìm kiếm trên bản đồ"
+                      placeholder="Nhập địa chỉ xã/phường"
                     />
                     <button
                       type="button"
                       onClick={searchAddressOnMap}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center"
+                      disabled={!formData.province || !formData.district}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center ${
+                        !formData.province || !formData.district
+                          ? 'bg-gray-400 cursor-not-allowed text-gray-200'
+                          : 'bg-blue-600 hover:bg-blue-700 text-white'
+                      }`}
+                      title={!formData.province || !formData.district ? 'Vui lòng chọn đầy đủ Tỉnh/Thành phố và Quận/Huyện' : ''}
                     >
                       <MapPin className="h-4 w-4 mr-1" />
                       Tìm
                     </button>
                   </div>
+                  {(!formData.province || !formData.district) && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      💡 Vui lòng chọn Tỉnh/Thành phố và Quận/Huyện trước khi tìm kiếm địa chỉ
+                    </p>
+                  )}
                 </div>
 
                 <div>
+                {/*
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Tọa độ chính xác (Tùy chọn)
                     <span className="text-xs text-gray-500 ml-1">- Để trống nếu không biết</span>
                   </label>
+                */}
+                  
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs text-gray-600 mb-1">Vĩ độ (Latitude)</label>

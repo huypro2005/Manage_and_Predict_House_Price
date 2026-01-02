@@ -29,7 +29,6 @@ class StandardResultsSetPagination(PageNumberPagination):
     max_page_size = 100
 
     def get_paginated_response(self, data):
-        print('Paginated response data')
         return Response({
             'count': data.get('total', 0),
             'not_readed': data.get('not_readed', 0),
@@ -78,7 +77,6 @@ class NotificationListView(APIView):
     '''
     
     def get(self, request):
-        print('NotificationListView GET called')
         page = int(request.query_params.get('page', 1))
         user = request.user 
         paginator = self.pagination_class()
@@ -90,7 +88,6 @@ class NotificationListView(APIView):
             notifications = Notification.objects.filter(id__in=ids_cached, user=user, is_deleted=False).order_by('-created_at')
             serializer = NotificationV1Serializer(notifications, many=True)
             tmp = serializer.data
-            print('From cache')
             return paginator.get_paginated_response({
                 'not_readed': count_not_readed,
                 'data': tmp,
@@ -100,7 +97,6 @@ class NotificationListView(APIView):
                 'total': get_total_count_cache(user.id)
             })
 
-        print('From DB')
         notifications = Notification.objects.filter(user=user, is_deleted=False).order_by('-created_at')
         
         result_page = paginator.paginate_queryset(notifications, request)
