@@ -118,7 +118,6 @@ class NotificationDetailView(APIView):
         
         action = request.data.get('action')
         if action == 'readed':
-            print('Marking as read')
             notification = self.mark_notification_as_read(notification_id)
             serializer = NotificationV1Serializer(notification)
             return Response({'data': serializer.data, 'message': 'Notification marked as read'}, status=status.HTTP_200_OK)

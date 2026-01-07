@@ -57,10 +57,8 @@ class PropertyListView(APIView):
         cache_key = 'property_list_'+hashlib.md5(str(params).encode()).hexdigest()
         res = cache.get(cache_key)
         if res is not None:
-            print("Cache hit")
             return Response(res, status=status.HTTP_200_OK)
 
-        print("Cache miss")
         filters = {}
 
         if params['username']:
@@ -94,7 +92,6 @@ class PropertyListView(APIView):
             # try:
             districts = [int(d) for d in str(params['district']).split(',')] if ',' in str(params['district']) else [int(params['district'])]
             filters['district__in'] = districts
-            print(params['district'])
             # except ValueError:
             #     print(params['district'])
         if params['is_active']:

@@ -156,21 +156,35 @@ function PostProperty() {
     ));
   };
 
+  // Kiểm tra xem attribute có phải là số không
+  const isNumericAttribute = (attrName) => {
+    return ['Số phòng ngủ', 'Số phòng tắm, vệ sinh', 'Đường vào', 'Mặt tiền'].includes(attrName);
+  };
+
   // Thêm attribute từ form
   const handleAddAttribute = (formId) => {
     const form = openForms.find(f => f.id === formId);
     if (!form || !form.attributeId || !form.value.trim()) return;
     
     const attr = attributesList.find(a => a.id === parseInt(form.attributeId));
-    if (attr && !selectedAttributes.some(s => s.attribute_id === attr.id)) {
-      setSelectedAttributes([...selectedAttributes, {
-        attribute_id: attr.id,
-        value: form.value.trim(),
-        name: attr.name,
-        unit: attr.unit
-      }]);
-      setOpenForms(openForms.filter(f => f.id !== formId));
+    if (!attr || selectedAttributes.some(s => s.attribute_id === attr.id)) return;
+
+    // Validate cho thuộc tính số: phải lớn hơn 0
+    if (isNumericAttribute(attr.name)) {
+      const numValue = Number(form.value.trim());
+      if (isNaN(numValue) || numValue <= 0) {
+        alert(`${attr.name} phải lớn hơn 0`);
+        return;
+      }
     }
+
+    setSelectedAttributes([...selectedAttributes, {
+      attribute_id: attr.id,
+      value: form.value.trim(),
+      name: attr.name,
+      unit: attr.unit
+    }]);
+    setOpenForms(openForms.filter(f => f.id !== formId));
   };
 
   // Đóng form
@@ -209,7 +223,9 @@ function PostProperty() {
       return 'Vui lòng nhập địa chỉ có cả tên quận/huyện (ví dụ: "..., ' + firstDistrictName + '")';
     }
     if (!price || isNaN(Number(price))) return 'Vui lòng nhập mức giá hợp lệ (triệu)';
+    if (Number(price) <= 0) return 'Giá phải lớn hơn 0';
     if (!area || isNaN(Number(area))) return 'Vui lòng nhập diện tích hợp lệ (m²)';
+    if (Number(area) <= 0) return 'Diện tích phải lớn hơn 0';
     if (!selectedPropertyTypeIds || selectedPropertyTypeIds.length !== 1) return 'Vui lòng chọn 1 loại nhà đất';
     return '';
   };
@@ -307,6 +323,18 @@ function PostProperty() {
     if (err) {
       alert(err);
       return;
+    }
+
+    // Validate các thuộc tính số phải lớn hơn 0
+    for (const attr of selectedAttributes) {
+      if (isNumericAttribute(attr.name)) {
+        const numValue = Number(attr.value);
+        if (isNaN(numValue) || numValue <= 0) {
+          alert(`${attr.name} phải lớn hơn 0`);
+          setSubmitting(false);
+          return;
+        }
+      }
     }
 
     setSubmitting(true);
@@ -468,12 +496,18 @@ function PostProperty() {
                 <div className="relative">
                   <input
                     type="number"
-                    min="0"
+                    min="0.01"
                     step="0.01"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent pr-12"
                     placeholder="Ví dụ: 1500 (tương đương 1.5 tỷ)"
                     value={price}
-                    onChange={(e) => setPrice(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // Chỉ cho phép số dương
+                      if (val === '' || (Number(val) > 0)) {
+                        setPrice(val);
+                      }
+                    }}
                   />
                   <Type className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
                 </div>
@@ -488,12 +522,18 @@ function PostProperty() {
                 <div className="relative">
                   <input
                     type="number"
-                    min="0"
+                    min="0.01"
                     step="0.01"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent pr-12"
                     placeholder="Ví dụ: 75"
                     value={area}
-                    onChange={(e) => setArea(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // Chỉ cho phép số dương
+                      if (val === '' || (Number(val) > 0)) {
+                        setArea(val);
+                      }
+                    }}
                   />
                   <Ruler className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
                 </div>
@@ -734,7 +774,7 @@ function PostProperty() {
                   {/* Các form thêm attribute */}
                   {openForms.map((form) => {
                     const selectedAttr = form.attributeId ? attributesList.find(a => a.id === parseInt(form.attributeId)) : null;
-                    const isNumeric = selectedAttr && ['Số phòng ngủ', 'Số phòng tắm, vệ sinh', 'Mặt tiền', 'Đường vào'].includes(selectedAttr.name);
+                    const isNumeric = selectedAttr && isNumericAttribute(selectedAttr.name);
                     return (
                       <div key={form.id} className="bg-white p-4 rounded-lg border border-gray-200 space-y-3 mb-3">
                         <div className="flex items-center gap-3">
@@ -751,12 +791,22 @@ function PostProperty() {
                           {form.attributeId ? (
                             <input
                               type={isNumeric ? 'number' : 'text'}
-                              min={isNumeric ? '0' : undefined}
+                              min={isNumeric ? '0.01' : undefined}
                               step={isNumeric ? (selectedAttr.name === 'Mặt tiền' || selectedAttr.name === 'Đường vào' ? '0.01' : '1') : undefined}
                               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                               placeholder={selectedAttr?.unit ? `Nhập ${selectedAttr.unit.toLowerCase()}` : 'Nhập giá trị'}
                               value={form.value}
-                              onChange={(e) => handleUpdateForm(form.id, 'value', e.target.value)}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                // Nếu là thuộc tính số, chỉ cho phép số dương
+                                if (isNumeric) {
+                                  if (val === '' || (Number(val) > 0)) {
+                                    handleUpdateForm(form.id, 'value', val);
+                                  }
+                                } else {
+                                  handleUpdateForm(form.id, 'value', val);
+                                }
+                              }}
                             />
                           ) : (
                             <div className="flex-1 px-3 py-2 text-gray-400 text-sm border border-gray-200 rounded-lg bg-gray-50">

@@ -47,6 +47,10 @@ function PropertyDetail() {
     email: '',
     content: ''
   });
+  const [contactErrors, setContactErrors] = useState({
+    phone: '',
+    email: ''
+  });
   const [recommendations, setRecommendations] = useState([]);
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [recommendationsError, setRecommendationsError] = useState('');
@@ -314,6 +318,36 @@ function PropertyDetail() {
   const handleCloseContactForm = () => {
     setShowContactForm(false);
     setContactInfo({ name: '', phone: '', email: '', content: '' });
+    setContactErrors({ phone: '', email: '' });
+  };
+
+  // Validate số điện thoại: 10 chữ số, bắt đầu bằng 0
+  const validatePhone = (phone) => {
+    if (!phone) return '';
+    // Chỉ cho phép số
+    const phoneDigits = phone.replace(/\D/g, '');
+    // Phải bắt đầu bằng 0 và có đúng 10 chữ số
+    if (phoneDigits.length > 0 && phoneDigits[0] !== '0') {
+      return 'Số điện thoại phải bắt đầu bằng số 0';
+    }
+    if (phoneDigits.length > 10) {
+      return 'Số điện thoại không được quá 10 chữ số';
+    }
+    if (phoneDigits.length > 0 && phoneDigits.length < 10) {
+      return 'Số điện thoại phải có đúng 10 chữ số';
+    }
+    return '';
+  };
+
+  // Validate email: phải chứa @ và đúng định dạng
+  const validateEmail = (email) => {
+    if (!email) return ''; // Email là tùy chọn
+    // Regex để kiểm tra định dạng email cơ bản
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return 'Email không đúng định dạng (ví dụ: example@email.com)';
+    }
+    return '';
   };
 
   // Xử lý thay đổi thông tin liên hệ
@@ -322,6 +356,21 @@ function PropertyDetail() {
       ...prev,
       [field]: value
     }));
+
+    // Validate real-time
+    if (field === 'phone') {
+      const error = validatePhone(value);
+      setContactErrors(prev => ({
+        ...prev,
+        phone: error
+      }));
+    } else if (field === 'email') {
+      const error = validateEmail(value);
+      setContactErrors(prev => ({
+        ...prev,
+        email: error
+      }));
+    }
   };
 
   const attributeList = useMemo(() => {
@@ -446,6 +495,33 @@ function PropertyDetail() {
       return;
     }
 
+    // Validate số điện thoại
+    const phoneError = validatePhone(contactInfo.phone);
+    if (phoneError) {
+      setContactErrors(prev => ({ ...prev, phone: phoneError }));
+      alert(phoneError);
+      return;
+    }
+    
+    // Kiểm tra số điện thoại phải có đúng 10 chữ số và bắt đầu bằng 0
+    const phoneDigits = contactInfo.phone.replace(/\D/g, '');
+    if (phoneDigits.length !== 10 || phoneDigits[0] !== '0') {
+      const error = 'Số điện thoại phải có đúng 10 chữ số và bắt đầu bằng số 0';
+      setContactErrors(prev => ({ ...prev, phone: error }));
+      alert(error);
+      return;
+    }
+
+    // Validate email nếu có nhập
+    if (contactInfo.email.trim()) {
+      const emailError = validateEmail(contactInfo.email);
+      if (emailError) {
+        setContactErrors(prev => ({ ...prev, email: emailError }));
+        alert(emailError);
+        return;
+      }
+    }
+
     // Kiểm tra property và user_id
     if (!property) {
       alert('Không tìm thấy thông tin tài sản!');
@@ -504,6 +580,7 @@ Link bài viết: ${currentUrl}`;
       if (sent) {
         alert('Tin nhắn đã được gửi thành công!');
         setContactInfo({ name: '', phone: '', email: '', content: '' });
+        setContactErrors({ phone: '', email: '' });
         setShowContactForm(false);
       } else {
         alert('Không thể kết nối. Vui lòng thử lại!');
@@ -1060,11 +1137,24 @@ Link bài viết: ${currentUrl}`;
                 <input
                   type="tel"
                   value={contactInfo.phone}
-                  onChange={(e) => handleContactInfoChange('phone', e.target.value)}
-                  placeholder="Nhập số điện thoại"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  onChange={(e) => {
+                    // Chỉ cho phép nhập số
+                    const value = e.target.value.replace(/\D/g, '');
+                    // Giới hạn tối đa 10 chữ số
+                    const limitedValue = value.slice(0, 10);
+                    handleContactInfoChange('phone', limitedValue);
+                  }}
+                  placeholder="Nhập số điện thoại (10 chữ số, bắt đầu bằng 0)"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent ${
+                    contactErrors.phone 
+                      ? 'border-red-500 focus:ring-red-500' 
+                      : 'border-gray-300 focus:ring-green-500'
+                  }`}
                   disabled={sendingMessage}
                 />
+                {contactErrors.phone && (
+                  <p className="text-red-500 text-xs mt-1">{contactErrors.phone}</p>
+                )}
               </div>
 
               <div>
@@ -1075,10 +1165,17 @@ Link bài viết: ${currentUrl}`;
                   type="email"
                   value={contactInfo.email}
                   onChange={(e) => handleContactInfoChange('email', e.target.value)}
-                  placeholder="Nhập email của bạn"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Nhập email của bạn (ví dụ: example@email.com)"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent ${
+                    contactErrors.email 
+                      ? 'border-red-500 focus:ring-red-500' 
+                      : 'border-gray-300 focus:ring-green-500'
+                  }`}
                   disabled={sendingMessage}
                 />
+                {contactErrors.email && (
+                  <p className="text-red-500 text-xs mt-1">{contactErrors.email}</p>
+                )}
               </div>
 
               <div>
@@ -1106,7 +1203,16 @@ Link bài viết: ${currentUrl}`;
               </button>
               <button
                 onClick={handleSendContact}
-                disabled={sendingMessage || !contactInfo.name.trim() || !contactInfo.phone.trim() || !contactInfo.content.trim()}
+                disabled={
+                  sendingMessage || 
+                  !contactInfo.name.trim() || 
+                  !contactInfo.phone.trim() || 
+                  !contactInfo.content.trim() ||
+                  contactErrors.phone !== '' ||
+                  contactErrors.email !== '' ||
+                  contactInfo.phone.replace(/\D/g, '').length !== 10 ||
+                  contactInfo.phone.replace(/\D/g, '')[0] !== '0'
+                }
                 className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center"
               >
                 {sendingMessage ? (
