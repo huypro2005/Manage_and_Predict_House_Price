@@ -160,6 +160,15 @@ function PostProperty() {
   const isNumericAttribute = (attrName) => {
     return ['Số phòng ngủ', 'Số phòng tắm, vệ sinh', 'Đường vào', 'Mặt tiền'].includes(attrName);
   };
+  
+  // Rule cho từng thuộc tính số
+  const getNumericRule = (attrName) => {
+    if (attrName === 'Số phòng ngủ' || attrName === 'Số phòng tắm, vệ sinh') {
+      return { kind: 'int', min: 1, step: 1 };
+    }
+    // Các thuộc tính số khác cho phép số thập phân
+    return { kind: 'float', min: 0.01, step: 0.01 };
+  };
 
   // Thêm attribute từ form
   const handleAddAttribute = (formId) => {
@@ -169,11 +178,17 @@ function PostProperty() {
     const attr = attributesList.find(a => a.id === parseInt(form.attributeId));
     if (!attr || selectedAttributes.some(s => s.attribute_id === attr.id)) return;
 
-    // Validate cho thuộc tính số: phải lớn hơn 0
+    // Validate cho thuộc tính số
     if (isNumericAttribute(attr.name)) {
-      const numValue = Number(form.value.trim());
+      const raw = form.value.trim();
+      const rule = getNumericRule(attr.name);
+      const numValue = Number(raw);
       if (isNaN(numValue) || numValue <= 0) {
-        alert(`${attr.name} phải lớn hơn 0`);
+        alert(`${attr.name} phải là số lớn hơn 0`);
+        return;
+      }
+      if (rule.kind === 'int' && (!Number.isInteger(numValue) || numValue < rule.min)) {
+        alert(`${attr.name} phải là số nguyên lớn hơn 0`);
         return;
       }
     }
@@ -325,12 +340,19 @@ function PostProperty() {
       return;
     }
 
-    // Validate các thuộc tính số phải lớn hơn 0
+    // Validate các thuộc tính số
     for (const attr of selectedAttributes) {
       if (isNumericAttribute(attr.name)) {
-        const numValue = Number(attr.value);
+        const raw = String(attr.value ?? '').trim();
+        const rule = getNumericRule(attr.name);
+        const numValue = Number(raw);
         if (isNaN(numValue) || numValue <= 0) {
-          alert(`${attr.name} phải lớn hơn 0`);
+          alert(`${attr.name} phải là số lớn hơn 0`);
+          setSubmitting(false);
+          return;
+        }
+        if (rule.kind === 'int' && (!Number.isInteger(numValue) || numValue < rule.min)) {
+          alert(`${attr.name} phải là số nguyên lớn hơn 0`);
           setSubmitting(false);
           return;
         }
@@ -775,6 +797,7 @@ function PostProperty() {
                   {openForms.map((form) => {
                     const selectedAttr = form.attributeId ? attributesList.find(a => a.id === parseInt(form.attributeId)) : null;
                     const isNumeric = selectedAttr && isNumericAttribute(selectedAttr.name);
+                    const numericRule = isNumeric && selectedAttr ? getNumericRule(selectedAttr.name) : null;
                     return (
                       <div key={form.id} className="bg-white p-4 rounded-lg border border-gray-200 space-y-3 mb-3">
                         <div className="flex items-center gap-3">
@@ -791,8 +814,8 @@ function PostProperty() {
                           {form.attributeId ? (
                             <input
                               type={isNumeric ? 'number' : 'text'}
-                              min={isNumeric ? '0.01' : undefined}
-                              step={isNumeric ? (selectedAttr.name === 'Mặt tiền' || selectedAttr.name === 'Đường vào' ? '0.01' : '1') : undefined}
+                              min={isNumeric ? String(numericRule?.min ?? 0.01) : undefined}
+                              step={isNumeric ? String(numericRule?.step ?? 0.01) : undefined}
                               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                               placeholder={selectedAttr?.unit ? `Nhập ${selectedAttr.unit.toLowerCase()}` : 'Nhập giá trị'}
                               value={form.value}
@@ -800,9 +823,12 @@ function PostProperty() {
                                 const val = e.target.value;
                                 // Nếu là thuộc tính số, chỉ cho phép số dương
                                 if (isNumeric) {
-                                  if (val === '' || (Number(val) > 0)) {
-                                    handleUpdateForm(form.id, 'value', val);
-                                  }
+                                  if (val === '') return handleUpdateForm(form.id, 'value', val);
+                                  const n = Number(val);
+                                  if (Number.isNaN(n) || n <= 0) return;
+                                  // Phòng ngủ / phòng tắm: ép số nguyên
+                                  if (numericRule?.kind === 'int' && !/^\d+$/.test(val)) return;
+                                  handleUpdateForm(form.id, 'value', val);
                                 } else {
                                   handleUpdateForm(form.id, 'value', val);
                                 }
